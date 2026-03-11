@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>흑백로그 | 오너보드</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page/owner_bord.css') }}">
+</head>
+<body>
+    <div class="owner-board-page">
+
+        <!-- 상단 헤더 -->
+    <header class="top-header">
+        <div class="header-left">
+            <div class="brand-wrap">
+                <img
+                    src="{{ url_for('static', filename='img/main_logo.png') }}"
+                    alt="흑백로그 로고"
+                    class="main-logo"
+                >
+            </div>
+
+            
+        </div>
+
+        <div class="header-right">
+            <span class="today-date">2024.08.20</span>
+
+            <div class="store-profile">
+                <span class="store-name">수원비빔밥집</span>
+                <div class="profile-circle">👨‍🍳</div>
+            </div>
+
+            <button class="menu-toggle" type="button" aria-label="메뉴 열기">
+                ☰
+            </button>
+        </div>
+    </header>
+
+        <main class="board-layout">
+            <!-- 좌측 사이드바 -->
+            <aside class="sidebar">
+                <div class="sidebar-top">
+                    <div class="sidebar-title">오너 페이지</div>
+
+                    <ul class="sidebar-menu">
+                        <li class="sidebar-item active">
+                            <a href="#">대시보드</a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="#">메뉴 관리</a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="#">리뷰 관리</a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="#">가게 정보</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <button class="logout-btn" type="button">로그아웃</button>
+            </aside>
+
+            <!-- 본문 -->
+            <section class="main-content">
+                <!-- 인사/가게 요약 -->
+                <section class="welcome-section">
+                    <h2 class="welcome-title">안녕하세요, 수원비빔밥집 사장님!</h2>
+
+                    <div class="store-summary">
+                        <div class="rating-badge">
+                            <strong>5.0</strong>
+                            <span>평점</span>
+                        </div>
+
+                        <div class="store-meta">
+                            <p class="store-category-location">한식 / 수원시 수원동</p>
+                            <p class="store-address">비빔밥 원조집, 경기도 수원팔달시 나눔의왕로 1</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 메인 그리드 -->
+                <section class="content-grid">
+                    <div class="left-column">
+                        <!-- 랭크 카드 -->
+                        <div class="rank-card card">
+                            <div class="rank-badge-area">
+                                <div class="diamond-badge">
+                                    💎
+                                </div>
+                            </div>
+
+                            <div class="rank-text-area">
+                                <h3>우리가게의 랭크는 <span>다이아몬드</span> 입니다!</h3>
+                                <p>와우 대단해요 맛집중에 맛집!</p>
+                            </div>
+                        </div>
+
+                        <!-- 메뉴 / 가게정보 카드 -->
+                        <div class="info-edit-card card">
+                            <div class="info-row top-row">
+                                <div class="food-logo-box">
+                                    <div class="food-logo">🍜</div>
+                                </div>
+
+                                <div class="store-info-box">
+                                    <h3>맛나는 중국집(사업자번호)</h3>
+                                    <p>가게주소</p>
+                                </div>
+                            </div>
+
+                            <div class="info-row bottom-row">
+                                <div class="menu-type-box">
+                                    <span class="emoji">🥟</span>
+                                    <span>중식</span>
+                                </div>
+
+                                <div class="menu-count-box">
+                                    메뉴 종류 갯수 <strong>0개</strong>
+                                </div>
+                            </div>
+
+                            <div class="action-buttons">
+                                <button type="button" class="outline-btn">수정하기</button>
+                                <button type="button" class="fill-btn">추가하기</button>
+                            </div>
+                        </div>
+
+                        <!-- 방문자 수 통계 -->
+                        <div class="chart-card card">
+                            <div class="card-header">
+                                <h3>방문자 수 통계</h3>
+                            </div>
+
+                            <div class="chart-area">
+                                <div class="chart-grid"></div>
+                                <svg class="chart-svg" viewBox="0 0 900 220" preserveAspectRatio="none">
+                                    <polyline
+                                        fill="none"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="4"
+                                        points="20,170 120,175 220,155 320,120 420,145 520,105 620,92 720,112 820,118 880,130"
+                                    />
+                                    <g class="chart-dots">
+                                        <circle cx="20" cy="170" r="6"></circle>
+                                        <circle cx="120" cy="175" r="6"></circle>
+                                        <circle cx="220" cy="155" r="6"></circle>
+                                        <circle cx="320" cy="120" r="6"></circle>
+                                        <circle cx="420" cy="145" r="6"></circle>
+                                        <circle cx="520" cy="105" r="6"></circle>
+                                        <circle cx="620" cy="92" r="6"></circle>
+                                        <circle cx="720" cy="112" r="6"></circle>
+                                        <circle cx="820" cy="118" r="6"></circle>
+                                        <circle cx="880" cy="130" r="6"></circle>
+                                    </g>
+                                </svg>
+
+                                <div class="chart-labels">
+                                    <span>일</span>
+                                    <span>월</span>
+                                    <span>화</span>
+                                    <span>수</span>
+                                    <span>목</span>
+                                    <span>금</span>
+                                    <span>토</span>
+                                    <span>일</span>
+                                    <span>월</span>
+                                    <span>화</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="right-column">
+                        <!-- 리뷰 수 카드 -->
+                        <div class="mini-stat-card card">
+                            <div class="mini-stat-top">
+                                <h3>우리 가게 리뷰</h3>
+                                <button class="circle-arrow" type="button">›</button>
+                            </div>
+                            <p class="stat-number">12건</p>
+                        </div>
+
+                        <!-- 리뷰 카드 -->
+                        <div class="review-card card">
+                            <div class="card-header">
+                                <h3>리뷰</h3>
+                            </div>
+
+                            <div class="review-list">
+                                <div class="review-item">
+                                    <div class="review-profile">👩</div>
+                                    <div class="review-content">
+                                        <div class="review-top">
+                                            <strong>밥비창</strong>
+                                            <span class="stars">★★★★★</span>
+                                        </div>
+                                        <p>비빔밥이 정말 맛있어요! 안이 꽉 차있습니다.</p>
+                                    </div>
+                                </div>
+
+                                <div class="review-item">
+                                    <div class="review-profile">👨</div>
+                                    <div class="review-content">
+                                        <div class="review-top">
+                                            <strong>긴티수</strong>
+                                            <span class="stars">★★★★☆</span>
+                                            <span class="review-date">2024.04.23</span>
+                                        </div>
+                                        <p>시장님댁 전통한 그 음식이 감성이 가득합니다.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="fill-btn review-more-btn" type="button">리뷰 더보기</button>
+                        </div>
+
+                        <!-- 공지사항 -->
+                        <div class="notice-card card">
+                            <div class="notice-header">
+                                <h3>공지사항</h3>
+                                <button class="circle-arrow" type="button">›</button>
+                            </div>
+
+                            <div class="notice-body">
+                                <h4>공지 바수</h4>
+                                <p>현재 지도 기능은 준비 중입니다.</p>
+                                <p>검색 및 랭킹 기능은 정상적으로 이용할 수 있습니다.</p>
+                            </div>
+
+                            <button class="fill-btn notice-manage-btn" type="button">공지사항 관리</button>
+
+                            <div class="notice-placeholder"></div>
+
+                            <button class="fill-btn notice-query-btn" type="button">공지사항 쿼리</button>
+                        </div>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/owner_bord.js') }}"></script>
+</body>
+</html>
