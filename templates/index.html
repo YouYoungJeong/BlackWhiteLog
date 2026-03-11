@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>흑백로그</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="brand-wrap">
+                <a href="/">
+                    <img
+                        id="main_logo"
+                        src="{{ url_for('static', filename='img/main_logo.png') }}"
+                        alt="흑백로그 로고"
+                        class="brand-logo-img"
+                    />
+                </a>
+            </div>
+
+            <section class="searchbar-section">
+                <div class="searchbar-box">
+                    <select id="regionSelect" class="search-select">
+                        {% for region in regions %}
+                        <option value="{{ region }}">{{ region }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select id="categorySelect" class="search-select">
+                        <option value="">전체 카테고리</option>
+                        {% for c in categories %}
+                        <option value="{{ c.restaurant_category_id }}">
+                            {{ c.restaurant_category_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <input
+                        type="text"
+                        id="keywordInput"
+                        class="search-input"
+                        placeholder="음식점명, 주소, 카테고리 검색"
+                    />
+
+                    <button id="searchBtn" class="search-btn">검색</button>
+                </div>
+            </section>
+
+            <div class="topbar-actions">
+                <button class="ghost-btn">로그인</button>
+                <button class="icon-btn" id="menuBtn" aria-label="메뉴" type="button">☰</button>
+            </div>
+        </header>
+
+        <main class="content-grid">
+            <aside class="sidebar">
+                <div class="sidebar-head">
+                    <div class="sidebar-top-row">
+                        <div class="sort-chip-row">
+                            <button class="sort-chip active" data-sort="visits">추천</button>
+                            <button class="sort-chip" data-sort="rating">랭킹</button>
+                            <button class="sort-chip" data-sort="latest">즐겨찾기</button>
+                            <button class="sort-chip" data-sort="reviews">카테고리</button>
+                        </div>
+
+                        <button
+                            class="roulette-btn"
+                            id="rouletteBtn"
+                            title="랜덤 추천"
+                            aria-label="랜덤 추천"
+                            type="button"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="12" height="12" x="2" y="10" rx="2" ry="2"></rect>
+                                <path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6"></path>
+                                <path d="M6 18h.01"></path>
+                                <path d="M10 14h.01"></path>
+                                <path d="M15 6h.01"></path>
+                                <path d="M18 9h.01"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="rouletteResult" class="roulette-result" hidden>
+                        <button
+                            type="button"
+                            class="roulette-result__close"
+                            id="rouletteCloseBtn"
+                            aria-label="추천 박스 닫기"
+                            title="닫기"
+                        >
+                            ×
+                        </button>
+
+                        <div class="roulette-result__badge">랜덤 추천</div>
+
+                        <div class="roulette-result__body roulette-result__body--stack">
+                            <div class="roulette-result__text">
+                                <div class="roulette-slot" id="rouletteSlot">
+                                    <div class="roulette-slot__track" id="rouletteSlotTrack">
+                                        <div class="roulette-slot__item">한식</div>
+                                    </div>
+                                </div>
+
+                                <p id="rouletteQuestion">이 카테고리 음식점을 추천해드릴까요?</p>
+                                <span id="rouletteDesc">주사위를 다시 눌러도 다른 카테고리를 추천받을 수 있어요.</span>
+                            </div>
+
+                            <div class="roulette-result__actions">
+                                <button class="roulette-result__confirm" id="rouletteConfirmBtn" type="button">
+                                    음식점 추천받기
+                                </button>
+                                <button class="roulette-result__retry" id="rouletteRetryBtn" type="button">
+                                    다시 뽑기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="restaurantList" class="restaurant-list">
+                    <div class="loading-box">음식점 데이터를 불러오는 중...</div>
+                </div>
+            </aside>
+
+            <section class="map-panel">
+                <div class="map-notice" id="mapNotice">
+                    <div class="map-notice__content">
+                        <strong class="map-notice__title">공지사항</strong>
+                        <p class="map-notice__text">
+                            현재 지도 기능은 준비 중입니다. 검색 및 랭킹 기능은 정상적으로 이용할 수 있습니다.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="map-notice__toggle"
+                        id="mapNoticeToggle"
+                        aria-label="공지사항 접기"
+                        aria-expanded="true"
+                    >
+                        <img
+                            src="{{ url_for('static', filename='img/notice.png') }}"
+                            alt="공지사항 펼치기"
+                            class="map-notice__toggle-img"
+                            id="mapNoticeToggleImg"
+                        />
+                    </button>
+                </div>
+
+                <div id="mapCanvas" class="map-canvas">
+                    <div class="map-grid"></div>
+                    <div id="mapMarkers" class="map-markers"></div>
+
+                    <div class="map-center-badge">
+                        <strong>지도 영역</strong>
+                        <span>다음 단계에서 네이버 지도 API 연결</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <div class="footer-inner">
+                <div class="footer-brand">
+                    <strong>흑백로그</strong>
+                    <span>Black & White Log</span>
+                </div>
+
+                <div class="footer-info">
+                    <p>© 2026 흑백로그. All rights reserved.</p>
+                    <p>
+                        본 사이트의 상호, 이미지, 리뷰 및 기타 콘텐츠는 각 권리자에게 권리가 있을 수 있으며,
+                        서비스 내 데이터는 업데이트 시점에 따라 실제 정보와 차이가 있을 수 있습니다.
+                    </p>
+                    <p>
+                        지도 및 위치 기반 서비스는 제휴 API 정책 및 각 제공사의 이용약관을 따릅니다.
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
+
+    <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
+        <div class="side-drawer__header">
+            <button
+                type="button"
+                class="side-drawer__close"
+                id="sideDrawerCloseBtn"
+                aria-label="메뉴 닫기"
+            >
+                ×
+            </button>
+
+            <div class="side-drawer__profile">
+                <div class="side-drawer__avatar">
+                    <span>👤</span>
+                </div>
+                <strong class="side-drawer__name">열일하는 판다님</strong>
+            </div>
+        </div>
+
+        <div class="side-drawer__body">
+            <nav class="side-drawer__nav">
+                <button type="button" class="side-drawer__item">
+                    <span class="side-drawer__icon">⌂</span>
+                    <span>피드</span>
+                </button>
+                <button type="button" class="side-drawer__item">
+                    <span class="side-drawer__icon">▣</span>
+                    <span>게시판</span>
+                </button>
+                <button type="button" class="side-drawer__item">
+                    <span class="side-drawer__icon">🔔</span>
+                    <span>공지사항</span>
+                </button>
+                <button type="button" class="side-drawer__item">
+                    <span class="side-drawer__icon">↪</span>
+                    <span>로그아웃</span>
+                </button>
+                <button type="button" class="side-drawer__item">
+                    <span class="side-drawer__icon">🏪</span>
+                    <span>판매자 등록하기</span>
+                </button>
+            </nav>
+
+            <div class="side-drawer__divider"></div>
+
+            <div class="side-drawer__section-title">기타</div>
+
+            <div class="side-drawer__sublist">
+                <button type="button" class="side-drawer__subitem">설정</button>
+                <button type="button" class="side-drawer__subitem">고객센터</button>
+                <button type="button" class="side-drawer__subitem">이용약관</button>
+            </div>
+        </div>
+    </aside>
+
+    <script>
+        window.__INITIAL_STATE__ = {
+            apiUrl: "{{ url_for('api_restaurants') }}"
+        };
+    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
