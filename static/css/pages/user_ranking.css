@@ -1,53 +1,328 @@
-/* static/css/pages/user_ranking.css */
+/* 숨김 유틸리티 */
+.hidden-view {
+    display: none !important;
+}
 
-/* 랭킹 전체를 감싸는 컨테이너 */
-#rankingMainWrapper {
-    display: none; /* 기본은 숨김 */
+/* =========================================
+   좌측 랭킹 리스트 (rankingListOverlay)
+========================================= */
+#rankingListOverlay {
+    position: absolute;
+    top: 76px; /* 추천/랭킹 탭 아래 영역부터 덮음 */
+    left: 0;
     width: 100%;
-    height: 100%;
-    background-color: #ffffff;
-    position: absolute; /* 지도 영역 위에 띄움 */
+    height: calc(100% - 76px);
+    background: #fff;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+}
+
+.ranking-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+.ranking-list-title {
+    margin: 0;
+    font-size: 16px;
+    color: var(--point-dark);
+}
+
+.ranking-list-desc {
+    font-size: 12px;
+    color: var(--subtext);
+}
+
+.ranking-list-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 20px;
+}
+
+.rank-item {
+    display: flex;
+    align-items: center;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    background: #fff;
+}
+
+.rank-item.my-rank-highlight {
+    border-color: var(--point);
+    background: #f2f6ed;
+    box-shadow: 0 4px 10px rgba(143, 170, 122, 0.15);
+}
+
+.rank-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 14px;
+    color: var(--subtext);
+}
+
+.rank-num.gold { background: #ffe082; color: #ff8f00; }
+.rank-num.silver { background: #e0e0e0; color: #757575; }
+.rank-num.bronze { background: #ffccbc; color: #d84315; }
+
+.rank-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.rank-info strong {
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.me-badge {
+    background: var(--point-dark);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.rank-tier {
+    font-size: 12px;
+    color: var(--subtext);
+}
+
+.rank-pts {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--point-dark);
+    text-align: right;
+}
+
+.rank-pts span {
+    font-size: 11px;
+    color: var(--subtext);
+}
+
+/* =========================================
+   우측 대시보드 (rankingDashboardOverlay)
+========================================= */
+#rankingDashboardOverlay {
+    position: absolute;
     top: 0;
     left: 0;
-    z-index: 9999; /* 다른 어떤 요소보다 위에 있도록 */
-    flex-direction: row; /* 왼쪽 리스트, 오른쪽 대시보드 */
-}
-
-/* 왼쪽 사이드바 (리스트) */
-.ranking-sidebar {
-    width: 380px;
+    width: 100%;
     height: 100%;
-    border-right: 1px solid #e0e0e0;
-    background: #fff;
+    background: #fafaf8;
+    z-index: 50;
+    padding: 30px 40px;
     overflow-y: auto;
-    flex-shrink: 0; /* 너비 고정 */
 }
 
-/* 오른쪽 메인 (대시보드) */
-.ranking-dashboard {
-    flex-grow: 1;
-    height: 100%;
-    background: #f4f7f6;
-    overflow-y: auto;
-    padding: 40px;
+.dashboard-header h2 {
+    margin: 0 0 24px 0;
+    font-size: 22px;
+    color: var(--text);
 }
 
-/* 대시보드 4분할 그리드 */
-.dash-grid {
+.dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    gap: 25px;
-    max-width: 1100px;
-    margin: 0 auto;
+    grid-template-columns: 1fr 1.5fr;
+    grid-gap: 20px;
 }
 
-.dash-item {
+.dash-card {
     background: #fff;
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
 }
 
-/* 유틸리티 클래스 */
-.hidden { display: none !important; }
+/* 1. 프로필 카드 */
+.profile-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    grid-row: span 2;
+}
+
+.profile-img-wrap {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 4px solid var(--point);
+    padding: 4px;
+    margin-bottom: 16px;
+}
+
+.profile-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #e6a28e; /* 이미지 속 색상 참고 */
+}
+
+.profile-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 20px;
+}
+
+.tier-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.tier-badge.platinum {
+    background: #e0f2f1;
+    color: #00897b;
+}
+
+.tier-desc {
+    margin: 0;
+    font-size: 13px;
+    color: var(--subtext);
+}
+
+/* 2. 게이지 카드 */
+.gauge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 10px;
+}
+
+.gauge-header h3 { margin: 0; font-size: 16px; }
+.gauge-pts strong { font-size: 20px; color: var(--point-dark); }
+.gauge-pts { color: var(--subtext); font-size: 14px; }
+
+.gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--subtext);
+    margin-bottom: 8px;
+}
+
+.gauge-bar-bg {
+    height: 12px;
+    background: #eef1e8;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.gauge-bar-fill {
+    height: 100%;
+    background: var(--point-dark);
+    border-radius: 6px;
+}
+
+.gauge-desc {
+    margin: 0;
+    text-align: right;
+    font-size: 13px;
+    color: var(--subtext);
+}
+
+/* 3. 뱃지 카드 */
+.card-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.card-title-row h3 { margin: 0; font-size: 16px; }
+.btn-change {
+    background: #f5f5f5;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--subtext);
+}
+
+.badge-list {
+    display: flex;
+    gap: 20px;
+    justify-content: space-around;
+}
+
+.badge-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.badge-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 3px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background: #fff;
+}
+
+.badge-item span { font-size: 12px; color: var(--subtext); }
+
+/* 4. 미션 카드 */
+.mission-card h3 { margin: 0 0 16px 0; font-size: 16px; }
+
+.mission-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mission-list li {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+}
+.mission-list li:last-child { border: none; }
+
+.check-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--subtext);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    margin-right: 12px;
+    color: transparent;
+}
+
+.completed .check-icon {
+    background: #eef1e8;
+    border-color: var(--point);
+    color: var(--point-dark);
+}
+
+.mission-text { flex: 1; font-size: 14px; color: var(--text); }
+.mission-reward { font-size: 12px; font-weight: bold; color: var(--subtext); }
+.completed .mission-reward { color: var(--point-dark); }
