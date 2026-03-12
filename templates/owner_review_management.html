@@ -9,9 +9,11 @@
          스타일시트 영역
          - owner_drawer.css : 공통 사이드 드로어 UI 스타일
          - owner_review_management.css : 리뷰관리 페이지 전용 스타일
+         - owner_layout_common.css : 공통 헤더/푸터 스타일
          ========================= -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/page/owner_drawer.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/page/owner_review_management.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_layout_common.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_drawer.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_review_management.css') }}">
 
     <!-- =========================
          스크립트 영역

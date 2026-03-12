@@ -6,7 +6,7 @@
     <title>흑백로그 | 오너보드</title>
 
     <!-- 현재 페이지 전용 CSS 연결 -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/page/owner_board.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_board.css') }}">
     
 <body>
     <!-- =========================================================
@@ -118,7 +118,7 @@
 
                         <!-- 공지 관리 버튼 -->
                         <button class="fill-btn sidebar-notice-btn" type="button">
-                            <a href="{{url_for('owner_notice_management')}}">공지 관리</a>
+                            <a href="{{url_for('owner_notice_management')}}">공지사항  관리</a>
                         </button>
                     </div>
 
@@ -323,10 +323,12 @@
                         <!-- 리뷰 개수 요약 카드 -->
                         <div class="mini-stat-card card">
                             <div class="mini-stat-top">
-                                <h3>우리 가게 리뷰</h3>
+                                <h4>이번달 우리 가게 리뷰</h4>
 
                                 <!-- 상세 화면 이동용 화살표 버튼 -->
-                                <button class="circle-arrow" type="button">›</button>
+                                <button class="circle-arrow" type="button">
+                                    <a href="{{url_for('owner_review_management')}}">›</a>  
+                                </button>
                             </div>
 
                             <p class="stat-number">12건</p>
