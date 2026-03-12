@@ -37,19 +37,16 @@ body {
 
 /* ===== 전체 레이아웃 ===== */
 .owner-notice-page {
-    width: min(1380px, calc(100% - 32px));
     min-height: 100vh;
-    margin: 0 auto;
-    padding: 20px 0 28px;
     display: flex;
     flex-direction: column;
 }
 
 /* ===== 메인 ===== */
 .page-main {
-    width: 100%;
-    max-width: 860px;
+    width: min(100%, 860px);
     margin: 0 auto;
+    padding: 0 16px 28px;
     display: flex;
     flex-direction: column;
     gap: 22px;
@@ -298,7 +295,7 @@ body {
 /* ===== 반응형 ===== */
 @media (max-width: 900px) {
     .page-main {
-        padding: 0 4px;
+        padding: 0 16px 24px;
     }
 
     .card-header,

@@ -5,45 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>흑백로그 | 리뷰관리</title>
 
-    <!-- =========================
-         스타일시트 영역
-         - owner_drawer.css : 공통 사이드 드로어 UI 스타일
-         - owner_review_management.css : 리뷰관리 페이지 전용 스타일
-         - owner_layout_common.css : 공통 헤더/푸터 스타일
-         ========================= -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_layout_common.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_layout_common.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_drawer.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_review_management.css') }}">
 
-    <!-- =========================
-         스크립트 영역
-         - defer : HTML 파싱 완료 후 실행
-         - owner_drawer.js : 햄버거 버튼/사이드 드로어 열기·닫기 제어
-         - owner_review_management.js : 리뷰관리 페이지 전용 동작 제어
-         ========================= -->
     <script defer src="{{ url_for('static', filename='js/owner_drawer.js') }}"></script>
     <script defer src="{{ url_for('static', filename='js/owner_review_management.js') }}"></script>
 </head>
 
 <body>
-    <!-- =========================
-         전체 페이지 래퍼
-         - 헤더 / 메인 / 푸터 / 드로어를 한 화면 단위로 감싸는 최상위 컨테이너
-         ========================= -->
     <div class="owner-board-page">
-
-        <!-- =========================
-             헤더 영역
-             - 시맨틱 태그: <header>
-             - 페이지 상단의 공통 브랜드/사용자 정보/메뉴 버튼 영역
-             - owner_board와 동일한 공통 헤더 구조
-             ========================= -->
         <header class="top-header">
-
-            <!-- 헤더 좌측 영역 : 로고 배치 -->
             <div class="header-left">
                 <div class="brand-wrap">
-                    <!-- 서비스 대표 로고 -->
                     <img
                         src="{{ url_for('static', filename='img/main_logo.png') }}"
                         alt="흑백로그 로고"
@@ -52,117 +26,60 @@
                 </div>
             </div>
 
-            <!-- 헤더 우측 영역 : 날짜 / 매장 프로필 / 햄버거 버튼 -->
             <div class="header-right">
-
-                <!-- 오늘 날짜 표시 -->
                 <span class="today-date">2026.03.12</span>
 
-                <!-- 매장 프로필 정보 -->
                 <div class="store-profile">
-
-                    <!-- 현재 로그인한 매장명 -->
                     <span class="store-name">수원비빔밥집</span>
-
-                    <!-- 매장 대표 프로필 아이콘 -->
                     <div class="profile-circle">👨‍🍳</div>
                 </div>
 
-                <!-- 햄버거 메뉴 버튼
-                     - id="menuBtn" : JS에서 클릭 이벤트 연결용
-                     - aria-label : 스크린리더 접근성용 설명 -->
                 <button id="menuBtn" class="menu-toggle" type="button" aria-label="메뉴 열기">
                     ☰
                 </button>
             </div>
         </header>
 
-        <!-- =========================
-             메인 콘텐츠 영역
-             - 시맨틱 태그: <main>
-             - 이 페이지의 핵심 콘텐츠인 리뷰관리 화면 전체
-             ========================= -->
         <main class="review-page">
-
-            <!-- =========================
-                 페이지 소개 카드
-                 - 시맨틱 태그: <section>
-                 - 현재 페이지의 목적과 사용 안내를 보여주는 상단 설명 영역
-                 ========================= -->
             <section class="page-title-card card">
                 <div class="page-title-left">
-
-                    <!-- 페이지 성격을 짧게 나타내는 라벨 -->
                     <span class="page-chip">리뷰 관리</span>
-
-                    <!-- 페이지 메인 제목 -->
                     <h2>고객 리뷰를 확인하고 답변을 관리해보세요</h2>
-
-                    <!-- 페이지 보조 설명 -->
                     <p>미답변 리뷰 우선 확인, 신고 처리, 답변 등록까지 한 화면에서 관리할 수 있습니다.</p>
                 </div>
             </section>
 
-            <!-- =========================
-                 리뷰 통계 카드 영역
-                 - 시맨틱 태그: <section>
-                 - 전체 리뷰 / 미답변 / 답변완료 / 신고리뷰 현황 요약
-                 ========================= -->
             <section class="review-summary-grid">
-
-                <!-- 통계 카드 1 : 전체 리뷰 -->
                 <article class="summary-card card active">
                     <span class="summary-label">전체 리뷰</span>
                     <strong class="summary-value">128건</strong>
                 </article>
 
-                <!-- 통계 카드 2 : 미답변 리뷰 -->
                 <article class="summary-card card">
                     <span class="summary-label">미답변</span>
                     <strong class="summary-value">14건</strong>
                 </article>
 
-                <!-- 통계 카드 3 : 답변 완료 리뷰 -->
                 <article class="summary-card card">
                     <span class="summary-label">답변완료</span>
                     <strong class="summary-value">102건</strong>
                 </article>
 
-                <!-- 통계 카드 4 : 신고된 리뷰
-                     - warning 클래스 : 강조 스타일 적용 -->
                 <article class="summary-card card warning">
                     <span class="summary-label">신고리뷰</span>
                     <strong class="summary-value">12건</strong>
                 </article>
             </section>
 
-            <!-- =========================
-                 필터 카드 영역
-                 - 시맨틱 태그: <section>
-                 - 리뷰 목록을 상태별/검색어 기준으로 필터링하는 UI
-                 ========================= -->
             <section class="review-filter-card card">
-
-                <!-- 상단 필터 줄 : 상태 탭 + 검색창 -->
                 <div class="filter-top">
-
-                    <!-- 상태 탭 그룹 -->
                     <div class="tab-group">
-
-                        <!-- 전체 리뷰 보기 -->
                         <button class="tab-btn active" type="button">전체</button>
-
-                        <!-- 미답변 리뷰만 보기 -->
                         <button class="tab-btn" type="button">미답변</button>
-
-                        <!-- 답변 완료 리뷰만 보기 -->
                         <button class="tab-btn" type="button">답변완료</button>
-
-                        <!-- 신고된 리뷰만 보기 -->
                         <button class="tab-btn" type="button">신고리뷰</button>
                     </div>
 
-                    <!-- 검색 영역 : 키워드 입력 + 검색 실행 버튼 -->
                     <div class="search-box">
                         <input type="text" placeholder="검색어 입력" />
                         <button type="button">🔍</button>
@@ -170,38 +87,15 @@
                 </div>
             </section>
 
-            <!-- =========================
-                 하단 필터 줄
-                 - 정렬 / 기간 선택 필터 버튼
-                 - 현재 구조상 review-filter-card section 바깥에 위치해 있음
-                 ========================= -->
             <div class="filter-bottom">
-
-                <!-- 최신 등록 순 정렬 -->
                 <button class="filter-chip" type="button">최신순 ▼</button>
-
-                <!-- 별점 기준 정렬 -->
                 <button class="filter-chip" type="button">별점순 ▼</button>
-
-                <!-- 기간 선택 필터 -->
                 <button class="filter-chip" type="button">기간선택 ▼</button>
             </div>
 
-            <!-- =========================
-                 리뷰 목록 영역
-                 - 시맨틱 태그: <section>
-                 - 테이블 형태로 리뷰 데이터 목록 출력
-                 ========================= -->
             <section class="review-board card">
-
-                <!-- 테이블 스크롤 래퍼
-                     - 화면이 좁을 때 가로 스크롤 허용 -->
                 <div class="review-table-wrap">
-
-                    <!-- 리뷰 데이터 테이블 -->
                     <table class="review-table">
-
-                        <!-- 테이블 헤더 -->
                         <thead>
                             <tr>
                                 <th>번호</th>
@@ -213,11 +107,7 @@
                             </tr>
                         </thead>
 
-                        <!-- 테이블 본문 : 리뷰 데이터 목록 -->
                         <tbody>
-
-                            <!-- 선택된 리뷰 행
-                                 - is-selected 클래스 : 현재 상세보기와 연결된 선택 상태 -->
                             <tr class="is-selected">
                                 <td>101</td>
                                 <td>user01</td>
@@ -229,7 +119,6 @@
                                 </td>
                             </tr>
 
-                            <!-- 일반 리뷰 행 -->
                             <tr>
                                 <td>100</td>
                                 <td>user22</td>
@@ -241,7 +130,6 @@
                                 </td>
                             </tr>
 
-                            <!-- 일반 리뷰 행 -->
                             <tr>
                                 <td>99</td>
                                 <td>user77</td>
@@ -253,7 +141,6 @@
                                 </td>
                             </tr>
 
-                            <!-- 일반 리뷰 행 -->
                             <tr>
                                 <td>98</td>
                                 <td>user09</td>
@@ -268,8 +155,6 @@
                     </table>
                 </div>
 
-                <!-- 페이지네이션 영역
-                     - 리뷰 목록 페이지 이동 버튼 -->
                 <div class="pagination">
                     <button type="button">&lt;</button>
                     <button type="button" class="active">1</button>
@@ -281,14 +166,7 @@
                 </div>
             </section>
 
-            <!-- =========================
-                 리뷰 상세 / 답변 입력 영역
-                 - 시맨틱 태그: <section>
-                 - 선택한 리뷰의 상세정보 확인 및 답변 작성/수정/삭제/신고 처리
-                 ========================= -->
             <section class="review-detail-card card">
-
-                <!-- 리뷰 메타 정보 -->
                 <div class="detail-meta">
                     <span><strong>작성자</strong> : user01</span>
                     <span><strong>별점</strong> : ★★★★★</span>
@@ -296,57 +174,34 @@
                     <span><strong>상태</strong> : 미답변</span>
                 </div>
 
-                <!-- 상세 내용 본문 -->
                 <div class="detail-content">
-
-                    <!-- 실제 작성된 리뷰 내용 -->
                     <div class="detail-row">
                         <strong>리뷰</strong>
                         <p>음식이 깔끔하고 맛있어요. 다음에도 방문하고 싶습니다.</p>
                     </div>
 
-                    <!-- 답변 작성 영역 -->
                     <div class="detail-row answer-row">
                         <strong>답변</strong>
-
-                        <!-- 점주가 고객에게 남길 답변 입력창 -->
                         <textarea placeholder="고객에게 남길 답변을 입력해주세요."></textarea>
                     </div>
                 </div>
 
-                <!-- 상세 액션 버튼 영역 -->
                 <div class="detail-actions">
-
-                    <!-- 신규 답변 등록 -->
                     <button class="fill-btn" type="button">등록</button>
-
-                    <!-- 기존 답변 수정 -->
                     <button class="ghost-btn" type="button">수정</button>
-
-                    <!-- 답변 또는 선택 항목 삭제 -->
                     <button class="ghost-btn" type="button">삭제</button>
-
-                    <!-- 리뷰 신고 처리 -->
                     <button class="ghost-btn warning" type="button">신고처리</button>
                 </div>
             </section>
         </main>
 
-        <!-- =========================
-             푸터 영역
-             - 시맨틱 태그: <footer>
-             - 서비스 정보 / 저작권 / 안내문 표시
-             ========================= -->
         <footer class="site-footer">
             <div class="footer-inner">
-
-                <!-- 푸터 브랜드 영역 -->
                 <div class="footer-brand">
                     <strong>흑백로그</strong>
                     <span>Black & White Log</span>
                 </div>
 
-                <!-- 푸터 안내 문구 영역 -->
                 <div class="footer-info">
                     <p>© 2026 흑백로그. All rights reserved.</p>
                     <p>
@@ -361,25 +216,10 @@
         </footer>
     </div>
 
-    <!-- =========================
-         사이드 드로어 배경 오버레이
-         - 드로어가 열렸을 때 뒷배경을 어둡게 처리
-         - hidden 속성으로 기본 비노출
-         ========================= -->
     <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
 
-    <!-- =========================
-         사이드 드로어 메뉴
-         - 시맨틱 태그: <aside>
-         - 보조 탐색 영역(사이드 메뉴)
-         - aria-hidden : 접근성 상태 제어용
-         ========================= -->
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
-
-        <!-- 드로어 상단 헤더 -->
         <div class="side-drawer__header">
-
-            <!-- 드로어 닫기 버튼 -->
             <button
                 type="button"
                 class="side-drawer__close"
@@ -389,7 +229,6 @@
                 ×
             </button>
 
-            <!-- 드로어 내부 프로필 -->
             <div class="side-drawer__profile">
                 <div class="side-drawer__avatar">
                     <span>👨‍🍳</span>
@@ -398,48 +237,33 @@
             </div>
         </div>
 
-        <!-- 드로어 본문 -->
         <div class="side-drawer__body">
-
-            <!-- =========================
-                 내비게이션 메뉴
-                 - 시맨틱 태그: <nav>
-                 - 페이지 이동 링크 모음
-                 ========================= -->
             <nav class="side-drawer__nav">
-
-                <!-- 대시보드 이동 -->
                 <a href="{{ url_for('owner_board') }}" class="side-drawer__item">
                     <span class="side-drawer__icon">⌂</span>
                     <span>대시보드</span>
                 </a>
 
-                <!-- 메뉴 관리 이동 -->
                 <a href="{{ url_for('owner_menu_management') }}" class="side-drawer__item">
                     <span class="side-drawer__icon">▣</span>
                     <span>메뉴 관리</span>
                 </a>
 
-                <!-- 리뷰 관리 이동 -->
                 <a href="{{ url_for('owner_review_management') }}" class="side-drawer__item">
                     <span class="side-drawer__icon">✎</span>
                     <span>리뷰 관리</span>
                 </a>
 
-                <!-- 가게 정보 이동 -->
-                <a href="#" class="side-drawer__item">
-                    <span class="side-drawer__icon">🏪</span>
-                    <span>가게 정보</span>
+                <a href="{{ url_for('owner_notice_management') }}" class="side-drawer__item">
+                    <span class="side-drawer__icon">📢</span>
+                    <span>공지사항 관리</span>
                 </a>
             </nav>
 
-            <!-- 구분선 -->
             <div class="side-drawer__divider"></div>
 
-            <!-- 기타 섹션 제목 -->
             <div class="side-drawer__section-title">기타</div>
 
-            <!-- 기타 하위 링크 목록 -->
             <div class="side-drawer__sublist">
                 <a href="#" class="side-drawer__subitem">설정</a>
                 <a href="#" class="side-drawer__subitem">고객센터</a>
@@ -447,11 +271,5 @@
             </div>
         </div>
     </aside>
-
-    <!-- =========================
-         페이지 전용 스크립트 재호출 영역
-         - 현재 문서 하단에서 owner_review_management.js를 한 번 더 불러오고 있음
-         ========================= -->
-    <script src="{{ url_for('static', filename='js/owner_review_management.js') }}"></script>
 </body>
 </html>

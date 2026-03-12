@@ -5,16 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>흑백로그 | 공지사항 관리</title>
 
-    <!-- 공통 헤더/푸터 스타일 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_layout_common.css') }}" />
-
-    <!-- 페이지 전용 스타일 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_notice_management.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_drawer.css') }}" />
 
-    <!-- 드로어 공통 스타일 -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_drawer.css') }}">
-
-    <!-- 스크립트 -->
     <script defer src="{{ url_for('static', filename='js/owner_notice_management.js') }}"></script>
     <script defer src="{{ url_for('static', filename='js/owner_drawer.js') }}"></script>
 </head>
@@ -47,7 +41,6 @@
             </div>
         </header>
 
-        <!-- 본문 -->
         <main class="page-main">
             <section class="notice-card">
                 <div class="card-header">
@@ -174,10 +167,8 @@
         </footer>
     </div>
 
-    <!-- 드로어 배경 -->
     <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
 
-    <!-- 사이드 드로어 -->
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
         <div class="side-drawer__header">
             <button
