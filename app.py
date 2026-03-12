@@ -48,5 +48,11 @@ def owner_review_management():
     return render_template("owner_review_management.html")
 
 
+# Oner 공지사항 route
+@app.route("/owner/notice_management")
+def owner_notice_management():
+    return render_template("owner_notice_management.html")
+
+
 if __name__ == "__main__":
     app.run(debug=os.getenv("FLASK_DEBUG", "True") == "True")
