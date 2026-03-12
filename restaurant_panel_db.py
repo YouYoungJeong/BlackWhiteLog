@@ -49,6 +49,7 @@ def get_restaurant_reviews(restaurant_id):
             r.created_at,
             u.nickname, 
             u.profile_image_url AS user_image,
+            v.user_id,
             GROUP_CONCAT(ri.image_url ORDER BY ri.sort_order ASC) AS review_images
         FROM reviews r
         JOIN visits v ON r.visit_id = v.visit_id
@@ -67,19 +68,22 @@ def get_restaurant_reviews(restaurant_id):
         conn.close()
         
 def save_restaurant_review(restaurant_id, user_id, rating, content):
-    """방문 기록 생성 후 리뷰를 저장하는 트랜잭션 함수"""
+    """
+    [명세서 준수] visits는 필수 외래키만, reviews는 created_at 포함하여 저장
+    """
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # 1. visits 테이블에 방문 기록 생성
+            # 1. visits 테이블 (visit_date 에러가 났었으므로, 필수 정보만 입력)
+            # 만약 DB에서 자동 생성이 안 된다면 명세서대로 'visit_date'를 다시 확인해야 해!
             visit_sql = """
-                INSERT INTO visits (user_id, restaurant_id, visit_date)
-                VALUES (%s, %s, CURDATE())
+                INSERT INTO visits (user_id, restaurant_id, visited_at)
+                VALUES (%s, %s, NOW())
             """
             cursor.execute(visit_sql, (user_id, restaurant_id))
-            visit_id = cursor.lastrowid # 방금 생성된 visit_id 가져오기
+            visit_id = cursor.lastrowid 
 
-            # 2. reviews 테이블에 리뷰 데이터 저장
+            # 2. reviews 테이블 (명세서의 created_at 컬럼 사용)
             review_sql = """
                 INSERT INTO reviews (visit_id, rating, content, created_at)
                 VALUES (%s, %s, %s, NOW())
@@ -90,7 +94,57 @@ def save_restaurant_review(restaurant_id, user_id, rating, content):
             return True
     except Exception as e:
         conn.rollback()
-        print(f"Review Save Error: {e}")
+        print(f"Review Save Error (DB): {e}")
+        return False
+    finally:
+        conn.close()
+
+def delete_review_transaction(review_id, user_id):
+    """리뷰 삭제 및 AUTO_INCREMENT 정리"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. 소유권 확인 및 visit_id 추출
+            check_sql = """
+                SELECT v.visit_id FROM reviews r 
+                JOIN visits v ON r.visit_id = v.visit_id 
+                WHERE r.review_id = %s AND v.user_id = %s
+            """
+            cursor.execute(check_sql,(review_id, user_id))
+            res = cursor.fetchone()
+            if not res: return False # 소유권 없음
+
+            visit_id = res['visit_id']
+
+            # 2. 자식(리뷰) 삭제
+            cursor.execute("DELETE FROM reviews WHERE review_id = %s", (review_id,))
+            
+            # 3. 부모(방문기록) 삭제
+            cursor.execute("DELETE FROM visits WHERE visit_id = %s", (visit_id,))
+
+            # # 4. AUTO_INCREMENT 최적화 
+            # # 마지막 번호를 지웠을 때 다음 번호가 건너뛰지 않도록 현재 최대값으로 조정
+            # cursor.execute("SELECT MAX(review_id) AS max_id FROM reviews")
+            # max_id = cursor.fetchone()['max_id'] or 0
+            # cursor.execute(f"ALTER TABLE reviews AUTO_INCREMENT = {max_id + 1}")
+            
+            # 3. reviews 테이블 AUTO_INCREMENT 초기화
+            cursor.execute("SELECT MAX(review_id) AS max_id FROM reviews")
+            row_rev = cursor.fetchone()
+            max_rev_id = row_rev['max_id'] if row_rev['max_id'] is not None else 0
+            cursor.execute(f"ALTER TABLE reviews AUTO_INCREMENT = {max_rev_id + 1}")
+
+            # 4. 🌟 visits 테이블 AUTO_INCREMENT 초기화 (추가됨)
+            cursor.execute("SELECT MAX(visit_id) AS max_id FROM visits")
+            row_vis = cursor.fetchone()
+            max_vis_id = row_vis['max_id'] if row_vis['max_id'] is not None else 0
+            cursor.execute(f"ALTER TABLE visits AUTO_INCREMENT = {max_vis_id + 1}")
+
+            conn.commit()
+            return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Delete Error: {e}")
         return False
     finally:
         conn.close()

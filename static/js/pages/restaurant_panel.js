@@ -48,6 +48,7 @@ tabButtons.forEach(btn => {
 
 // 패널 열기 및 AJAX 정보 호출 함수 
 async function openDetailPanel(restaurantId) {
+    const currentUserId = 1; // 나중에 로그인 세션값으로 대체
     const detailPanel = document.getElementById("restaurantDetailPanel");
     detailPanel.classList.remove("hidden");
 
@@ -146,8 +147,12 @@ async function openDetailPanel(restaurantId) {
                     const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
                     const userImgStyle = r.user_image ? `background-image: url('${r.user_image}');` : `background-color: #ddd;`;
                     const reviewImageHtml = r.review_image ? `<img src="${r.review_image}" alt="리뷰 이미지" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 12px;">` : '';
-                    
+
+                    const isMine = r.user_id === currentUserId;
+                    const deleteBtn = isMine ? `<button class="delete-review-btn" onclick="deleteReview(${r.review_id}, ${restaurantId})">삭제</button>` : '';
+
                     let imageGalleryHtml = '';
+                    // 이미지 나열
                     if (r.review_images) {
                         // 콤마로 구분된 문자열을 배열로 변환
                         const imgList = r.review_images.split(','); 
@@ -166,6 +171,7 @@ async function openDetailPanel(restaurantId) {
                                         <span class="user-nickname">${r.nickname || '익명'}</span>
                                     </div>
                                     <span class="review-date">${dateStr}</span>
+                                    ${deleteBtn}
                                 </div>
                                 <div class="review-rating-stars">${stars}</div>
                                 
@@ -187,6 +193,18 @@ async function openDetailPanel(restaurantId) {
         infoTab.innerHTML = `<p style="color:red;">오류 발생: ${error.message}</p>`;
         console.error("Detail Fetch Error:", error);
     }
+}
+
+// 삭제 실행 함수
+async function deleteReview(review_id, restaurantId) {
+    if (!confirm("정말 이 리뷰를 삭제하시겠습니까?")) return;
+
+    try {
+        const res = await fetch(`/api/reviews/${review_id}`, { method: "DELETE" });
+        if ((await res.json()).success) {
+            openDetailPanel(restaurantId); // 목록 갱신
+        }
+    } catch (e) { console.error(e); }
 }
 
 document.addEventListener("click", (event) => {
@@ -274,7 +292,7 @@ function resetReviewForm() {
 }
 
 // =======================================================
-// [업그레이드] 이미지 개별 삭제가 가능한 멀티 미리보기
+// 이미지 개별 삭제가 가능한 멀티 미리보기
 // =======================================================
 const reviewImageInput = document.getElementById("reviewImage");
 const previewContainer = document.getElementById("imagePreviewContainer");
@@ -350,7 +368,7 @@ if (reviewImageInput && previewSlider) {
 }
 
 // =======================================================
-// [신규] Step 4-4: 리뷰 서버 전송 (이미지 포함)
+// Step 4-4: 리뷰 서버 전송 (이미지 포함)
 // =======================================================
 document.getElementById("submitReviewBtn").addEventListener("click", async () => {
     const detailPanel = document.getElementById("restaurantDetailPanel");
@@ -382,7 +400,6 @@ document.getElementById("submitReviewBtn").addEventListener("click", async () =>
         const result = await response.json();
 
         if (result.success) {
-            alert("리뷰가 등록되었습니다!");
             resetReviewForm(); // 폼 초기화
             openDetailPanel(restaurantId); // 리뷰 목록 새로고침하여 방금 쓴 글 확인
         } else {
