@@ -1,0 +1,902 @@
+@charset "UTF-8";
+
+/* =========================
+   전역 컬러 / 공통 토큰 변수
+   - 프로젝트 전체에서 재사용할 색상
+   - 카드 그림자
+   - 공통 radius 값
+   - Black & White + Sage Green 테마
+========================= */
+:root {
+    /* 기본 텍스트/배경 컬러 */
+    --color-black: #111111;
+    --color-text: #222222;
+    --color-white: #ffffff;
+    --color-bg: #f5f5f2;
+
+    /* 보더/라인 컬러 */
+    --color-line: #d8ddd2;
+    --color-line-soft: #e8ece3;
+
+    /* 포인트 컬러 : 세이지 그린 */
+    --color-sage: #98ad8a;
+    --color-sage-dark: #7f9672;
+    --color-sage-light: #edf3e8;
+
+    /* 버튼 보조 배경 */
+    --color-gray-btn: #f3f4f2;
+
+    /* 카드 그림자 */
+    --shadow-card: 0 8px 24px rgba(17, 17, 17, 0.06);
+
+    /* 공통 라운드 값 */
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 10px;
+}
+
+/* =========================
+   브라우저 기본 박스모델 통일
+   - padding/border 포함 기준으로 크기 계산
+========================= */
+* {
+    box-sizing: border-box;
+}
+
+/* =========================
+   문서 기본 설정
+   - html, body의 기본 margin 제거
+   - 전체 폰트 지정
+   - 전체 배경색/기본 글자색 지정
+========================= */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Pretendard", "Noto Sans KR", sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* body 최소 높이 확보
+   - 푸터를 하단으로 밀어내기 위한 기본 높이 */
+body {
+    min-height: 100vh;
+}
+
+/* 링크 기본 스타일 초기화
+   - 상위 요소의 글자색을 그대로 사용
+   - 밑줄 제거 */
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* 폼 컨트롤 폰트 통일
+   - 버튼/인풋/셀렉트가 본문 폰트를 따라가도록 설정 */
+button,
+input,
+select {
+    font: inherit;
+}
+
+/* 이미지 기본 처리
+   - inline 여백 방지
+   - 부모 너비를 넘지 않도록 제한 */
+img {
+    display: block;
+    max-width: 100%;
+}
+
+/* =========================
+   페이지 전체 레이아웃
+   - 페이지 세로 구조
+   - 메인 콘텐츠 영역 폭 제한
+========================= */
+
+/* 페이지 전체 래퍼
+   - 헤더 / 본문 / 푸터를 세로로 배치 */
+.owner-menu-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 메인 콘텐츠 영역
+   - 중앙 정렬
+   - 최대 폭 제한
+   - 카드 사이 간격 유지 */
+.main-content {
+    width: min(100%, 760px);
+    margin: 0 auto;
+    padding: 0 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* =========================
+   상단 헤더 영역
+   - 로고
+   - 날짜
+   - 매장 정보
+   - 햄버거 버튼
+========================= */
+
+/* 헤더 전체 박스
+   - 반투명 화이트 배경
+   - 좌우 정렬
+   - 큰 라운드 카드 형태 */
+.top-header {
+    height: 94px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #edf0ea;
+    border-radius: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    margin: 20px auto 22px;
+    width: min(1380px, calc(100% - 32px));
+}
+
+/* 헤더 왼쪽 그룹
+   - 로고 영역 정렬용 */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 46px;
+}
+
+/* 로고 래퍼
+   - 로고 수직 중앙 정렬 */
+.brand-wrap {
+    display: flex;
+    align-items: center;
+}
+
+/* 로고 링크
+   - 클릭 가능한 로고 정렬 */
+.brand-logo {
+    display: flex;
+    align-items: center;
+}
+
+/* 실제 로고 이미지
+   - 높이 기준으로 크기 제어
+   - 비율 유지 */
+.main-logo {
+    height: 75px;
+    width: auto;
+    display: block;
+    object-fit: contain;
+}
+
+/* 헤더 오른쪽 그룹
+   - 날짜 / 프로필 / 햄버거 버튼 정렬 */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+/* 오늘 날짜 텍스트 */
+.today-date {
+    color: #707070;
+    font-size: 1.1rem;
+}
+
+/* 매장 프로필 묶음
+   - 매장명과 원형 프로필 아이콘 가로 배치 */
+.store-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 매장명 텍스트 */
+.store-name {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-black);
+    letter-spacing: 0;
+}
+
+/* 원형 프로필 아이콘
+   - 사장님/매장 대표 아이콘 표시용 */
+.profile-circle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: #f3ede6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    border: 1px solid #e7e1d9;
+}
+
+/* 햄버거 메뉴 버튼
+   - 드로어 열기 버튼 */
+.menu-toggle {
+    width: 54px;
+    height: 54px;
+    border: 1px solid #d9ddd4;
+    border-radius: 18px;
+    font-size: 1.8rem;
+    color: #333;
+    background: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* 햄버거 버튼 hover 상태
+   - 포인트 컬러 강조 */
+.menu-toggle:hover {
+    border-color: var(--color-sage);
+    background: var(--color-sage-light);
+}
+
+/* =========================
+   공통 카드 스타일
+   - 메뉴 등록 카드
+   - 등록된 메뉴 카드
+========================= */
+
+/* 두 카드의 공통 박스 스타일
+   - 흰색 배경
+   - 연한 라인
+   - 큰 라운드
+   - 카드 그림자 */
+.menu-form-card,
+.registered-menu-card {
+    background: var(--color-white);
+    border: 1px solid var(--color-line-soft);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 28px 26px;
+}
+
+/* 섹션 제목
+   - 메뉴 등록 / 등록된 메뉴 공통 제목 */
+.section-title {
+    margin: 0 0 24px;
+    font-size: 1.95rem;
+    font-weight: 800;
+    color: var(--color-black);
+    letter-spacing: -0.03em;
+}
+
+/* 소제목
+   - 메뉴 사진 등록 / 옵션 설정 같은 내부 제목 */
+.sub-title {
+    margin: 0 0 18px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-black);
+}
+
+/* =========================
+   메뉴 등록 폼 영역
+   - 업로드
+   - 상세 입력
+   - 옵션 설정
+========================= */
+
+/* 각 폼 섹션 공통
+   - 위쪽 구분선으로 영역 분리 */
+.menu-upload-section,
+.menu-detail-section,
+.menu-option-section {
+    padding-top: 18px;
+    border-top: 1px solid var(--color-line-soft);
+}
+
+/* 상세 정보 / 옵션 설정 섹션
+   - 이전 블록과 위쪽 간격 확보 */
+.menu-detail-section,
+.menu-option-section {
+    margin-top: 16px;
+}
+
+/* 이미지 + 입력 필드 2열 레이아웃
+   - 왼쪽 이미지 업로드
+   - 오른쪽 텍스트 입력 */
+.upload-form-grid {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 18px;
+    align-items: start;
+}
+
+/* 이미지 업로드 박스
+   - 미리보기와 버튼을 세로로 배치 */
+.image-upload-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 이미지 미리보기 프레임
+   - 썸네일 크기 고정
+   - 이미지 넘침 숨김 */
+.preview-image-wrap {
+    width: 160px;
+    height: 136px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    background: #f0f0ec;
+}
+
+/* 미리보기 이미지
+   - 박스를 꽉 채우며 비율에 맞게 잘라 표시 */
+.preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 메뉴 입력 전체 영역
+   - 메뉴명 / 가격 입력을 세로 배치 */
+.menu-input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* 각 입력 행의 전체 너비 사용 */
+.form-row {
+    width: 100%;
+}
+
+/* 세로형 입력 묶음
+   - label 위 / input 아래 배치 */
+.form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 폼 라벨 공통 스타일
+   - 일반 입력 라벨
+   - 가로 배치 필드 라벨 */
+.form-row label,
+.field-group label {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-black);
+}
+
+/* 입력 요소 공통 스타일
+   - 텍스트 입력
+   - 숫자 입력
+   - 셀렉트 박스 */
+input[type="text"],
+input[type="number"],
+select {
+    width: 100%;
+    height: 48px;
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    padding: 0 14px;
+    background: var(--color-white);
+    color: var(--color-text);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* 입력 요소 focus 상태
+   - 세이지 그린 라인 강조
+   - 접근성용 외곽 glow */
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    border-color: var(--color-sage);
+    box-shadow: 0 0 0 4px rgba(152, 173, 138, 0.15);
+}
+
+/* 가격 입력 래퍼
+   - 오른쪽 '원' 단위를 absolute 배치하기 위한 기준 */
+.price-input-wrap {
+    position: relative;
+}
+
+/* 가격 input 우측 여백 확보
+   - 단위 텍스트가 겹치지 않도록 패딩 추가 */
+.price-input-wrap input {
+    padding-right: 44px;
+}
+
+/* 가격 단위 텍스트(원)
+   - 입력창 우측 중앙 고정 */
+.price-unit {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666666;
+    font-weight: 700;
+}
+
+/* 카테고리 + 설명 가로 배치 행
+   - 좌측 고정폭 / 우측 가변폭 */
+.horizontal-row {
+    display: grid;
+    grid-template-columns: 330px 1fr;
+    gap: 18px;
+    align-items: end;
+}
+
+/* 개별 필드 그룹
+   - 라벨과 입력창을 가로로 정렬 */
+.field-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* 라벨 줄바꿈 방지
+   - '카테고리:' 같은 짧은 텍스트가 한 줄 유지 */
+.field-group label {
+    white-space: nowrap;
+}
+
+/* 카테고리 select가 그리드 안에서 넘치지 않도록 최소 폭 해제 */
+.category-group select {
+    min-width: 0;
+}
+
+/* 설명 input이 그리드 안에서 넘치지 않도록 최소 폭 해제 */
+.description-group input {
+    min-width: 0;
+}
+
+/* =========================
+   버튼 공통 스타일
+   - 주요 버튼
+   - 보조 버튼
+   - 외곽선 버튼
+========================= */
+
+/* 공통 버튼 베이스
+   - 높이
+   - 라운드
+   - 패딩
+   - hover transition */
+.point-btn,
+.sub-btn,
+.ghost-btn,
+.outline-btn {
+    height: 46px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    padding: 0 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* 주요 액션 버튼
+   - 등록완료 / 메뉴 등록 등에 사용 */
+.point-btn {
+    background: var(--color-sage);
+    border-color: var(--color-sage);
+    color: var(--color-white);
+}
+
+/* 주요 버튼 hover */
+.point-btn:hover {
+    background: var(--color-sage-dark);
+    border-color: var(--color-sage-dark);
+}
+
+/* 보조 버튼 / 고스트 버튼
+   - 취소 / 임시저장 계열 */
+.sub-btn,
+.ghost-btn {
+    background: var(--color-gray-btn);
+    border-color: var(--color-line);
+    color: var(--color-black);
+}
+
+/* 보조 버튼 hover */
+.sub-btn:hover,
+.ghost-btn:hover {
+    background: #ebeee8;
+    border-color: #cbd3c2;
+}
+
+/* 외곽선 버튼
+   - 옵션 그룹 추가 버튼 등에 사용 */
+.outline-btn {
+    background: var(--color-white);
+    border-color: var(--color-line);
+    color: var(--color-black);
+}
+
+/* 외곽선 버튼 hover */
+.outline-btn:hover {
+    background: var(--color-sage-light);
+    border-color: var(--color-sage);
+}
+
+/* 업로드 버튼 전체 너비 사용 */
+.upload-btn {
+    width: 100%;
+}
+
+/* 옵션 그룹 버튼 래퍼
+   - 아래 체크박스와 간격 확보 */
+.option-group-wrap {
+    margin-bottom: 18px;
+}
+
+/* 옵션 그룹 추가 버튼 최소 너비 확보 */
+.option-add-btn {
+    min-width: 270px;
+}
+
+/* 체크박스 묶음 행
+   - 품절 처리 / 숨김을 가로로 배치 */
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+/* 체크박스 한 세트
+   - 체크박스와 텍스트를 한 줄로 묶음 */
+.check-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--color-black);
+}
+
+/* 체크박스 자체 스타일
+   - 크기 통일
+   - 포인트 컬러 적용 */
+.check-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-sage-dark);
+    cursor: pointer;
+}
+
+/* 하단 액션 버튼 영역
+   - 취소 / 임시저장 / 등록완료 정렬
+   - 상단 구분선으로 폼 내용과 분리 */
+.action-btn-row {
+    margin-top: 22px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-line-soft);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* =========================
+   등록된 메뉴 카드 리스트 영역
+   - 메뉴 썸네일
+   - 메뉴명/가격
+   - 수정/삭제 버튼
+========================= */
+
+/* 등록된 메뉴 목록 컨테이너
+   - 카드들을 세로 리스트로 배치 */
+.registered-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* 메뉴 카드 한 개
+   - 썸네일 / 정보 / 버튼 3열 배치 */
+.registered-menu-item {
+    display: grid;
+    grid-template-columns: 92px 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    border: 1px solid var(--color-line);
+    border-radius: 16px;
+    background: #fcfcfa;
+}
+
+/* 메뉴 썸네일 박스
+   - 고정 크기
+   - 둥근 모서리
+   - 이미지 넘침 숨김 */
+.registered-menu-thumb {
+    width: 92px;
+    height: 92px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--color-line-soft);
+    background: #f0f0ec;
+    flex-shrink: 0;
+}
+
+/* 썸네일 이미지
+   - 박스를 꽉 채우며 crop */
+.registered-menu-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 메뉴 정보 영역
+   - 텍스트 줄바꿈 계산 안정화 */
+.registered-menu-info {
+    min-width: 0;
+}
+
+/* 메뉴명 텍스트 */
+.registered-menu-name {
+    margin: 0 0 8px;
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: var(--color-black);
+    letter-spacing: -0.02em;
+}
+
+/* 메뉴 가격 텍스트 */
+.registered-menu-price {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: #5f6a57;
+}
+
+/* 수정 / 삭제 버튼 그룹 */
+.registered-menu-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 수정 / 삭제 버튼 공통 */
+.menu-edit-btn,
+.menu-delete-btn {
+    min-width: 68px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* 수정 버튼
+   - 세이지 강조 */
+.menu-edit-btn {
+    border: 1px solid var(--color-sage);
+    background: var(--color-sage-light);
+    color: var(--color-sage-dark);
+}
+
+/* 수정 버튼 hover */
+.menu-edit-btn:hover {
+    background: #dfe9d6;
+}
+
+/* 삭제 버튼
+   - 중립 화이트 버튼 */
+.menu-delete-btn {
+    border: 1px solid var(--color-line);
+    background: var(--color-white);
+    color: #555555;
+}
+
+/* 삭제 버튼 hover */
+.menu-delete-btn:hover {
+    border-color: #bfc8b6;
+    background: #f3f4ef;
+}
+
+/* =========================
+   푸터 영역
+   - 하단 링크
+   - 안내 문구
+========================= */
+
+/* 전체 푸터
+   - 페이지 하단 고정 역할
+   - 상단 구분선 */
+.site-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--color-line-soft);
+    background: #f3f4ef;
+}
+
+/* 푸터 내부 컨테이너
+   - 폭 제한 + 중앙 정렬 */
+.footer-inner {
+    width: min(100%, 1100px);
+    margin: 0 auto;
+    padding: 16px 20px 22px;
+    text-align: center;
+}
+
+/* 푸터 링크 줄
+   - 공지사항 / 표시하기 / 이용약관 정렬 */
+.footer-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.93rem;
+    color: #444444;
+    margin-bottom: 10px;
+}
+
+/* 푸터 링크 hover */
+.footer-links a:hover {
+    color: var(--color-sage-dark);
+}
+
+/* 푸터 안내 문구 */
+.footer-copy p {
+    margin: 4px 0;
+    font-size: 0.82rem;
+    color: #777777;
+    line-height: 1.5;
+}
+
+/* =========================
+   반응형 : 860px 이하
+   - 헤더 세로 전환
+   - 카드 패딩 축소
+   - 업로드 영역 1열 전환
+========================= */
+@media (max-width: 860px) {
+    /* 헤더를 세로 구조로 변경
+       - 높이 자동
+       - 내부 요소 줄바꿈 대응 */
+    .top-header {
+        height: auto;
+        padding: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 18px;
+        width: min(100%, calc(100% - 24px));
+        margin: 12px auto 18px;
+    }
+
+    /* 헤더 오른쪽 그룹
+       - 전체 너비 사용
+       - 우측 정렬 + 줄바꿈 허용 */
+    .header-right {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    /* 카드 크기 축소
+       - 모바일/태블릿에서 여백 감소 */
+    .menu-form-card,
+    .registered-menu-card {
+        padding: 24px 18px;
+        border-radius: 20px;
+    }
+
+    /* 업로드 영역을 한 줄 한 칸으로 변경 */
+    .upload-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* 업로드 박스 최대 너비 제한 */
+    .image-upload-box {
+        width: 100%;
+        max-width: 220px;
+    }
+
+    /* 미리보기 박스를 부모 너비에 맞춰 확장 */
+    .preview-image-wrap {
+        width: 100%;
+        height: 170px;
+    }
+
+    /* 카테고리/설명 가로 배치를 세로로 변경 */
+    .horizontal-row {
+        grid-template-columns: 1fr;
+    }
+
+    /* 필드 그룹 내부 라벨과 입력을 세로 정렬 */
+    .field-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* 하단 액션 버튼 줄바꿈 허용 */
+    .action-btn-row {
+        flex-wrap: wrap;
+    }
+
+    /* 버튼이 남는 공간을 유연하게 차지하도록 설정 */
+    .action-btn-row button {
+        flex: 1 1 140px;
+    }
+}
+
+/* =========================
+   반응형 : 640px 이하
+   - 등록 메뉴 카드 구조 단순화
+========================= */
+@media (max-width: 640px) {
+    /* 메뉴 카드
+       - 썸네일 + 정보 2열 구성으로 변경 */
+    .registered-menu-item {
+        grid-template-columns: 72px 1fr;
+        align-items: start;
+    }
+
+    /* 썸네일 크기 축소 */
+    .registered-menu-thumb {
+        width: 72px;
+        height: 72px;
+    }
+
+    /* 버튼 영역을 아래 줄 전체로 이동 */
+    .registered-menu-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+        margin-top: 6px;
+    }
+}
+
+/* =========================
+   반응형 : 520px 이하
+   - 폰트/아이콘/로고 크기 추가 축소
+========================= */
+@media (max-width: 520px) {
+    /* 로고 축소 */
+    .main-logo {
+        height: 56px;
+    }
+
+    /* 날짜 폰트 축소 */
+    .today-date {
+        font-size: 0.95rem;
+    }
+
+    /* 매장명 폰트 축소 */
+    .store-name {
+        font-size: 1.1rem;
+    }
+
+    /* 프로필 원형 아이콘 축소 */
+    .profile-circle {
+        width: 46px;
+        height: 46px;
+        font-size: 1.45rem;
+    }
+
+    /* 햄버거 버튼 축소 */
+    .menu-toggle {
+        width: 42px;
+        height: 42px;
+        font-size: 1.45rem;
+    }
+
+    /* 메인 섹션 제목 축소 */
+    .section-title {
+        font-size: 1.55rem;
+    }
+
+    /* 소제목 축소 */
+    .sub-title {
+        font-size: 0.98rem;
+    }
+
+    /* 푸터 안내 문구 축소 */
+    .footer-copy p {
+        font-size: 0.76rem;
+    }
+}

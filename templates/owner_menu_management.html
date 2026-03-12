@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>흑백로그 | 메뉴 등록</title>
+
+    <!-- =========================
+        스타일시트 연결 영역
+        - 공통 드로어(사이드 메뉴) 스타일
+        - 현재 페이지(메뉴 관리) 전용 스타일
+    ========================= -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page/owner_drawer.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page/owner_menu_management.css') }}">
+
+    <!-- =========================
+        스크립트 연결 영역
+        - owner_drawer.js : 햄버거 버튼 클릭 시 사이드 드로어 열기/닫기 제어
+        - owner_menu_management.js : 메뉴 등록/수정/삭제 등 페이지 기능 제어
+        - defer : HTML 해석 후 실행되어 DOM 요소를 안전하게 참조
+    ========================= -->
+    <script defer src="{{ url_for('static', filename='js/owner_drawer.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='js/owner_menu_management.js') }}"></script>
+</head>
+
+<body>
+    <!-- =========================
+        페이지 전체 래퍼
+        - 오너 메뉴 관리 화면 전체를 감싸는 최상위 컨테이너
+    ========================= -->
+    <div class="owner-menu-page">
+
+        <!-- =========================
+            [시멘틱 태그] header
+            상단 헤더 영역
+            - 로고
+            - 날짜
+            - 가게 정보
+            - 햄버거 메뉴 버튼
+        ========================= -->
+        <header class="top-header">
+
+            <!-- 헤더 좌측 영역 : 브랜드 로고 -->
+            <div class="header-left">
+                <div class="brand-wrap">
+                    <!-- 메인 페이지("/")로 이동하는 로고 링크 -->
+                    <a href="/" class="brand-logo">
+                        <img
+                            src="{{ url_for('static', filename='img/main_logo.png') }}"
+                            alt="흑백로그 로고"
+                            class="main-logo"
+                        >
+                    </a>
+                </div>
+            </div>
+
+            <!-- 헤더 우측 영역 : 날짜 / 매장 프로필 / 메뉴 버튼 -->
+            <div class="header-right">
+
+                <!-- 현재 날짜 표시 -->
+                <span class="today-date">2026.03.12</span>
+
+                <!-- 매장 프로필 정보 -->
+                <div class="store-profile">
+                    <!-- 매장 이름 -->
+                    <span class="store-name">수원비빔밥집</span>
+
+                    <!-- 매장/사장 프로필 아이콘 -->
+                    <div class="profile-circle">👨‍🍳</div>
+                </div>
+
+                <!-- 햄버거 메뉴 버튼
+                    - id="menuBtn" : JS에서 클릭 이벤트 연결용
+                    - aria-label : 접근성용 설명 -->
+                <button id="menuBtn" class="menu-toggle" type="button" aria-label="메뉴 열기">
+                    ☰
+                </button>
+            </div>
+        </header>
+
+        <!-- =========================
+            [시멘틱 태그] main
+            본문 메인 콘텐츠 영역
+            - 메뉴 등록 카드
+            - 등록된 메뉴 목록 카드
+        ========================= -->
+        <main class="main-content">
+
+            <!-- =========================
+                [시멘틱 태그] section
+                메뉴 등록 폼 카드
+                - 새 메뉴를 등록하는 입력 폼 영역
+            ========================= -->
+            <section class="menu-form-card">
+
+                <!-- 섹션 제목 -->
+                <h2 class="section-title">메뉴 등록</h2>
+
+                <!-- =========================
+                    메뉴 이미지 업로드 + 기본 정보 입력 영역
+                    - 메뉴 사진
+                    - 메뉴명
+                    - 가격
+                ========================= -->
+                <div class="menu-upload-section">
+
+                    <!-- 소제목 -->
+                    <h3 class="sub-title">[메뉴 사진 등록] 이미지 파일 1개</h3>
+
+                    <!-- 업로드 영역과 입력 영역을 나누는 그리드 -->
+                    <div class="upload-form-grid">
+
+                        <!-- 이미지 업로드 박스 -->
+                        <div class="image-upload-box">
+
+                            <!-- 업로드 이미지 미리보기 영역 -->
+                            <div class="preview-image-wrap">
+                                <img
+                                    src="{{ url_for('static', filename='img/sample_menu.jpg') }}"
+                                    alt="메뉴 이미지 미리보기"
+                                    class="preview-image"
+                                >
+                            </div>
+
+                            <!-- 이미지 등록 버튼
+                                - 실제 파일 업로드 트리거 기능이 JS와 연결될 가능성 있음 -->
+                            <button type="button" class="point-btn upload-btn">메뉴 등록</button>
+                        </div>
+
+                        <!-- 메뉴 기본 입력 필드 영역 -->
+                        <div class="menu-input-area">
+
+                            <!-- 메뉴명 입력 -->
+                            <div class="form-row form-column">
+                                <label for="menu-name">메뉴명:</label>
+                                <input type="text" id="menu-name" name="menu_name">
+                            </div>
+
+                            <!-- 가격 입력 -->
+                            <div class="form-row form-column">
+                                <label for="menu-price">가격:</label>
+
+                                <!-- 가격 입력 + 단위(원) 묶음 -->
+                                <div class="price-input-wrap">
+                                    <input type="number" id="menu-price" name="menu_price">
+                                    <span class="price-unit">원</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =========================
+                    메뉴 상세 정보 입력 영역
+                    - 카테고리 선택
+                    - 메뉴 설명 입력
+                ========================= -->
+                <div class="menu-detail-section">
+                    <div class="form-row horizontal-row">
+
+                        <!-- 카테고리 선택 그룹 -->
+                        <div class="field-group category-group">
+                            <label for="menu-category">카테고리:</label>
+                            <select id="menu-category" name="menu_category">
+                                <option value="main">메인</option>
+                                <option value="side">사이드</option>
+                                <option value="drink">음료</option>
+                                <option value="dessert">디저트</option>
+                            </select>
+                        </div>
+
+                        <!-- 메뉴 설명 입력 그룹 -->
+                        <div class="field-group description-group">
+                            <label for="menu-description">설명:</label>
+                            <input type="text" id="menu-description" name="menu_description">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =========================
+                    메뉴 옵션 설정 영역
+                    - 품절 그룹 추가
+                    - 품절 처리
+                    - 숨김 처리
+                ========================= -->
+                <div class="menu-option-section">
+
+                    <!-- 소제목 -->
+                    <h3 class="sub-title">옵션 설정</h3>
+
+                    <!-- 옵션 그룹 추가 버튼 영역
+                        - 예: 만두, 토핑 등 옵션 세트 추가 -->
+                    <div class="option-group-wrap">
+                        <button type="button" class="outline-btn option-add-btn">
+                            ＋ 품절 그룹 추가 (예: 만두, 토핑)
+                        </button>
+                    </div>
+
+                    <!-- 체크박스 옵션 행 -->
+                    <div class="checkbox-row">
+
+                        <!-- 품절 처리 체크 -->
+                        <label class="check-item">
+                            <input type="checkbox" name="soldout">
+                            <span>품절 처리</span>
+                        </label>
+
+                        <!-- 숨김 처리 체크 -->
+                        <label class="check-item">
+                            <input type="checkbox" name="hidden">
+                            <span>숨김</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- =========================
+                    하단 액션 버튼 영역
+                    - 취소
+                    - 임시저장
+                    - 등록완료
+                ========================= -->
+                <div class="action-btn-row">
+                    <button type="button" class="ghost-btn">취소</button>
+                    <button type="button" class="sub-btn">임시저장</button>
+                    <button type="submit" class="point-btn">등록완료</button>
+                </div>
+            </section>
+
+            <!-- =========================
+                [시멘틱 태그] section
+                등록된 메뉴 목록 카드
+                - 현재 등록된 메뉴를 카드 리스트 형식으로 표시
+            ========================= -->
+            <section class="registered-menu-card">
+
+                <!-- 섹션 제목 -->
+                <h2 class="section-title">등록된 메뉴</h2>
+
+                <!-- 등록된 메뉴 리스트 -->
+                <div class="registered-menu-list">
+
+                    <!-- =========================
+                        [시멘틱 태그] article
+                        등록된 메뉴 1개 단위 카드
+                        - 메뉴 썸네일
+                        - 메뉴명 / 가격
+                        - 수정 / 삭제 버튼
+                    ========================= -->
+                    <article class="registered-menu-item">
+
+                        <!-- 메뉴 썸네일 -->
+                        <div class="registered-menu-thumb">
+                            <img src="{{ url_for('static', filename='img/sample_menu.jpg') }}" alt="수원비빔밥 이미지">
+                        </div>
+
+                        <!-- 메뉴 정보 -->
+                        <div class="registered-menu-info">
+                            <p class="registered-menu-name">수원비빔밥</p>
+                            <p class="registered-menu-price">12,000원</p>
+                        </div>
+
+                        <!-- 메뉴 액션 버튼 -->
+                        <div class="registered-menu-actions">
+                            <button type="button" class="menu-edit-btn">수정</button>
+                            <button type="button" class="menu-delete-btn">삭제</button>
+                        </div>
+                    </article>
+
+                    <!-- 등록된 메뉴 2개째 카드 -->
+                    <article class="registered-menu-item">
+
+                        <!-- 메뉴 썸네일 -->
+                        <div class="registered-menu-thumb">
+                            <img src="{{ url_for('static', filename='img/sample_menu.jpg') }}" alt="돌솥비빔밥 이미지">
+                        </div>
+
+                        <!-- 메뉴 정보 -->
+                        <div class="registered-menu-info">
+                            <p class="registered-menu-name">돌솥비빔밥</p>
+                            <p class="registered-menu-price">13,000원</p>
+                        </div>
+
+                        <!-- 메뉴 액션 버튼 -->
+                        <div class="registered-menu-actions">
+                            <button type="button" class="menu-edit-btn">수정</button>
+                            <button type="button" class="menu-delete-btn">삭제</button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </main>
+
+        <!-- =========================
+            [시멘틱 태그] footer
+            하단 푸터 영역
+            - 푸터 링크
+            - 저작권 / 안내 문구
+        ========================= -->
+        <footer class="site-footer">
+            <div class="footer-inner">
+
+                <!-- 푸터 링크 네비게이션 -->
+                <nav class="footer-links">
+                    <a href="#">공지사항</a>
+                    <span>|</span>
+                    <a href="#">표시하기</a>
+                    <span>|</span>
+                    <a href="#">이용약관</a>
+                </nav>
+
+                <!-- 저작권 및 안내 문구 -->
+                <div class="footer-copy">
+                    <p>© 2026 수원비빔밥집. All rights reserved.</p>
+                    <p>
+                        본 레퍼런스 화면의 서비스 문구와 기타 예시는 화면 레이아웃 확인을 위한 더미 데이터이며,
+                        실제 운영 시 정책에 따라 변경될 수 있습니다.
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- =========================
+        드로어 배경 영역
+        - 사이드 드로어가 열릴 때 뒤쪽 화면을 어둡게 처리
+        - hidden 속성으로 초기 비표시
+        - JS에서 열기/닫기 시 표시 제어
+    ========================= -->
+    <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
+
+    <!-- =========================
+        [시멘틱 태그] aside
+        사이드 드로어 영역
+        - 햄버거 버튼 클릭 시 우측/좌측에서 슬라이드 메뉴로 등장
+        - aria-hidden 으로 접근성 상태 관리
+    ========================= -->
+    <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
+
+        <!-- 드로어 헤더 -->
+        <div class="side-drawer__header">
+
+            <!-- 닫기 버튼 -->
+            <button
+                type="button"
+                class="side-drawer__close"
+                id="sideDrawerCloseBtn"
+                aria-label="메뉴 닫기"
+            >
+                ×
+            </button>
+
+            <!-- 사용자 프로필 -->
+            <div class="side-drawer__profile">
+                <div class="side-drawer__avatar">
+                    <span>👨‍🍳</span>
+                </div>
+                <strong class="side-drawer__name">사장님</strong>
+            </div>
+        </div>
+
+        <!-- 드로어 본문 -->
+        <div class="side-drawer__body">
+
+            <!-- 드로어 메인 네비게이션 -->
+            <nav class="side-drawer__nav">
+
+                <!-- 대시보드 이동 -->
+                <a href="{{ url_for('owner_board') }}" class="side-drawer__item">
+                    <span class="side-drawer__icon">⌂</span>
+                    <span>대시보드</span>
+                </a>
+
+                <!-- 메뉴 관리 이동 -->
+                <a href="{{ url_for('owner_menu_management') }}" class="side-drawer__item">
+                    <span class="side-drawer__icon">▣</span>
+                    <span>메뉴 관리</span>
+                </a>
+
+                <!-- 리뷰 관리 이동 -->
+                <a href="{{ url_for('owner_review_management') }}" class="side-drawer__item">
+                    <span class="side-drawer__icon">✎</span>
+                    <span>리뷰 관리</span>
+                </a>
+
+                <!-- 가게 정보 이동 -->
+                <a href="#" class="side-drawer__item">
+                    <span class="side-drawer__icon">🏪</span>
+                    <span>가게 정보</span>
+                </a>
+            </nav>
+
+            <!-- 구분선 -->
+            <div class="side-drawer__divider"></div>
+
+            <!-- 기타 섹션 제목 -->
+            <div class="side-drawer__section-title">기타</div>
+
+            <!-- 기타 서브 메뉴 -->
+            <div class="side-drawer__sublist">
+                <a href="#" class="side-drawer__subitem">설정</a>
+                <a href="#" class="side-drawer__subitem">고객센터</a>
+                <a href="#" class="side-drawer__subitem">이용약관</a>
+            </div>
+        </div>
+    </aside>
+</body>
+</html>

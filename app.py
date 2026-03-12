@@ -32,6 +32,21 @@ def api_restaurants():
     )
     return jsonify(items)
 
+# Owner 보드 route
+@app.route("/owner/board")
+def owner_board():
+    return render_template("owner_board.html")
+
+# Oner 메뉴관리 route
+@app.route("/owner/menu_management")
+def owner_menu_management():
+    return render_template("owner_menu_management.html")
+
+# Oner 리뷰관리 route
+@app.route("/owner/review_management")
+def owner_review_management():
+    return render_template("owner_review_management.html")
+
 
 if __name__ == "__main__":
     app.run(debug=os.getenv("FLASK_DEBUG", "True") == "True")
