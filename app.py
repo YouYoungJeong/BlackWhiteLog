@@ -7,6 +7,12 @@ from db import fetch_categories, fetch_regions, fetch_restaurants
 load_dotenv()
 
 app = Flask(__name__)
+
+#### 레스토랑 판넬 블루프린트(모듈화)  
+from restaurant_panel import restaurant_panel_bp  # 분리한 파일 임포트
+app.register_blueprint(restaurant_panel_bp) # 앱에 등록
+#### 레스토랑 판넬 블루프린트(모듈화)
+
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 
 

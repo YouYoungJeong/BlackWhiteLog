@@ -1,0 +1,88 @@
+/* =========================
+#### 음식점 상세 판넬 -0312
+========================= */
+.detail-panel {
+    position: absolute;
+    /* 1. 위아래 헤더/푸터 공간 확보 (기존 왼쪽 패널 여백과 동일하게 조절 가능) */
+    top: 16px; 
+    height: calc(100% - 32px); 
+    
+    /* 2. 지도 탭 내에서 왼쪽 패널과의 이격(Gap) 확보 */
+    left: 16px; 
+    width: 380px;
+    
+    background-color: var(--panel);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    
+    /* 3. 둥근 모서리 및 그림자 (style.css의 기존 변수 활용) */
+    border-radius: var(--radius-lg); 
+    overflow: hidden; /* 내부 이미지나 헤더가 둥근 모서리를 튀어나오지 않게 함 */
+    box-shadow: var(--shadow); 
+    
+    transition: transform 0.3s ease;
+}
+
+.detail-panel.hidden {
+    display: none;
+}
+
+.detail-header {
+    position: relative;
+}
+
+.detail-main-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background-color: var(--chip);
+}
+
+.detail-title {
+    padding: 16px;
+    margin: 0;
+    font-size: 1.5rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.back-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.8);
+    border: none;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.detail-nav {
+    display: flex;
+    border-bottom: 1px solid var(--line);
+}
+
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 12px 0;
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--subtext);
+}
+
+.tab-btn.active {
+    color: var(--point-dark);
+    border-bottom: 3px solid var(--point-dark);
+}
+
+.detail-content {
+    padding: 16px;
+    flex: 1;
+}
+
+.tab-pane.hidden {
+    display: none;
+}
