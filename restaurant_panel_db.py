@@ -94,7 +94,6 @@ def save_restaurant_review(restaurant_id, user_id, rating, content):
             return True
     except Exception as e:
         conn.rollback()
-        print(f"Review Save Error (DB): {e}")
         return False
     finally:
         conn.close()
@@ -134,7 +133,7 @@ def delete_review_transaction(review_id, user_id):
             max_rev_id = row_rev['max_id'] if row_rev['max_id'] is not None else 0
             cursor.execute(f"ALTER TABLE reviews AUTO_INCREMENT = {max_rev_id + 1}")
 
-            # 4. 🌟 visits 테이블 AUTO_INCREMENT 초기화 (추가됨)
+            # 4. visits 테이블 AUTO_INCREMENT 초기화 (추가됨)
             cursor.execute("SELECT MAX(visit_id) AS max_id FROM visits")
             row_vis = cursor.fetchone()
             max_vis_id = row_vis['max_id'] if row_vis['max_id'] is not None else 0
@@ -144,7 +143,6 @@ def delete_review_transaction(review_id, user_id):
             return True
     except Exception as e:
         conn.rollback()
-        print(f"Delete Error: {e}")
         return False
     finally:
         conn.close()

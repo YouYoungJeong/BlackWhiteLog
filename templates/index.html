@@ -43,12 +43,16 @@
                         {% endfor %}
                     </select>
 
-                    <input
-                        type="text"
-                        id="keywordInput"
-                        class="search-input"
-                        placeholder="음식점명, 주소, 카테고리 검색"
-                    />
+                    <div class="search-input-wrap">
+                        <input
+                            type="text"
+                            id="keywordInput"
+                            class="search-input"
+                            placeholder="음식점명, 주소, 카테고리 검색"
+                            autocomplete="off"
+                        />
+                        <div id="searchSuggestionBox" class="search-suggestion-box" hidden></div>
+                    </div>
 
                     <button id="searchBtn" class="search-btn">검색</button>
                 </div>
