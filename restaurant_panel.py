@@ -1,9 +1,8 @@
 from flask import Blueprint, jsonify
-from restaurant_panel_db import get_restaurant_detail, get_restaurant_menus
+from restaurant_panel_db import get_restaurant_detail, get_restaurant_menus, get_restaurant_reviews
 
 restaurant_panel_bp = Blueprint('restaurant_panel_bp', __name__)
 
-####
 @restaurant_panel_bp.route("/api/restaurants/<int:restaurant_id>")
 def api_restaurant_detail(restaurant_id):
     """특정 음식점 상세 정보 반환 API"""
@@ -17,4 +16,9 @@ def api_restaurant_menus(restaurant_id):
     """특정 음식점의 메뉴 목록 반환 API"""
     menus = get_restaurant_menus(restaurant_id)
     return jsonify(menus)
-####
+
+@restaurant_panel_bp.route("/api/restaurants/<int:restaurant_id>/reviews")
+def api_restaurant_reviews(restaurant_id):
+    """특정 음식점의 리뷰 목록 반환 API"""
+    reviews = get_restaurant_reviews(restaurant_id)
+    return jsonify(reviews)

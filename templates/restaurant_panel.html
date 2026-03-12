@@ -26,7 +26,35 @@
     </div>
 
     <div id="tab-reviews" class="tab-pane hidden">
-        <div class="star-rating-ui">⭐⭐⭐⭐⭐ (UI 임시)</div>
+        
+    <div class="review-write-form" style="text-align: center;">
+    <div style="font-weight: bold; margin-bottom: 10px; color: var(--subtext);">이 식당을 평가해주세요!</div>
+    
+    <div class="star-input-wrap" id="starInputWrap" data-current-rating="0">
+        <span class="star" data-value="1">★</span>
+        <span class="star" data-value="2">★</span>
+        <span class="star" data-value="3">★</span>
+        <span class="star" data-value="4">★</span>
+        <span class="star" data-value="5">★</span>
+        <input type="hidden" id="reviewRating" value="0">
+    </div>
+    
+    <div id="reviewInputArea" class="hidden" style="text-align: left; margin-top: 15px;">
+        <div id="imagePreviewContainer" class="hidden">
+            <div id="previewSlider" class="preview-slider">
+                </div>
+        </div>
+
+        <textarea id="reviewContent" placeholder="이 식당에서의 경험을 솔직하게 나누어 주세요!"></textarea>
+        
+        <div class="review-form-actions">
+            <label for="reviewImage" class="btn-attach">첨부</label>
+            <input type="file" id="reviewImage" accept="image/*" multiple style="display: none;">
+            <button id="submitReviewBtn" class="btn-submit">리뷰 등록</button>
+        </div>
+    </div>
+    </div>
+
         <div id="reviewListContainer"></div>
     </div>
 
