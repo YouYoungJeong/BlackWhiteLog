@@ -2,6 +2,9 @@ import os
 import pymysql
 from dotenv import load_dotenv
 
+# 비밀번호 해시 생성 / 비밀번호 검사용
+from werkzeug.security import generate_password_hash, check_password_hash
+
 load_dotenv()
 
 
@@ -23,7 +26,7 @@ def fetch_regions():
         SELECT DISTINCT region_sigungu
         FROM restaurants
         WHERE region_sigungu IS NOT NULL
-          AND region_sigungu <> ''
+        AND region_sigungu <> ''
         ORDER BY region_sigungu ASC
     """
 
@@ -129,8 +132,8 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visi
 
     params = []
 
-    # status 컬럼 값이 정확히 어떤 enum인지 명세 일부만 보여서
-    # 운영 데이터에 따라 OPEN / ACTIVE 등으로 바꿔도 됨.
+    # 운영 가능한 음식점만 보이게 하는 조건
+    # 실제 DB 상태값이 다르면 OPEN / ACTIVE 부분은 맞게 수정하면 됨
     sql += " AND (r.status IS NULL OR r.status IN ('OPEN', 'ACTIVE')) "
 
     if region and region != "전체":
@@ -163,11 +166,171 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visi
             rows = cursor.fetchall()
 
             for row in rows:
+                # 이미지가 없으면 기본 이미지 사용
                 row["image_url"] = row["image_url"] or "https://placehold.co/160x120?text=No+Image"
                 row["avg_rating"] = float(row["avg_rating"] or 0)
                 row["visit_count"] = int(row["visit_count"] or 0)
                 row["review_count"] = int(row["review_count"] or 0)
 
             return rows
+    finally:
+        conn.close()
+
+
+# -----------------------------
+# 로그인 관련 함수
+# -----------------------------
+def verify_user_login(email, password):
+    sql = """
+        SELECT *
+        FROM users
+        WHERE email = %s
+        AND (status IS NULL OR status <> 'DELETED')   -- 탈퇴 회원 제외
+        LIMIT 1
+    """
+
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (email,))
+            user = cursor.fetchone()
+
+            if user and check_password_hash(user["password_hash"], password):
+                return user
+            else:
+                return None
+    finally:
+        conn.close()
+
+
+# -----------------------------
+# 이메일 중복 확인 함수 (추가)
+# -----------------------------
+def find_user_by_email(email):
+    sql = """
+        SELECT user_id, email, nickname, status
+        FROM users
+        WHERE email = %s
+        LIMIT 1
+        """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (email,))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+# -----------------------------
+# 회원가입 함수
+# -----------------------------
+def create_user(nickname, email, password):
+    """
+    회원가입 시 비밀번호를 해시로 변환해서 저장
+    실제 DB 컬럼명은 password가 아니라 password_hash
+    """
+
+    conn = get_connection()
+
+    # 입력받은 비밀번호를 안전하게 해시 처리
+    password_hash = generate_password_hash(password)
+
+    sql = """
+        INSERT INTO users (email, password_hash, nickname)
+        VALUES (%s, %s, %s)
+    """
+
+    try:
+        with conn.cursor() as cursor:
+            # 컬럼 순서: email, password_hash, nickname
+            cursor.execute(sql, (email, password_hash, nickname))
+        conn.commit()
+    finally:
+        conn.close()
+
+        # -----------------------------
+# 카카오/소셜 로그인용 사용자 조회
+# -----------------------------
+def find_user_by_social(provider, social_id):
+    sql = """
+        SELECT *
+        FROM users
+        WHERE provider = %s
+        AND social_id = %s
+        AND (status IS NULL OR status <> 'DELETED')   -- 탈퇴 회원 제외
+        LIMIT 1
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (provider, social_id))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+# -----------------------------
+# 카카오/소셜 로그인용 사용자 생성
+# -----------------------------
+def create_social_user(nickname, email, provider, social_id, profile_image_url=None):
+    sql = """
+        INSERT INTO users (nickname, email, password_hash, provider, social_id, profile_image_url)
+        VALUES (%s, %s, NULL, %s, %s, %s)
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (nickname, email, provider, social_id, profile_image_url))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def create_social_user(nickname, email, provider, social_id, profile_image_url=None):
+    sql = """
+        INSERT INTO users (nickname, email, password_hash, provider, social_id, profile_image_url)
+        VALUES (%s, %s, NULL, %s, %s, %s)
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (nickname, email, provider, social_id, profile_image_url))
+        conn.commit()
+    finally:
+        conn.close()
+
+def withdraw_user(user_id):
+    sql = """
+        UPDATE users
+        SET status = 'DELETED'
+        WHERE user_id = %s
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (user_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+def restore_user(user_id):
+    sql = """
+        UPDATE users
+        SET status = 'ACTIVE'
+        WHERE user_id = %s
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (user_id,))
+        conn.commit()
     finally:
         conn.close()

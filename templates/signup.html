@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}">
+</head>
+<body>
+    <div class="page">
+        <div class="logo-wrap">
+            <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="흑백로그 로고" class="signup-logo">
+        </div>
+
+        <br>
+        <h1 class="title">회원가입</h1>
+
+        <div class="top-line">* 필수입력사항</div>
+        <div class="divider"></div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <script>
+                    alert("{{ messages[-1] }}");
+                </script>
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('signup') }}" method="post" id="signupForm">
+            <input type="hidden" name="useruse_id_checked" id="useruse_id_checked" value="false">
+            <input type="hidden" name="email_checked" id="email_checked" value="false">
+            <input type="hidden" name="checked_useruse_id_value" id="checked_useruse_id_value" value="">
+            <input type="hidden" name="checked_email_value" id="checked_email_value" value="">
+
+            <div class="form-table">
+                <div class="form-row">
+                    <label class="label" for="useruse_id">아이디<span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <div class="input-row">
+                            <input type="text" id="useruse_id" name="useruse_id" class="input" placeholder="6자 이상의 영문 혹은 영문과 숫자를 조합" required>
+                            <button type="button" class="action-btn" id="checkUseruseIdBtn">중복 확인</button>
+                        </div>
+                        <div id="useruseIdMessage" class="check-message"></div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label class="label" for="nickname">닉네임<span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <input type="text" id="nickname" name="nickname" class="input" placeholder="닉네임을 입력해주세요" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label class="label" for="email">이메일<span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <div class="input-row">
+                            <input type="email" id="email" name="email" class="input" placeholder="예: blackwhitelog@gmail.com" required>
+                            <button type="button" class="action-btn" id="checkEmailBtn">중복 확인</button>
+                        </div>
+                        <div id="emailMessage" class="check-message"></div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label class="label" for="password">비밀번호<span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <input type="password" id="password" name="password" class="input" placeholder="비밀번호를 입력해주세요" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label class="label" for="password_confirm">비밀번호 확인<span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <input type="password" id="password_confirm" name="password_confirm" class="input" placeholder="비밀번호를 한번 더 입력해주세요" required>
+                    </div>
+                </div>
+
+                <br>
+
+                <div class="form-row">
+                    <label class="label">성별<span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <div class="gender-group">
+                            <label class="radio-item">
+                                <input type="radio" name="gender" value="male" required>
+                                남자
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="gender" value="female" required>
+                                여자
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="gender" value="none" required>
+                                선택안함
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label class="label">생년월일<span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <div class="birth-row">
+                            <input type="text" name="birth_year" class="birth-input" placeholder="YYYY" maxlength="4" required>
+                            <div class="slash">/</div>
+                            <input type="text" name="birth_month" class="birth-input" placeholder="MM" maxlength="2" required>
+                            <div class="slash">/</div>
+                            <input type="text" name="birth_day" class="birth-input" placeholder="DD" maxlength="2" required>
+                        </div>
+                    </div>
+                </div>
+
+                <br>
+
+                <div class="form-row">
+                    <label class="label">주소<span class="req">*</span></label>
+                    <div class="input-wrap address-block">
+                        <button type="button" class="full-btn" onclick="execDaumPostcode()"><span>🔍 주소 검색</span></button>
+
+                        <input type="text" id="postcode" name="postcode" class="input" placeholder="우편번호" readonly required>
+                        <input type="text" id="roadAddress" name="roadAddress" class="input" placeholder="도로명 주소" readonly required>
+                        <input type="text" id="jibunAddress" name="jibunAddress" class="input" placeholder="지번 주소" readonly>
+                        <input type="text" id="detailAddress" name="detailAddress" class="input" placeholder="상세주소를 입력해주세요" required>
+                        <input type="text" id="extraAddress" name="extraAddress" class="input" placeholder="참고항목" readonly>
+                    </div>
+                </div>
+
+                <br><br>
+
+                <div class="form-row">
+                    <label class="label">가입경로</label>
+                    <div class="input-wrap">
+                        <div class="path-grid">
+                            <label class="check-item"><input type="checkbox" name="join_path" value="recommend"> 지인 추천</label>
+                            <label class="check-item"><input type="checkbox" name="join_path" value="search"> 인터넷 검색</label>
+                            <label class="check-item"><input type="checkbox" name="join_path" value="sns"> SNS</label>
+                            <label class="check-item"><input type="checkbox" name="join_path" value="ad"> 광고</label>
+                            <label class="check-item"><input type="checkbox" name="join_path" value="offline"> 오프라인 홍보</label>
+                            <label class="check-item"><input type="checkbox" name="join_path" value="etc"> 기타</label>
+                        </div>
+                    </div>
+                </div>
+
+                <br>
+
+                <div class="form-row">
+                    <label class="label">광고성 정보<br>&nbsp;수신 동의</label>
+                    <div class="input-wrap">
+                        <div class="agree-box">
+                            <label class="check-item">
+                                <input type="checkbox" name="ad_agree" value="Y">
+                                (선택) 할인 혜택 및 이벤트 정보 수신에 동의합니다.
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="submit-area">
+                <button type="submit" class="submit-btn">가입하기</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="//t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+    <script src="{{ url_for('static', filename='js/signup.js') }}"></script>
+</body>
+</html>

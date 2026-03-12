@@ -48,10 +48,19 @@
                 </div>
             </section>
 
-            <div class="topbar-actions">
-                <button class="ghost-btn">로그인</button>
-                <button class="icon-btn" id="menuBtn" aria-label="메뉴" type="button">☰</button>
-            </div>
+<div class="topbar-actions">
+    {% if user_email %}
+        <span class="user-welcome">{{ user_nickname }}</span>
+        <button class="profile-btn" type="button">
+            <img src="{{ url_for('static', filename='img/profile.png') }}" alt="profile">
+        </button>
+    {% else %}
+        <a href="{{ url_for('login') }}" class="ghost-btn login-link">로그인</a>
+    {% endif %}
+
+    <button class="icon-btn" id="menuBtn" aria-label="메뉴" type="button">☰</button>
+</div>
+
         </header>
 
         <main class="content-grid">
@@ -196,14 +205,15 @@
                 ×
             </button>
 
-            <div class="side-drawer__profile">
-                <div class="side-drawer__avatar">
-                    <span>👤</span>
-                </div>
-                <strong class="side-drawer__name">열일하는 판다님</strong>
-            </div>
+        <a href="{{ url_for('mypage') }}" class="side-drawer__profile">
+        <div class="side-drawer__avatar">
+        <span>👤</span>
         </div>
-
+        <strong class="side-drawer__name">
+        {{ user_nickname }}
+        </strong>
+        </a>
+    </div>
         <div class="side-drawer__body">
             <nav class="side-drawer__nav">
                 <button type="button" class="side-drawer__item">
@@ -218,10 +228,10 @@
                     <span class="side-drawer__icon">🔔</span>
                     <span>공지사항</span>
                 </button>
-                <button type="button" class="side-drawer__item">
-                    <span class="side-drawer__icon">↪</span>
-                    <span>로그아웃</span>
-                </button>
+                <a href="{{ url_for('logout') }}" class="side-drawer__item">
+                <span class="side-drawer__icon">↪</span>
+                <span>로그아웃</span>
+                </a>
                 <button type="button" class="side-drawer__item">
                     <span class="side-drawer__icon">🏪</span>
                     <span>판매자 등록하기</span>

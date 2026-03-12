@@ -1,0 +1,174 @@
+/* =========================
+   마이페이지
+========================= */
+
+.mypage-wrap {
+    min-height: 100vh;
+    background: #f6f7f2;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 60px 20px;
+    box-sizing: border-box;
+}
+
+.mypage-card {
+    width: 100%;
+    max-width: 720px;
+    background: #ffffff;
+    border: 1px solid #d9dfc8;
+    border-radius: 28px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    padding: 36px;
+    box-sizing: border-box;
+}
+
+.mypage-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 28px;
+}
+
+.mypage-avatar {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border: 2px solid #b7c59a;
+    background: #f3f7ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    flex-shrink: 0;
+}
+
+.mypage-title {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 800;
+    color: #1f2418;
+}
+
+.mypage-subtitle {
+    margin: 8px 0 0;
+    font-size: 15px;
+    color: #7b856d;
+}
+
+.mypage-info-box {
+    border: 1px solid #e2e7d4;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.mypage-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    background: #fcfdf9;
+    border-bottom: 1px solid #edf0e5;
+}
+
+.mypage-row:last-child {
+    border-bottom: none;
+}
+
+.mypage-label {
+    font-size: 15px;
+    color: #6f7863;
+    font-weight: 600;
+}
+
+.mypage-value {
+    font-size: 16px;
+    color: #222;
+    font-weight: 700;
+}
+
+.mypage-menu {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+}
+
+.mypage-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 58px;
+    border-radius: 16px;
+    background: #f7f9f1;
+    border: 1px solid #dde5cd;
+    text-decoration: none;
+    color: #2b3221;
+    font-weight: 700;
+    transition: all 0.2s ease;
+}
+
+.mypage-menu-item:hover {
+    background: #edf3df;
+    transform: translateY(-1px);
+}
+
+.mypage-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.mypage-home-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    border-radius: 14px;
+    background: #1f2418;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    transition: opacity 0.2s ease;
+}
+
+.mypage-home-btn:hover {
+    opacity: 0.9;
+}
+
+.mypage-withdraw-btn {
+    border: none;
+    padding: 12px 18px;
+    border-radius: 14px;
+    background: #d9534f;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.mypage-withdraw-btn:hover {
+    opacity: 0.9;
+}
+
+.withdraw-btn {
+    padding: 12px 20px;
+    background: #fff4f4;
+    color: #b42318;
+    border: 1px solid #f1b5b5;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.withdraw-btn:hover {
+    background: #ffe9e9;
+}
+
+.mypage-actions form {
+    margin: 0;
+}
