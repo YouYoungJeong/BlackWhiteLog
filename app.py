@@ -7,6 +7,16 @@ from db import fetch_categories, fetch_regions, fetch_restaurants
 load_dotenv()
 
 app = Flask(__name__)
+
+#### 레스토랑 판넬 블루프린트(모듈화)  
+from restaurant_panel import restaurant_panel_bp  # 분리한 파일 임포트
+app.register_blueprint(restaurant_panel_bp) # 앱에 등록
+#### 레스토랑 판넬 블루프린트(모듈화)
+#### 랭크 블루프린트
+from user_ranking import user_ranking_bp
+app.register_blueprint(user_ranking_bp)
+#### 랭크 블루프린트
+
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 
 
@@ -31,6 +41,27 @@ def api_restaurants():
         sort_by=sort_by,
     )
     return jsonify(items)
+
+# Owner 보드 route
+@app.route("/owner/board")
+def owner_board():
+    return render_template("owner_board.html")
+
+# Oner 메뉴관리 route
+@app.route("/owner/menu_management")
+def owner_menu_management():
+    return render_template("owner_menu_management.html")
+
+# Oner 리뷰관리 route
+@app.route("/owner/review_management")
+def owner_review_management():
+    return render_template("owner_review_management.html")
+
+
+# Oner 공지사항 route
+@app.route("/owner/notice_management")
+def owner_notice_management():
+    return render_template("owner_notice_management.html")
 
 
 if __name__ == "__main__":

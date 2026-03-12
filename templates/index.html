@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>흑백로그</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <!--#### restaurant_panel css 스타일시트-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/restaurant_panel.css') }}" />
+    <!--#### restaurant_panel css 스타일시트-->
+    <!--#### 랭크 css 스타일시트-->
+    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/user_ranking.css') }}" /> -->
+    <!--#### 랭크 css 스타일시트-->
 </head>
 <body>
     <div class="app-shell">
@@ -37,12 +43,16 @@
                         {% endfor %}
                     </select>
 
-                    <input
-                        type="text"
-                        id="keywordInput"
-                        class="search-input"
-                        placeholder="음식점명, 주소, 카테고리 검색"
-                    />
+                    <div class="search-input-wrap">
+                        <input
+                            type="text"
+                            id="keywordInput"
+                            class="search-input"
+                            placeholder="음식점명, 주소, 카테고리 검색"
+                            autocomplete="off"
+                        />
+                        <div id="searchSuggestionBox" class="search-suggestion-box" hidden></div>
+                    </div>
 
                     <button id="searchBtn" class="search-btn">검색</button>
                 </div>
@@ -92,7 +102,7 @@
                             aria-label="추천 박스 닫기"
                             title="닫기"
                         >
-                            ×
+                            
                         </button>
 
                         <div class="roulette-result__badge">랜덤 추천</div>
@@ -150,7 +160,12 @@
                         />
                     </button>
                 </div>
-
+                <!--#### 레스토랑 판넬 -->
+                {% include 'restaurant_panel.html' %}
+                <!--#### 레스토랑 판넬 -->
+                <!--#### 랭킹-->
+                <!-- {% include 'user_ranking.html' %} -->
+                <!--#### 랭킹-->
                 <div id="mapCanvas" class="map-canvas">
                     <div class="map-grid"></div>
                     <div id="mapMarkers" class="map-markers"></div>
@@ -240,11 +255,19 @@
         </div>
     </aside>
 
+    
+
     <script>
         window.__INITIAL_STATE__ = {
             apiUrl: "{{ url_for('api_restaurants') }}"
         };
     </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!--####레스토랑 판넬 js-->
+    <script src="{{ url_for('static', filename='js/pages/restaurant_panel.js') }}"></script>
+    <!--####레스토랑 판넬 js-->
+    <!--####랭킹 js-->
+    <!-- <script src="{{ url_for('static', filename='js/pages/user_ranking.js') }}"></script> -->
+    <!--####랭킹 js-->
 </body>
 </html>
