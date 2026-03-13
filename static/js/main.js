@@ -10,8 +10,19 @@ const state = {
     allItems: [],                     // 전체 음식점 목록 (검색과 무관한 원본 데이터)
     pickedCategory: null,             // 룰렛으로 뽑힌 카테고리
     rouletteAnimating: false,         // 룰렛이 돌고 있는지 여부
-    lastRecommendedRestaurantId: null // 직전에 추천된 음식점 id
+    lastRecommendedRestaurantId: null, // 직전에 추천된 음식점 id
+
+    filteredItems: [],
+    suggestionItems: [],
+    activeSuggestionIndex: -1,
+    lastKeyword: ""
 };
+
+/* 이종민 수정한 부분 */
+let naverMap = null;
+let naverMarkers = [];
+let activeInfoWindow = null;
+let activeRestaurantId = null;
 
 /************************************************************
  * DOM 요소 모음
@@ -23,6 +34,7 @@ const regionSelect = document.getElementById("regionSelect");
 const categorySelect = document.getElementById("categorySelect");
 const keywordInput = document.getElementById("keywordInput");
 const searchBtn = document.getElementById("searchBtn");
+const searchSuggestionBox = document.getElementById("searchSuggestionBox");
 
 const restaurantList = document.getElementById("restaurantList");
 const mapMarkers = document.getElementById("mapMarkers");
@@ -45,6 +57,9 @@ const sideDrawer = document.getElementById("sideDrawer");
 const sideDrawerBackdrop = document.getElementById("sideDrawerBackdrop");
 const sideDrawerCloseBtn = document.getElementById("sideDrawerCloseBtn");
 
+/* 이종민 수정 3월 12일 2번째 */
+const sellerRegisterBtn = document.getElementById("sellerRegisterBtn");
+
 /************************************************************
  * 상수(Constant)
  * ----------------------------------------------------------
@@ -56,6 +71,7 @@ const ROULETTE_MIN_ROUNDS = 5;
 const SIDE_DRAWER_CLOSE_DELAY = 280;
 const CARD_HIGHLIGHT_DURATION = 1500;
 const DEFAULT_IMAGE_URL = "https://placehold.co/300x300?text=No+Image";
+const MAX_SUGGESTIONS = 8;
 
 /************************************************************
  * 유틸 함수(작은 도구 함수들)
@@ -132,6 +148,435 @@ function showEmptyList() {
     `;
 }
 
+function normalizeText(value) {
+    return String(value ?? "")
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[^\wㄱ-ㅎㅏ-ㅣ가-힣]/g, "");
+}
+
+function isHangulSyllable(char) {
+    const code = char.charCodeAt(0);
+    return code >= 0xac00 && code <= 0xd7a3;
+}
+
+const CHOSEONG_LIST = [
+    "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ",
+    "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
+];
+
+const JUNGSEONG_LIST = [
+    "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ",
+    "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"
+];
+
+const JONGSEONG_LIST = [
+    "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ",
+    "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ",
+    "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
+];
+
+function decomposeHangulToJamo(text) {
+    let result = "";
+
+    for (const char of String(text ?? "")) {
+        if (!isHangulSyllable(char)) {
+            result += char;
+            continue;
+        }
+
+        const code = char.charCodeAt(0) - 0xac00;
+        const choseongIndex = Math.floor(code / 588);
+        const jungseongIndex = Math.floor((code % 588) / 28);
+        const jongseongIndex = code % 28;
+
+        result += CHOSEONG_LIST[choseongIndex];
+        result += JUNGSEONG_LIST[jungseongIndex];
+        if (JONGSEONG_LIST[jongseongIndex]) {
+            result += JONGSEONG_LIST[jongseongIndex];
+        }
+    }
+
+    return result;
+}
+
+function extractChoseong(text) {
+    let result = "";
+
+    for (const char of String(text ?? "")) {
+        if (isHangulSyllable(char)) {
+            const code = char.charCodeAt(0) - 0xac00;
+            const choseongIndex = Math.floor(code / 588);
+            result += CHOSEONG_LIST[choseongIndex];
+        } else if (/[ㄱ-ㅎ]/.test(char)) {
+            result += char;
+        }
+    }
+
+    return result;
+}
+
+function isChoseongOnly(text) {
+    const value = String(text ?? "").trim();
+    return value.length > 0 && /^[ㄱ-ㅎ]+$/.test(value);
+}
+
+function isMixedJamoQuery(text) {
+    const value = String(text ?? "").trim();
+    if (!value) return false;
+
+    const hasJamo = /[ㄱ-ㅎㅏ-ㅣ]/.test(value);
+    const hasSyllable = /[가-힣]/.test(value);
+
+    return hasJamo && hasSyllable;
+}
+
+function includesNormalized(text, keyword) {
+    return normalizeText(text).includes(normalizeText(keyword));
+}
+
+function startsWithNormalized(text, keyword) {
+    return normalizeText(text).startsWith(normalizeText(keyword));
+}
+
+function includesChoseong(text, keyword) {
+    return normalizeText(extractChoseong(text)).includes(normalizeText(keyword));
+}
+
+function startsWithChoseong(text, keyword) {
+    return normalizeText(extractChoseong(text)).startsWith(normalizeText(keyword));
+}
+
+function includesJamo(text, keyword) {
+    return normalizeText(decomposeHangulToJamo(text))
+        .includes(normalizeText(decomposeHangulToJamo(keyword)));
+}
+
+function startsWithJamo(text, keyword) {
+    return normalizeText(decomposeHangulToJamo(text))
+        .startsWith(normalizeText(decomposeHangulToJamo(keyword)));
+}
+
+function getSearchTextBundle(item) {
+    const menuText =
+        item.menu_names ||
+        item.menu_name ||
+        item.menus ||
+        item.menu ||
+        item.signature_menu ||
+        "";
+
+    return {
+        name: item.name || "",
+        region: `${item.region_sido || ""} ${item.region_sigungu || ""}`.trim(),
+        category: item.category_name || "",
+        menu: Array.isArray(menuText) ? menuText.join(" ") : String(menuText)
+    };
+}
+
+function matchExactStage(item, keyword) {
+    const fields = getSearchTextBundle(item);
+    const key = String(keyword ?? "").trim();
+
+    if (!key) return { matched: true, score: 0 };
+
+    let score = 0;
+
+    if (normalizeText(fields.name) === normalizeText(key)) score += 10000;
+    else if (startsWithNormalized(fields.name, key)) score += 7000;
+    else if (includesNormalized(fields.name, key)) score += 5000;
+
+    if (startsWithNormalized(fields.region, key)) score += 3200;
+    else if (includesNormalized(fields.region, key)) score += 2500;
+
+    if (startsWithNormalized(fields.category, key)) score += 2200;
+    else if (includesNormalized(fields.category, key)) score += 1700;
+
+    if (startsWithNormalized(fields.menu, key)) score += 1400;
+    else if (includesNormalized(fields.menu, key)) score += 1100;
+
+    return { matched: score > 0, score };
+}
+
+function matchChoseongStage(item, keyword) {
+    const fields = getSearchTextBundle(item);
+    const key = String(keyword ?? "").trim();
+
+    if (!isChoseongOnly(key)) return { matched: false, score: 0 };
+
+    let score = 0;
+
+    if (startsWithChoseong(fields.name, key)) score += 6000;
+    else if (includesChoseong(fields.name, key)) score += 4500;
+
+    if (startsWithChoseong(fields.region, key)) score += 2800;
+    else if (includesChoseong(fields.region, key)) score += 2100;
+
+    if (startsWithChoseong(fields.category, key)) score += 1800;
+    else if (includesChoseong(fields.category, key)) score += 1300;
+
+    if (startsWithChoseong(fields.menu, key)) score += 1200;
+    else if (includesChoseong(fields.menu, key)) score += 900;
+
+    return { matched: score > 0, score };
+}
+
+function matchJamoStage(item, keyword) {
+    const fields = getSearchTextBundle(item);
+    const key = String(keyword ?? "").trim();
+
+    if (!isMixedJamoQuery(key)) return { matched: false, score: 0 };
+
+    let score = 0;
+
+    if (startsWithJamo(fields.name, key)) score += 5500;
+    else if (includesJamo(fields.name, key)) score += 4000;
+
+    if (startsWithJamo(fields.region, key)) score += 2600;
+    else if (includesJamo(fields.region, key)) score += 1900;
+
+    if (startsWithJamo(fields.category, key)) score += 1700;
+    else if (includesJamo(fields.category, key)) score += 1200;
+
+    if (startsWithJamo(fields.menu, key)) score += 1100;
+    else if (includesJamo(fields.menu, key)) score += 800;
+
+    return { matched: score > 0, score };
+}
+
+function getTieBreakerScore(item) {
+    return (
+        toNumber(item.avg_rating) * 10 +
+        toNumber(item.review_count) * 0.1 +
+        toNumber(item.visit_count) * 0.03
+    );
+}
+
+function hideSuggestionBox() {
+    if (!searchSuggestionBox) return;
+    searchSuggestionBox.hidden = true;
+    searchSuggestionBox.innerHTML = "";
+    state.activeSuggestionIndex = -1;
+}
+
+function renderSuggestionList(items, keyword) {
+    if (!searchSuggestionBox) return;
+
+    if (!keyword.trim()) {
+        hideSuggestionBox();
+        return;
+    }
+
+    if (!items.length) {
+        searchSuggestionBox.hidden = false;
+        searchSuggestionBox.innerHTML = `<div class="search-suggestion-empty">추천 검색어가 없습니다.</div>`;
+        return;
+    }
+
+    searchSuggestionBox.hidden = false;
+    searchSuggestionBox.innerHTML = items.map((item, index) => {
+        const menuText =
+            item.menu_names ||
+            item.menu_name ||
+            item.menus ||
+            item.menu ||
+            item.signature_menu ||
+            "";
+
+        const menuPreview = Array.isArray(menuText)
+            ? menuText.slice(0, 2).join(", ")
+            : String(menuText).split(",").slice(0, 2).join(", ");
+
+        const meta = [
+            escapeHtml(item.region_sigungu || item.region_sido || ""),
+            escapeHtml(item.category_name || "카테고리 미지정"),
+            escapeHtml(menuPreview)
+        ].filter(Boolean).join(" · ");
+
+        return `
+            <button
+                type="button"
+                class="search-suggestion-item ${index === state.activeSuggestionIndex ? "active" : ""}"
+                data-id="${item.restaurant_id}"
+                data-index="${index}"
+            >
+                <span class="search-suggestion-title">${escapeHtml(item.name || "이름 없음")}</span>
+                <span class="search-suggestion-meta">${meta}</span>
+            </button>
+        `;
+    }).join("");
+
+    document.querySelectorAll(".search-suggestion-item").forEach((button) => {
+        button.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+        });
+
+        button.addEventListener("click", () => {
+            const restaurantId = Number(button.dataset.id);
+            const item = findRestaurantById(restaurantId);
+            if (!item) return;
+
+            keywordInput.value = item.name || "";
+            applyKeywordSearch();
+            hideSuggestionBox();
+            focusRestaurantCard(item.restaurant_id);
+            highlightMarker(item.restaurant_id);
+        });
+    });
+}
+
+function moveSuggestionIndex(direction) {
+    if (!state.suggestionItems.length) return;
+
+    if (direction === "down") {
+        state.activeSuggestionIndex =
+            (state.activeSuggestionIndex + 1) % state.suggestionItems.length;
+    } else {
+        state.activeSuggestionIndex =
+            (state.activeSuggestionIndex - 1 + state.suggestionItems.length) % state.suggestionItems.length;
+    }
+
+    renderSuggestionList(state.suggestionItems, keywordInput.value);
+}
+
+function selectActiveSuggestion() {
+    if (
+        state.activeSuggestionIndex < 0 ||
+        state.activeSuggestionIndex >= state.suggestionItems.length
+    ) {
+        applyKeywordSearch();
+        return;
+    }
+
+    const item = state.suggestionItems[state.activeSuggestionIndex];
+    keywordInput.value = item.name || "";
+    applyKeywordSearch();
+    hideSuggestionBox();
+    focusRestaurantCard(item.restaurant_id);
+    highlightMarker(item.restaurant_id);
+}
+
+function getMatchedEntries(keyword, source) {
+    if (!keyword) {
+        return source.map((item) => ({
+            item,
+            matched: true,
+            score: 0,
+            tie: getTieBreakerScore(item)
+        }));
+    }
+
+    let matched = source
+        .map((item) => {
+            const result = matchExactStage(item, keyword);
+            return {
+                item,
+                matched: result.matched,
+                score: result.score,
+                tie: getTieBreakerScore(item)
+            };
+        })
+        .filter((entry) => entry.matched);
+
+    if (!matched.length) {
+        matched = source
+            .map((item) => {
+                const result = matchChoseongStage(item, keyword);
+                return {
+                    item,
+                    matched: result.matched,
+                    score: result.score,
+                    tie: getTieBreakerScore(item)
+                };
+            })
+            .filter((entry) => entry.matched);
+    }
+
+    if (matched.length < 5) {
+        const jamoMatched = source
+            .map((item) => {
+                const result = matchJamoStage(item, keyword);
+                return {
+                    item,
+                    matched: result.matched,
+                    score: result.score,
+                    tie: getTieBreakerScore(item)
+                };
+            })
+            .filter((entry) => entry.matched);
+
+        const mergedMap = new Map();
+
+        [...matched, ...jamoMatched].forEach((entry) => {
+            const id = Number(entry.item.restaurant_id);
+            const prev = mergedMap.get(id);
+
+            if (!prev || entry.score > prev.score) {
+                mergedMap.set(id, entry);
+            }
+        });
+
+        matched = [...mergedMap.values()];
+    }
+
+    matched.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return b.tie - a.tie;
+    });
+
+    return matched;
+}
+
+function updateSuggestionsOnly() {
+    const keyword = keywordInput?.value.trim() ?? "";
+    const source = [...state.items];
+
+    if (!keyword) {
+        state.suggestionItems = source.slice(0, MAX_SUGGESTIONS);
+        state.activeSuggestionIndex = -1;
+        renderSuggestionList(state.suggestionItems, keyword);
+        return;
+    }
+
+    const matched = getMatchedEntries(keyword, source);
+
+    state.suggestionItems = matched
+        .slice(0, MAX_SUGGESTIONS)
+        .map((entry) => entry.item);
+
+    state.activeSuggestionIndex = -1;
+    renderSuggestionList(state.suggestionItems, keyword);
+}
+
+function applyKeywordSearch() {
+    const keyword = keywordInput?.value.trim() ?? "";
+    const source = [...state.items];
+
+    if (!keyword) {
+        state.filteredItems = source;
+        renderRestaurantList(state.filteredItems);
+        renderMapMarkers(state.filteredItems);
+
+        state.suggestionItems = source.slice(0, MAX_SUGGESTIONS);
+        state.activeSuggestionIndex = -1;
+        renderSuggestionList(state.suggestionItems, keyword);
+        state.lastKeyword = keyword;
+        return;
+    }
+
+    const matched = getMatchedEntries(keyword, source);
+
+    state.filteredItems = matched.map((entry) => entry.item);
+
+    renderRestaurantList(state.filteredItems);
+    renderMapMarkers(state.filteredItems);
+
+    state.suggestionItems = state.filteredItems.slice(0, MAX_SUGGESTIONS);
+    state.activeSuggestionIndex = -1;
+    renderSuggestionList(state.suggestionItems, keyword);
+    state.lastKeyword = keyword;
+}
+
 /************************************************************
  * 쿼리 문자열 생성
  ************************************************************/
@@ -143,7 +588,7 @@ function buildFilteredQuery() {
     const params = new URLSearchParams({
         region: regionSelect?.value ?? "",
         category_id: categorySelect?.value ?? "",
-        keyword: keywordInput?.value.trim() ?? "",
+        keyword: "",
         sort_by: state.sortBy
     });
 
@@ -203,7 +648,10 @@ async function fetchRestaurants() {
         state.allItems = Array.isArray(allData) ? allData : [];
 
         renderRestaurantList(state.items);
-        renderMapMarkers(state.items);
+        /* 이종민 추가 3월 12일 - 지도 마커 렌더링 완료 후 검색 결과에 맞게 지도 포커스 */
+        await renderMapMarkers(state.items);/*여기*/
+        focusMapOnSearchResult(state.items);
+        
     } catch (error) {
         console.error(error);
         showError();
@@ -276,7 +724,6 @@ function createRestaurantCardHtml(item, index) {
                 <div class="card-stats">
                     <span class="stat-pill">방문 ${visitCount}</span>
                     <span class="stat-pill">리뷰 ${reviewCount}</span>
-                    <span class="stat-pill">평점 ${avgRating}</span>
                 </div>
             </div>
         </article>
@@ -310,11 +757,97 @@ function bindRestaurantCardEvents() {
             const item = findRestaurantById(restaurantId);
 
             if (item) {
+                setActiveRestaurantCard(item.restaurant_id);
                 highlightMarker(item.restaurant_id);
             }
         });
     });
 }
+
+/* 이종민 수정 부분 S*/
+function initNaverMap() {
+    const mapElement = document.getElementById("naverMap");
+    if (!mapElement || !window.naver?.maps) return;
+
+    naverMap = new naver.maps.Map(mapElement, {
+        center: new naver.maps.LatLng(37.5665, 126.9780),
+        zoom: 14
+    });
+}
+
+function clearNaverMarkers() {
+    naverMarkers.forEach((marker) => marker.setMap(null));
+    naverMarkers = [];
+
+    if (activeInfoWindow) {
+        activeInfoWindow.close();
+        activeInfoWindow = null;
+    }
+}
+
+function getLatLngFromItem(item) {
+    const lat = Number(item.latitude ?? item.lat);
+    const lng = Number(item.longitude ?? item.lng);
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return new naver.maps.LatLng(lat, lng);
+    }
+
+    return null;
+}
+
+function createInfoWindowContent(item) {
+    const title = escapeHtml(item.name || "이름 없음");
+    const category = escapeHtml(item.category_name || "카테고리 미지정");
+    const address = escapeHtml(item.road_address || item.address || "주소 정보 없음");
+    const rating = formatRating(item.avg_rating);
+    const visits = toNumber(item.visit_count);
+    const reviews = toNumber(item.review_count);
+
+    return `
+        <div style="padding:12px; min-width:220px; line-height:1.5;">
+            <strong style="font-size:15px;">${title}</strong><br>
+            <span>${category}</span><br>
+            <span>${address}</span><br>
+            <span>★ ${rating} · 방문 ${visits} · 리뷰 ${reviews}</span>
+        </div>
+    `;
+}
+
+function geocodeAddress(address) {
+    return Promise.resolve(null);
+}
+
+/**
+ * 지도에 마커를 그린다.
+ * 현재는 상위 10개만 표시한다.
+ */
+
+/* 이종민 추가 3월 12일 - 검색 시 첫 번째 결과 매장으로 지도 이동 */
+function focusMapOnSearchResult(items) {
+    if (!naverMap || !Array.isArray(items) || items.length === 0) return;
+
+    const keyword = (keywordInput?.value || "").trim();
+    const selectedRegion = regionSelect?.value || "";
+    const selectedCategory = categorySelect?.value || "";
+
+    const hasSearchCondition =
+        keyword.length > 0 ||
+        (selectedRegion && selectedRegion !== "전체") ||
+        selectedCategory.length > 0;
+
+    if (!hasSearchCondition) {
+        return;
+    }
+
+    const targetItem = items[0];
+    if (!targetItem) return;
+
+    requestAnimationFrame(() => {
+        highlightMarker(targetItem.restaurant_id);
+    });
+}
+/* 이종민 수정 부분 E*/
 
 /************************************************************
  * 룰렛 결과 표시
@@ -350,6 +883,8 @@ function focusRestaurantCard(restaurantId) {
     const targetCard = document.querySelector(`.restaurant-card[data-id="${restaurantId}"]`);
     if (!targetCard) return;
 
+    setActiveRestaurantCard(restaurantId);
+
     targetCard.scrollIntoView({
         behavior: "smooth",
         block: "center"
@@ -361,6 +896,17 @@ function focusRestaurantCard(restaurantId) {
     setTimeout(() => {
         targetCard.style.boxShadow = "";
     }, CARD_HIGHLIGHT_DURATION);
+}
+
+function setActiveRestaurantCard(restaurantId) {
+    document.querySelectorAll(".restaurant-card").forEach((card) => {
+        card.classList.toggle(
+            "is-active",
+            Number(card.dataset.id) === Number(restaurantId)
+        );
+    });
+
+    activeRestaurantId = Number(restaurantId);
 }
 
 /**
@@ -567,56 +1113,74 @@ function pickRandomCategory() {
  * 지도 마커 렌더링
  ************************************************************/
 
-/**
- * 지도가 아직 실제 API와 연결되지 않았기 때문에
- * 임시 위치 배열을 사용해 마커를 배치한다.
- */
-function getFallbackMarkerPositions() {
-    return [
-        { x: 28, y: 22 },
-        { x: 43, y: 27 },
-        { x: 35, y: 39 },
-        { x: 26, y: 35 },
-        { x: 40, y: 49 },
-        { x: 32, y: 57 },
-        { x: 53, y: 32 },
-        { x: 58, y: 67 },
-        { x: 70, y: 48 },
-        { x: 63, y: 22 }
-    ];
-}
+/* 이종민 수정 3월 12일 - DB 위도/경도만 사용해서 지도 마커 표시 */
+async function renderMapMarkers(items) {
+    if (!naverMap) return;
 
-/**
- * 지도에 마커를 그린다.
- * 현재는 상위 10개만 표시한다.
- */
-function renderMapMarkers(items) {
+    clearNaverMarkers();
+
     if (!items.length) {
-        mapMarkers.innerHTML = "";
         return;
     }
 
-    const fallbackPositions = getFallbackMarkerPositions();
+    const bounds = new naver.maps.LatLngBounds();
+    let hasMarker = false; // 이종민 추가 3월 12일 - 실제 마커 생성 여부 확인
 
-    mapMarkers.innerHTML = items
-        .slice(0, 10)
-        .map((item, index) => {
-            const pos = fallbackPositions[index % fallbackPositions.length];
+    /* 이종민 수정 3월 12일 - 검색 결과 전체를 지도에 표시 */
+    for (const item of items) {
+        const position = getLatLngFromItem(item);
 
-            return `
-                <div
-                    class="map-marker"
-                    data-id="${item.restaurant_id}"
-                    style="left:${pos.x}%; top:${pos.y}%;"
-                    title="${escapeHtml(item.name || "이름 없음")}"
-                >
-                    <span>${index + 1}</span>
-                </div>
-            `;
-        })
-        .join("");
+        /* 이종민 수정 3월 12일 - DB 위경도가 없으면 마커를 찍지 않음 */
+        if (!position) continue;
 
-    bindMapMarkerEvents();
+        hasMarker = true;
+
+        const marker = new naver.maps.Marker({
+            position: position,
+            map: naverMap,
+            title: item.name || "이름 없음"
+        });
+
+        marker.restaurantId = Number(item.restaurant_id);
+
+        const infoWindow = new naver.maps.InfoWindow({
+            content: createInfoWindowContent(item)
+        });
+
+        naver.maps.Event.addListener(marker, "click", () => {
+            if (activeInfoWindow) {
+                activeInfoWindow.close();
+            }
+
+            infoWindow.open(naverMap, marker);
+            activeInfoWindow = infoWindow;
+
+            // 좌측 음식점 카드로 포커스 이동
+            focusRestaurantCard(item.restaurant_id);
+
+            // 상세 패널 열기
+            // map-panel 클릭 닫기 이벤트보다 늦게 실행되도록 한 템포 뒤에 호출
+            setTimeout(() => {
+                openDetailPanel(item.restaurant_id);
+            }, 0);
+        });
+
+        naverMarkers.push(marker);
+        bounds.extend(position);
+    }
+
+    /* 이종민 수정 3월 12일 - bounds.isEmpty() 대신 실제 마커 존재 여부로 판단 */
+    /* 이종민 수정 3월 12일 - bounds에 맞춘 뒤 한 단계 더 축소해서 조금 멀리서 보이게 */
+    if (hasMarker) {
+        /* 이종민 수정 3월 12일 - 줌 단계 조절 대신 fitBounds 여백으로 미세 조정 */
+        naverMap.fitBounds(bounds, {
+            top: 40,
+            right: 40,
+            bottom: 40,
+            left: 40,
+            maxZoom: 16
+        });
+    }
 }
 
 /**
@@ -640,18 +1204,28 @@ function bindMapMarkerEvents() {
 /**
  * 특정 음식점 마커를 강조한다.
  */
+/* 이종민 수정 3월 11일 */
 function highlightMarker(restaurantId) {
-    document.querySelectorAll(".map-marker").forEach((marker) => {
-        marker.style.filter = "";
-        marker.style.transform = "rotate(-45deg)";
+    const targetMarker = naverMarkers.find(
+        (marker) => Number(marker.restaurantId) === Number(restaurantId)
+    );
+
+    if (!targetMarker || !naverMap) return;
+
+    naverMap.panTo(targetMarker.getPosition());
+
+    const item = findRestaurantById(restaurantId);
+    if (!item) return;
+
+    if (activeInfoWindow) {
+        activeInfoWindow.close();
+    }
+
+    activeInfoWindow = new naver.maps.InfoWindow({
+        content: createInfoWindowContent(item)
     });
 
-    const targetMarker = document.querySelector(`.map-marker[data-id="${restaurantId}"]`);
-
-    if (targetMarker) {
-        targetMarker.style.filter = "brightness(0.9) saturate(1.2)";
-        targetMarker.style.transform = "rotate(-45deg) scale(1.12)";
-    }
+    activeInfoWindow.open(naverMap, targetMarker);
 }
 
 /************************************************************
@@ -716,13 +1290,43 @@ function bindSortChipEvents() {
  */
 function bindSearchEvents() {
     if (searchBtn) {
-        searchBtn.addEventListener("click", fetchRestaurants);
+        searchBtn.addEventListener("click", () => {
+            applyKeywordSearch();
+        });
     }
 
     if (keywordInput) {
+        keywordInput.addEventListener("input", () => {
+            updateSuggestionsOnly();
+        });
+
+        keywordInput.addEventListener("focus", () => {
+            if (keywordInput.value.trim()) {
+                renderSuggestionList(state.suggestionItems, keywordInput.value);
+            }
+        });
+
         keywordInput.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                moveSuggestionIndex("down");
+                return;
+            }
+
+            if (event.key === "ArrowUp") {
+                event.preventDefault();
+                moveSuggestionIndex("up");
+                return;
+            }
+
             if (event.key === "Enter") {
-                fetchRestaurants();
+                event.preventDefault();
+                selectActiveSuggestion();
+                return;
+            }
+
+            if (event.key === "Escape") {
+                hideSuggestionBox();
             }
         });
     }
@@ -734,6 +1338,20 @@ function bindSearchEvents() {
     if (categorySelect) {
         categorySelect.addEventListener("change", fetchRestaurants);
     }
+
+    document.addEventListener("click", (event) => {
+        const target = event.target;
+
+        if (
+            target === keywordInput ||
+            target.closest(".search-suggestion-box") ||
+            target.closest(".search-input-wrap")
+        ) {
+            return;
+        }
+
+        hideSuggestionBox();
+    });
 }
 
 /**
@@ -782,6 +1400,13 @@ function bindMapNoticeEvents() {
 function bindSideDrawerEvents() {
     if (menuBtn) {
         menuBtn.addEventListener("click", openSideDrawer);
+        if (sellerRegisterBtn) {
+            sellerRegisterBtn.addEventListener("click", () => {
+                closeSideDrawer();
+                window.location.href = "/seller/register";
+            });
+        }
+    
     }
 
     if (sideDrawerCloseBtn) {
@@ -809,6 +1434,7 @@ function bindSideDrawerEvents() {
  * - 첫 데이터 로드
  */
 function init() {
+    initNaverMap();
     bindSortChipEvents();
     bindSearchEvents();
     bindRouletteEvents();

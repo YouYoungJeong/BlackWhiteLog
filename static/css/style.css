@@ -14,6 +14,7 @@
     --point: #8faa7a;
     --point-dark: #6f8d59;
     --chip: #f2f4ed;
+    --back: #eef0e9;
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
     --radius-xl: 24px;
     --radius-lg: 18px;
@@ -24,7 +25,7 @@ html,
 body {
     margin: 0;
     padding: 0;
-    background: var(--bg);
+    background: var(--back);
     color: var(--text);
     font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
 }
@@ -70,11 +71,11 @@ img {
    드롭다운이 아래로 펼쳐질 수 있게 overflow: visible 적용 */
 .topbar {
     position: relative;
-    z-index: 100;
+    z-index: 5000;
     overflow: visible;
-
     min-height: 120px;
-    padding: 18px 28px 0;
+    padding: 10px 28px 0px;
+    margin-bottom: 20px;
     background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(10px);
 
@@ -372,6 +373,7 @@ img {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.24s ease;
+    z-index: 6000;
 }
 
 .side-drawer-backdrop.is-open {
@@ -397,8 +399,8 @@ img {
     border: 1px solid var(--line);
     border-radius: 24px;
     box-shadow: var(--shadow);
-
     overflow: hidden;
+    z-index: 6100;
     transform: translateX(calc(100% + 28px)) scale(0.98);
     opacity: 0;
     pointer-events: none;
@@ -602,6 +604,9 @@ body.drawer-open {
 ========================= */
 /* 검색 영역 전체 */
 .searchbar-section {
+    position: relative;
+    z-index: 5100;
+    overflow: visible;
     width: 100%;
     padding: 0;
     background: transparent;
@@ -609,6 +614,9 @@ body.drawer-open {
 
 /* 검색 컨트롤 정렬 */
 .searchbar-box {
+    position: relative;
+    z-index: 5200;
+    overflow: visible;
     width: 100%;
     max-width: 820px;
     margin: 0 auto;
@@ -654,11 +662,81 @@ body.drawer-open {
     font-weight: 700;
 }
 
+.search-input-wrap {
+    position: relative;
+    min-width: 220px;
+    z-index: 5300;
+    overflow: visible;
+}
+
+.search-suggestion-box {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12);
+    max-height: 320px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.search-suggestion-empty {
+    padding: 14px 16px;
+    border-radius: 12px;
+    color: var(--subtext);
+    font-size: 14px;
+}
+
+.search-suggestion-item {
+    width: 100%;
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.search-suggestion-item:hover,
+.search-suggestion-item.active {
+    background: #f6f9f1;
+}
+
+.search-suggestion-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.search-suggestion-meta {
+    font-size: 13px;
+    color: var(--subtext);
+    line-height: 1.45;
+}
+
+.search-highlight,
+.search-suggestion-item mark {
+    background: rgba(143, 170, 122, 0.18);
+    color: inherit;
+    border-radius: 4px;
+    padding: 0 2px;
+}
+
 /* =========================
    9. MAIN LAYOUT
 ========================= */
 /* 본문 2단 레이아웃 */
 .content-grid {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-columns: 420px minmax(0, 1fr);
     gap: 18px;
@@ -673,8 +751,20 @@ body.drawer-open {
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: var(--radius-xl);
-    overflow: hidden;
     box-shadow: var(--shadow);
+}
+
+.sidebar {
+    overflow: hidden;
+}
+
+/* 지도보다 추천창이 위에 보이도록 map-panel 레이어를 낮춤 */
+.map-panel {
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* =========================
@@ -1019,7 +1109,11 @@ body.drawer-open {
     box-shadow: var(--shadow);
 }
 
-/* 순위 배지 */
+.restaurant-card.is-active {
+    box-shadow: 0 0 0 3px rgba(143, 170, 122, 0.35), 0 12px 30px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
 .rank-badge {
     width: 38px;
     height: 38px;
@@ -1126,6 +1220,7 @@ body.drawer-open {
 /* 지도 배경 캔버스 */
 .map-canvas {
     position: relative;
+    z-index: 1;
     flex: 1;
     overflow: hidden;
 
@@ -1146,10 +1241,19 @@ body.drawer-open {
         radial-gradient(circle at 78% 72%, rgba(143, 170, 122, 0.18) 0 40px, transparent 41px);
 }
 
-/* 마커 레이어 */
+.naver-map {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
 .map-markers {
     position: absolute;
     inset: 0;
+    z-index: 1;
+    display: none;
 }
 
 /* 지도 마커 */
@@ -1355,6 +1459,8 @@ body.drawer-open {
 
 /* 푸터 */
 .site-footer {
+    position: relative;
+    z-index: 1;
     margin-bottom: 20px;
     padding: 22px 28px;
 

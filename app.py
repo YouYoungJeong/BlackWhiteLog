@@ -57,7 +57,15 @@ load_dotenv()
 # Flask 앱 생성
 app = Flask(__name__)
 
-# 세션/flash 메시지용 비밀키 설정
+#### 레스토랑 판넬 블루프린트(모듈화)  
+from restaurant_panel import restaurant_panel_bp  # 분리한 파일 임포트
+app.register_blueprint(restaurant_panel_bp) # 앱에 등록
+#### 레스토랑 판넬 블루프린트(모듈화)
+#### 랭크 블루프린트
+from user_ranking import user_ranking_bp
+app.register_blueprint(user_ranking_bp)
+#### 랭크 블루프린트
+
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 
 # 관리자 음식점 관리 블루프린트 등록
@@ -143,6 +151,11 @@ def api_restaurants():
 
     # JSON 형태로 반환
     return jsonify(items)
+
+# 이종민 추가 3월 12일 3번째
+@app.route("/seller/register")
+def seller_register():
+    return render_template("seller_register.html")
 
 
 # =========================
