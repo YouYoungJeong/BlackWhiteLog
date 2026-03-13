@@ -5,26 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>흑백로그 | 공지사항 관리</title>
 
+    <!-- 공통 레이아웃 모듈 CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_layout_common.css') }}" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_notice_management.css') }}" />
+
+    <!-- 공통 드로어 모듈 CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_drawer.css') }}" />
 
-    <script defer src="{{ url_for('static', filename='js/owner_notice_management.js') }}"></script>
+    <!-- 공지사항 페이지 전용 CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_notice_management.css') }}" />
+
+    <!-- 공통 드로어 모듈 JS -->
     <script defer src="{{ url_for('static', filename='js/owner_drawer.js') }}"></script>
+
+    <!-- 공지사항 페이지 전용 JS -->
+    <script defer src="{{ url_for('static', filename='js/owner_notice_management.js') }}"></script>
 </head>
 <body>
     <div class="owner-notice-page">
 
-        <!-- 공통 헤더 -->
+        <!-- 공통 헤더 영역 시작 : owner_layout_common.css 기준 -->
         <header class="top-header">
             <div class="header-left">
-                <div class="brand-wrap">
+                <a href="{{ url_for('owner_board') }}" class="brand-wrap" aria-label="흑백로그 오너 대시보드로 이동">
                     <img
                         src="{{ url_for('static', filename='img/main_logo.png') }}"
                         alt="흑백로그 로고"
                         class="main-logo"
                     >
-                </div>
+                </a>
             </div>
 
             <div class="header-right">
@@ -32,15 +40,25 @@
 
                 <div class="store-profile">
                     <span class="store-name">수원비빔밥집</span>
-                    <div class="profile-circle">👨‍🍳</div>
+                    <div class="profile-circle" aria-hidden="true">👨‍🍳</div>
                 </div>
 
-                <button id="menuBtn" class="menu-toggle" type="button" aria-label="메뉴 열기">
+                <!-- 공통 드로어 열기 버튼 : owner_drawer.js가 menuBtn id를 사용 -->
+                <button
+                    id="menuBtn"
+                    class="menu-toggle"
+                    type="button"
+                    aria-label="메뉴 열기"
+                    aria-controls="sideDrawer"
+                    aria-expanded="false"
+                >
                     ☰
                 </button>
             </div>
         </header>
+        <!-- 공통 헤더 영역 끝 -->
 
+        <!-- 공지사항 페이지 전용 메인 콘텐츠 -->
         <main class="page-main">
             <section class="notice-card">
                 <div class="card-header">
@@ -145,12 +163,12 @@
             </section>
         </main>
 
-        <!-- 공통 푸터 -->
+        <!-- 공통 푸터 영역 시작 : owner_layout_common.css 기준 -->
         <footer class="site-footer">
             <div class="footer-inner">
                 <div class="footer-brand">
                     <strong>흑백로그</strong>
-                    <span>Black & White Log</span>
+                    <span>Black &amp; White Log</span>
                 </div>
 
                 <div class="footer-info">
@@ -165,8 +183,10 @@
                 </div>
             </div>
         </footer>
+        <!-- 공통 푸터 영역 끝 -->
     </div>
 
+    <!-- 공통 드로어 영역 시작 : owner_drawer.css / owner_drawer.js 기준 -->
     <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
 
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
@@ -222,5 +242,6 @@
             </div>
         </div>
     </aside>
+    <!-- 공통 드로어 영역 끝 -->
 </body>
 </html>

@@ -1,44 +1,9 @@
 @charset "UTF-8";
 
 /* =========================
-   전체 초기화
-<<<<<<< HEAD
-   - 브라우저 기본 margin/padding 제거
-   - box-sizing: border-box로 크기 계산 일관화
+   리뷰관리 페이지 전용 토큰
+   - 공통 헤더/푸터/드로어 스타일은 owner_layout_common.css / owner_drawer.css에서 관리
    ========================= */
-=======
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* =========================
-<<<<<<< HEAD
-   전역 커스텀 속성(CSS 변수)
-   - 페이지 전체에서 공통으로 사용하는 색상/반경/그림자 값
-   - 유지보수 시 여기 값만 바꾸면 전체 톤 변경 가능
-   ========================= */
-:root {
-    --bg: #f5f6f2; /* 페이지 기본 배경색 */
-    --panel: #ffffff; /* 카드/패널 배경색 */
-    --line: #e7e9e3; /* 공통 보더 색상 */
-    --text: #222222; /* 기본 본문 텍스트 색상 */
-    --sub-text: #666666; /* 보조 텍스트 색상 */
-    --muted: #8c8c8c; /* 약한 텍스트/비활성 느낌 색상 */
-    --point: #9caf7f; /* 포인트 컬러(세이지 그린 계열) */
-    --point-dark: #82956a; /* 포인트 hover/강조용 진한 색상 */
-    --point-light: #eef3e8; /* 포인트의 연한 배경색 */
-    --shadow: 0 8px 24px rgba(0, 0, 0, 0.05); /* 카드 공통 그림자 */
-    --radius-xl: 28px; /* 가장 큰 라운드 값 */
-    --radius-lg: 22px; /* 카드 기본 라운드 값 */
-    --radius-md: 16px; /* 중간 라운드 값 */
-    --radius-sm: 12px; /* 작은 버튼/요소 라운드 값 */
-=======
-   전역 커스텀 속성
-========================= */
 :root {
     --bg: #f5f6f2;
     --panel: #ffffff;
@@ -50,64 +15,20 @@
     --point-dark: #82956a;
     --point-light: #eef3e8;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-    --radius-xl: 28px;
     --radius-lg: 22px;
     --radius-md: 16px;
     --radius-sm: 12px;
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 }
 
 /* =========================
-   body 기본 설정
-<<<<<<< HEAD
-   - 전체 폰트 지정
-   - 상단은 옅은 블루 톤, 아래는 기본 배경으로 이어지는 그라데이션 배경
-   - 전체 기본 텍스트 색상 설정
+   페이지 기본 배경 / 래퍼
    ========================= */
-=======
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 body {
     font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
     background: linear-gradient(180deg, #eef2fb 0 92px, var(--bg) 92px 100%);
     color: var(--text);
 }
 
-/* =========================
-<<<<<<< HEAD
-   버튼 기본 초기화
-   - 브라우저 기본 버튼 스타일 제거
-   - 상속 폰트 사용
-   - 클릭 가능한 포인터 적용
-   ========================= */
-button {
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-/* =========================
-   링크 기본 초기화
-   - 밑줄 제거
-   - 부모 색상 상속
-   ========================= */
-a {
-    text-decoration: none;
-    color: inherit;
-}
-
-/* =========================
-   전체 페이지 래퍼
-   - 최대 너비 제한
-   - 좌우 여백 확보
-   - 화면 높이를 최소 viewport 높이만큼 유지
-   - 상하 패딩으로 숨쉴 공간 확보
-   ========================= */
-=======
-   전체 페이지 래퍼
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .owner-board-page {
     width: min(1380px, calc(100% - 32px));
     min-height: 100vh;
@@ -116,103 +37,8 @@ a {
 }
 
 /* =========================
-<<<<<<< HEAD
-   헤더 영역
-   - 상단 공통 헤더 박스
-   - flex로 좌우 정렬
-   - 반투명 흰색 + 라운드 + 보더
+   공통 카드
    ========================= */
-.top-header {
-    height: 94px; /* 헤더 높이 고정 */
-    background: rgba(255, 255, 255, 0.9); /* 반투명 흰 배경 */
-    border: 1px solid #edf0ea; /* 연한 테두리 */
-    border-radius: 26px; /* 둥근 모서리 */
-    display: flex; /* 내부 요소 가로 배치 */
-    align-items: center; /* 세로 중앙 정렬 */
-    justify-content: space-between; /* 좌우 끝 정렬 */
-    padding: 0 28px; /* 좌우 안쪽 여백 */
-    margin-bottom: 22px; /* 헤더 아래 간격 */
-}
-
-/* 헤더 왼쪽 영역 : 로고 배치 */
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 46px;
-}
-
-/* 로고 감싸는 래퍼 */
-.brand-wrap {
-    display: flex;
-    align-items: center;
-}
-
-/* 실제 로고 이미지 */
-.main-logo {
-    height: 75px; /* 로고 높이 */
-    width: auto; /* 비율 유지 */
-    display: block; /* inline 요소 여백 이슈 방지 */
-    object-fit: contain; /* 비율 유지하며 영역 안에 맞춤 */
-}
-
-/* 헤더 오른쪽 영역 : 날짜 / 프로필 / 메뉴버튼 */
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-}
-
-/* 날짜 텍스트 */
-.today-date {
-    color: #707070;
-    font-size: 1.1rem;
-}
-
-/* 점주 정보 영역 */
-.store-profile {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* 점주/가게 이름 */
-.store-name {
-    font-size: 1.35rem;
-    font-weight: 700;
-}
-
-/* 프로필 원형 아이콘 */
-.profile-circle {
-    width: 54px;
-    height: 54px;
-    border-radius: 50%; /* 완전 원형 */
-    background: #f3ede6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-    border: 1px solid #e7e1d9;
-}
-
-/* 햄버거 메뉴 버튼 */
-.menu-toggle {
-    width: 54px;
-    height: 54px;
-    border: 1px solid #d9ddd4;
-    border-radius: 18px;
-    font-size: 1.8rem;
-    color: #333;
-    background: #fff;
-}
-
-/* =========================
-   공통 카드 스타일
-   - 여러 section/article에서 공용 사용
-   ========================= */
-=======
-   공통 카드 스타일
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .card {
     background: var(--panel);
     border: 1px solid var(--line);
@@ -221,14 +47,8 @@ a {
 }
 
 /* =========================
-   메인 리뷰 페이지 레이아웃
-<<<<<<< HEAD
-   - 세로 스택 구조
-   - 각 블럭 사이 간격 통일
+   리뷰 페이지 레이아웃
    ========================= */
-=======
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-page {
     display: flex;
     flex-direction: column;
@@ -236,60 +56,42 @@ a {
 }
 
 /* =========================
-<<<<<<< HEAD
-   채워진 스타일 버튼
-   - 등록 같은 주요 액션 버튼
+   리뷰 상세 액션 버튼
+   - 공통 버튼 초기화/헤더 버튼은 owner_layout_common.css 사용
    ========================= */
-=======
-   버튼 스타일
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .fill-btn {
     min-width: 120px;
     height: 50px;
+    border: none;
     border-radius: 16px;
     padding: 0 22px;
     background: var(--point);
-    color: #fff;
+    color: #ffffff;
     font-size: 1rem;
     font-weight: 700;
-<<<<<<< HEAD
-    transition: 0.2s ease; /* hover 부드럽게 */
-}
-
-/* 주요 버튼 hover 상태 */
-=======
+    cursor: pointer;
+    font-family: inherit;
     transition: 0.2s ease;
 }
 
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .fill-btn:hover {
     background: var(--point-dark);
 }
 
-<<<<<<< HEAD
-/* =========================
-   외곽선 버튼
-   - 수정/삭제 같은 보조 액션 버튼
-   ========================= */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .ghost-btn {
     min-width: 110px;
     height: 50px;
     border-radius: 16px;
     padding: 0 20px;
-    background: #fff;
+    background: #ffffff;
     border: 1px solid #d8ddd2;
-    color: #444;
+    color: #444444;
     font-size: 1rem;
     font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
 }
 
-<<<<<<< HEAD
-/* 경고 성격 버튼 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .ghost-btn.warning {
     color: #7f8f69;
     border-color: #cfd9c3;
@@ -297,84 +99,49 @@ a {
 }
 
 /* =========================
-   페이지 타이틀 카드
-<<<<<<< HEAD
-   - 상단 안내 영역
+   상단 타이틀 카드
    ========================= */
-=======
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .page-title-card {
     padding: 28px 30px;
 }
 
-<<<<<<< HEAD
-/* 타이틀 카드 내부 텍스트 묶음 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .page-title-left {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-<<<<<<< HEAD
-/* 작은 라벨 칩 */
-.page-chip {
-    display: inline-flex;
-    align-self: flex-start; /* 내용 길이에 맞게만 표시 */
-    padding: 7px 14px;
-    border-radius: 999px; /* pill 형태 */
-=======
 .page-chip {
     display: inline-flex;
     align-self: flex-start;
     padding: 7px 14px;
     border-radius: 999px;
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
     background: var(--point-light);
     color: var(--point-dark);
     font-size: 0.92rem;
     font-weight: 700;
 }
 
-<<<<<<< HEAD
-/* 페이지 메인 제목 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .page-title-left h2 {
     font-size: 2rem;
     font-weight: 800;
 }
 
-<<<<<<< HEAD
-/* 페이지 설명 문장 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .page-title-left p {
-    color: #666;
+    color: #666666;
     font-size: 1.04rem;
     line-height: 1.6;
 }
 
 /* =========================
-   통계 카드 그리드
-<<<<<<< HEAD
-   - 4칸 균등 배치
+   리뷰 요약 카드
    ========================= */
-=======
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-summary-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 18px;
 }
 
-<<<<<<< HEAD
-/* 개별 통계 카드 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-card {
     padding: 24px 24px 22px;
     display: flex;
@@ -383,300 +150,167 @@ a {
     overflow: hidden;
 }
 
-<<<<<<< HEAD
-/* 선택/강조된 통계 카드 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-card.active {
     border-color: #d7e3cb;
     background: linear-gradient(180deg, #fbfdf8 0%, #f4f8ef 100%);
 }
 
-<<<<<<< HEAD
-/* 경고 계열 통계 카드 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-card.warning {
     background: linear-gradient(180deg, #ffffff 0%, #f7faf4 100%);
 }
 
-<<<<<<< HEAD
-/* 줄바꿈 방지 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-label,
 .summary-value {
     white-space: nowrap;
 }
 
-<<<<<<< HEAD
-/* 통계 라벨 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-label {
-    color: #666;
+    color: #666666;
     font-size: 1rem;
     font-weight: 600;
-<<<<<<< HEAD
-    white-space: nowrap;
 }
 
-/* 통계 숫자 */
-=======
-}
-
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-value {
     font-size: 2rem;
     font-weight: 800;
-    color: #222;
-<<<<<<< HEAD
-    white-space: nowrap;
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
+    color: #222222;
 }
 
 /* =========================
-   필터 카드
-<<<<<<< HEAD
-   - 상태 탭 + 검색창 영역
+   필터 영역
    ========================= */
-=======
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-filter-card {
     padding: 18px;
 }
 
-<<<<<<< HEAD
-/* 상단 필터 줄 */
-.filter-top {
-    display: flex;
-    justify-content: space-between; /* 탭 왼쪽 / 검색 오른쪽 */
-=======
 .filter-top {
     display: flex;
     justify-content: space-between;
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
     gap: 16px;
     margin-bottom: 14px;
 }
 
-<<<<<<< HEAD
-/* 탭 버튼 묶음 */
-.tab-group {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap; /* 공간 부족 시 줄바꿈 */
-}
-
-/* 개별 탭 버튼 */
-=======
 .tab-group {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
 }
 
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .tab-btn {
     min-width: 100px;
     height: 46px;
     padding: 0 18px;
     border: 1px solid #dfe4da;
     border-radius: 14px;
-    background: #fff;
-    color: #333;
+    background: #ffffff;
+    color: #333333;
     font-size: 1rem;
     font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
 }
 
-<<<<<<< HEAD
-/* 활성화된 탭 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .tab-btn.active {
     background: var(--point);
     border-color: var(--point);
-    color: #fff;
+    color: #ffffff;
 }
 
-<<<<<<< HEAD
-/* 검색창 전체 래퍼 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .search-box {
     display: flex;
     width: min(360px, 100%);
     border: 1px solid #dfe4da;
     border-radius: 16px;
-<<<<<<< HEAD
-    overflow: hidden; /* 내부 요소가 모서리 밖으로 튀는 것 방지 */
-    background: #fff;
-}
-
-/* 검색 입력창 */
-=======
     overflow: hidden;
-    background: #fff;
+    background: #ffffff;
 }
 
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .search-box input {
     flex: 1;
     height: 46px;
     border: none;
     outline: none;
     padding: 0 16px;
-    font-size: 1rem;
     background: transparent;
+    font: inherit;
 }
 
-<<<<<<< HEAD
-/* 검색 버튼 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .search-box button {
-    width: 58px;
-    background: var(--point);
-    color: #fff;
-    font-size: 1.2rem;
-    font-weight: 700;
+    width: 52px;
+    border: none;
+    border-left: 1px solid #eef1eb;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 1rem;
 }
 
-<<<<<<< HEAD
-/* 하단 필터 칩 영역 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .filter-bottom {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
 }
 
-<<<<<<< HEAD
-/* 정렬/기간 선택 칩 버튼 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .filter-chip {
-    height: 42px;
+    min-width: 110px;
+    height: 44px;
     padding: 0 16px;
-    border: 1px solid #dde2d7;
-    border-radius: 999px;
-    background: #fff;
-    color: #333;
+    border: 1px solid #dfe4da;
+    border-radius: 14px;
+    background: #ffffff;
+    color: #444444;
     font-size: 0.96rem;
     font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
 }
 
 /* =========================
-   리뷰 테이블 영역
-<<<<<<< HEAD
+   리뷰 테이블
    ========================= */
-=======
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-board {
-    padding: 18px;
+    padding: 18px 18px 20px;
 }
 
-<<<<<<< HEAD
-/* 가로 스크롤 허용 래퍼
-   - 모바일/좁은 화면에서 테이블이 잘리지 않게 함 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table-wrap {
+    width: 100%;
     overflow-x: auto;
 }
 
-<<<<<<< HEAD
-/* 실제 리뷰 테이블 */
-.review-table {
-    width: 100%;
-    border-collapse: collapse; /* 셀 경계선 겹침 제거 */
-    min-width: 980px; /* 너무 좁아지지 않도록 최소 너비 유지 */
-}
-
-/* 테이블 헤더 셀 */
-=======
 .review-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 980px;
+    min-width: 860px;
 }
 
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table thead th {
-    background: linear-gradient(90deg, #242424 0%, #353535 100%);
-    color: #fff;
-    font-size: 1rem;
+    padding: 16px 14px;
+    border-bottom: 1px solid #e8ebe5;
+    background: #fafbf8;
+    color: #555555;
+    font-size: 0.95rem;
     font-weight: 700;
-    padding: 18px 14px;
     text-align: center;
+    white-space: nowrap;
 }
 
-<<<<<<< HEAD
-/* 헤더 첫 번째 칸 좌상단 라운드 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
-.review-table thead th:first-child {
-    border-top-left-radius: 14px;
-}
-
-<<<<<<< HEAD
-/* 헤더 마지막 칸 우상단 라운드 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
-.review-table thead th:last-child {
-    border-top-right-radius: 14px;
-}
-
-<<<<<<< HEAD
-/* 본문 셀 공통 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table tbody td {
     padding: 18px 14px;
-    border-bottom: 1px solid #ecefe8;
+    border-bottom: 1px solid #eef1eb;
+    color: #333333;
+    font-size: 0.96rem;
     text-align: center;
-    font-size: 1rem;
-    color: #2c2c2c;
-    background: #fff;
+    vertical-align: middle;
 }
 
-<<<<<<< HEAD
-/* 마우스 오버한 행 강조 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
-.review-table tbody tr:hover td {
-    background: #fafbf8;
+.review-table tbody tr.is-selected {
+    background: #fbfdf8;
 }
 
-<<<<<<< HEAD
-/* 현재 선택된 리뷰 행 강조 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
-.review-table tbody tr.is-selected td {
-    background: #f6faf1;
-}
-
-<<<<<<< HEAD
-/* 리뷰내용 컬럼(3번째)은 왼쪽 정렬 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
-.review-table tbody td:nth-child(3) {
-    text-align: left;
-}
-
-<<<<<<< HEAD
-/* 상태 뱃지 공통 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .state-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 82px;
+    min-width: 84px;
     height: 34px;
     padding: 0 12px;
     border-radius: 999px;
@@ -684,341 +318,114 @@ a {
     font-weight: 700;
 }
 
-<<<<<<< HEAD
-/* 미답변 상태 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .state-badge.pending {
-    background: #edf4e6;
-    color: #6f8559;
+    background: #f7f2df;
+    color: #8a6c1a;
 }
 
-<<<<<<< HEAD
-/* 답변완료 상태 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .state-badge.done {
-    background: #f2f3f1;
-    color: #555;
+    background: #eef4ec;
+    color: #6e8762;
 }
 
-/* =========================
-   페이지네이션
-<<<<<<< HEAD
-   ========================= */
-=======
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .pagination {
     display: flex;
     justify-content: center;
     gap: 8px;
-    margin-top: 18px;
+    margin-top: 20px;
 }
 
-<<<<<<< HEAD
-/* 페이지 버튼 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .pagination button {
-    width: 42px;
-    height: 42px;
+    min-width: 40px;
+    height: 40px;
+    border: 1px solid #dfe4da;
     border-radius: 12px;
-    border: 1px solid transparent;
-    background: transparent;
-    color: #333;
-    font-size: 1rem;
+    background: #ffffff;
+    color: #444444;
     font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
 }
 
-<<<<<<< HEAD
-/* 현재 활성 페이지 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .pagination button.active {
-    background: var(--point-light);
-    color: var(--point-dark);
-    border-color: #d8e3cd;
+    background: var(--point);
+    border-color: var(--point);
+    color: #ffffff;
 }
 
 /* =========================
    리뷰 상세 카드
-<<<<<<< HEAD
    ========================= */
-=======
-========================= */
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-detail-card {
     padding: 24px;
 }
 
-<<<<<<< HEAD
-/* 리뷰 메타 정보 줄
-   - 작성자/별점/작성일/상태 등을 한 줄 또는 여러 줄로 배치 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px 24px;
-    padding-bottom: 16px;
-    margin-bottom: 18px;
+    gap: 10px 24px;
+    padding-bottom: 18px;
     border-bottom: 1px solid #ecefe8;
-    color: #333;
-    font-size: 1rem;
+    color: #444444;
+    font-size: 0.95rem;
 }
 
-<<<<<<< HEAD
-/* 상세 본문 세로 배치 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-content {
     display: flex;
     flex-direction: column;
     gap: 18px;
+    padding: 22px 0;
 }
 
-<<<<<<< HEAD
-/* 리뷰/답변 한 블럭 단위 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-row {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-<<<<<<< HEAD
-/* 리뷰/답변 제목 텍스트 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-row strong {
     font-size: 1rem;
-    font-weight: 800;
+    color: #222222;
 }
 
-<<<<<<< HEAD
-/* 실제 리뷰 본문 박스 */
-=======
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-row p {
-    min-height: 70px;
-    padding: 18px;
-    border: 1px solid #e8ece3;
-    border-radius: 16px;
-    background: #fafbf9;
-    color: #333;
+    color: #444444;
     line-height: 1.7;
 }
 
-<<<<<<< HEAD
-/* 답변 입력창 */
 .answer-row textarea {
     width: 100%;
-    min-height: 140px;
-    resize: vertical; /* 세로 방향 크기 조절 허용 */
-=======
-.answer-row textarea {
-    width: 100%;
-    min-height: 140px;
-    resize: vertical;
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
+    min-height: 160px;
     border: 1px solid #dfe4da;
     border-radius: 16px;
-    padding: 16px;
-    font-family: inherit;
-    font-size: 1rem;
+    padding: 16px 18px;
+    resize: vertical;
+    font: inherit;
+    color: #222222;
     outline: none;
-    background: #fff;
+    background: #ffffff;
 }
 
-<<<<<<< HEAD
-/* 답변 입력창 포커스 상태 */
 .answer-row textarea:focus {
     border-color: var(--point);
     box-shadow: 0 0 0 4px rgba(156, 175, 127, 0.12);
 }
 
-/* 상세 액션 버튼 묶음 */
 .detail-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
-    flex-wrap: wrap;
-    margin-top: 22px;
-}
-
-/* =========================
-   푸터 영역
-   ========================= */
-.site-footer {
-    margin-top: 22px;
-    margin-bottom: 20px;
-    padding: 22px 28px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid var(--line);
-    border-radius: 24px;
-    box-shadow: var(--shadow);
-}
-
-/* 푸터 내부 정렬 */
-.footer-inner {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    flex-wrap: wrap;
-}
-
-/* 푸터 로고/브랜드 텍스트 */
-.footer-brand {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 180px;
-}
-
-/* 푸터 안내문 영역 */
-.footer-info {
-    flex: 1;
-    min-width: 280px;
-}
-
-/* =========================
-   반응형 : 태블릿 이하 (1100px)
-   - 헤더를 조금 더 압축
-   - 날짜 숨김
-   - 로고/프로필/버튼 크기 축소
-   ========================= */
-@media (max-width: 1100px) {
-    .top-header {
-        height: 94px;
-        padding: 0 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-direction: row;
-        gap: 12px;
-    }
-
-    .header-left {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .header-right {
-        width: auto;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        flex-wrap: nowrap;
-        gap: 10px;
-        flex-shrink: 0;
-    }
-
-    .store-profile {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-shrink: 0;
-    }
-
-    .store-name {
-        font-size: 1rem;
-        white-space: nowrap;
-    }
-
-    .today-date {
-        display: none; /* 공간 확보를 위해 날짜 숨김 */
-    }
-
-    .main-logo {
-        height: 58px;
-        width: auto;
-        max-width: 180px;
-        object-fit: contain;
-    }
-
-    .profile-circle {
-        width: 42px;
-        height: 42px;
-        font-size: 1.35rem;
-    }
-
-    .menu-toggle {
-        width: 42px;
-        height: 42px;
-        font-size: 1.4rem;
-        border-radius: 14px;
-    }
-}
-
-/* =========================
-   반응형 : 모바일 이하 (768px)
-   - 헤더 더 축소
-   - 점주명 말줄임 처리
-   - 아이콘/버튼 크기 추가 축소
-   ========================= */
-@media (max-width: 768px) {
-    .top-header {
-        height: 82px;
-        padding: 0 14px;
-        gap: 8px;
-    }
-
-    .main-logo {
-        height: 46px;
-        max-width: 140px;
-    }
-
-    .store-name {
-        font-size: 0.92rem;
-        max-width: 72px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .profile-circle {
-        width: 36px;
-        height: 36px;
-        font-size: 1.1rem;
-    }
-
-    .menu-toggle {
-        width: 36px;
-        height: 36px;
-        font-size: 1.15rem;
-    }
-
-    .header-right {
-        gap: 6px;
-    }
-}
-
-/* =========================
-   반응형 : 모바일 이하 (768px)
-   - 통계 카드를 4열 → 2열로 변경
-   - 카드 내부 패딩/텍스트 크기 축소
-   ========================= */
-@media (max-width: 768px) {
-=======
-.answer-row textarea:focus {
-    border-color: var(--point);
-    box-shadow: 0 0 0 4px rgba(156, 175, 127, 0.14);
-}
-
-.detail-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-    flex-wrap: wrap;
+    padding-top: 6px;
 }
 
 /* =========================
    반응형
-========================= */
+   ========================= */
 @media (max-width: 1100px) {
+    .review-summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
     .filter-top {
         flex-direction: column;
         align-items: stretch;
@@ -1032,53 +439,30 @@ a {
 @media (max-width: 768px) {
     .owner-board-page {
         width: min(100%, calc(100% - 20px));
-        padding: 16px 0 24px;
+        padding: 12px 0 20px;
     }
 
-    .page-title-card {
-        padding: 24px 20px;
+    .page-title-card,
+    .review-board,
+    .review-detail-card {
+        padding-left: 18px;
+        padding-right: 18px;
     }
 
     .page-title-left h2 {
-        font-size: 1.7rem;
+        font-size: 1.55rem;
     }
 
-    .page-title-left p {
-        font-size: 0.96rem;
-    }
-
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
     .review-summary-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
     }
 
     .summary-card {
-        padding: 18px 16px;
-    }
-
-    .summary-label {
-        font-size: 0.95rem;
+        padding: 20px 18px;
     }
 
     .summary-value {
-        font-size: 1.8rem;
-    }
-<<<<<<< HEAD
-=======
-
-    .review-filter-card,
-    .review-board,
-    .review-detail-card {
-        padding: 16px;
-    }
-
-    .tab-btn {
-        min-width: auto;
-        flex: 1 1 calc(50% - 5px);
-    }
-
-    .filter-chip {
-        flex: 1 1 auto;
+        font-size: 1.7rem;
     }
 
     .detail-actions {
@@ -1089,20 +473,4 @@ a {
     .ghost-btn {
         width: 100%;
     }
-}
-
-@media (max-width: 520px) {
-    .review-summary-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .tab-group {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .tab-btn {
-        width: 100%;
-    }
->>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 }

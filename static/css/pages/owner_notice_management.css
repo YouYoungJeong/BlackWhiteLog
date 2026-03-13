@@ -1,6 +1,9 @@
 @charset "UTF-8";
 
-/* ===== 기본 설정 ===== */
+/* =========================
+   공지사항 페이지 전용 토큰
+   - 공통 헤더/푸터/드로어 스타일은 owner_layout_common.css / owner_drawer.css에서 관리
+   ========================= */
 :root {
     --bg: #f5f6f2;
     --card: #fcfcfb;
@@ -35,14 +38,15 @@ body {
     min-height: 100vh;
 }
 
-/* ===== 전체 레이아웃 ===== */
+/* =========================
+   페이지 레이아웃
+   ========================= */
 .owner-notice-page {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
 
-/* ===== 메인 ===== */
 .page-main {
     width: min(100%, 860px);
     margin: 0 auto;
@@ -52,6 +56,9 @@ body {
     gap: 22px;
 }
 
+/* =========================
+   공지 카드 공통
+   ========================= */
 .notice-card,
 .notice-list-card {
     background: var(--card);
@@ -79,7 +86,9 @@ body {
     font-size: 0.98rem;
 }
 
-/* ===== 폼 ===== */
+/* =========================
+   공지 작성 폼
+   ========================= */
 .notice-form {
     padding: 28px;
 }
@@ -107,7 +116,7 @@ body {
 .form-group textarea {
     border: 1px solid var(--line-strong);
     border-radius: 14px;
-    background: #fff;
+    background: #ffffff;
     padding: 16px 18px;
     outline: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -134,7 +143,7 @@ body {
 .file-upload-box {
     border: 1px solid var(--line-strong);
     border-radius: 14px;
-    background: #fff;
+    background: #ffffff;
     padding: 14px 16px;
 }
 
@@ -167,7 +176,10 @@ body {
     accent-color: var(--point-dark);
 }
 
-/* ===== 버튼 ===== */
+/* =========================
+   버튼
+   - 공통 헤더 버튼은 owner_layout_common.css 사용
+   ========================= */
 .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -183,6 +195,7 @@ body {
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
+    font-family: inherit;
     transition: all 0.2s ease;
 }
 
@@ -201,7 +214,7 @@ body {
 .btn-primary {
     border: 1px solid var(--point-dark);
     background: linear-gradient(180deg, #9db197 0%, #7f957a 100%);
-    color: #fff;
+    color: #ffffff;
 }
 
 .btn:hover {
@@ -209,7 +222,9 @@ body {
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
-/* ===== 등록된 공지사항 ===== */
+/* =========================
+   등록된 공지 리스트
+   ========================= */
 .notice-list {
     padding: 24px 28px 28px;
     display: flex;
@@ -220,7 +235,7 @@ body {
 .notice-item {
     border: 1px solid var(--line);
     border-radius: 18px;
-    background: #fff;
+    background: #ffffff;
     padding: 18px 20px;
 }
 
@@ -274,6 +289,7 @@ body {
     color: var(--point-dark);
     font-weight: 700;
     cursor: pointer;
+    font-family: inherit;
     padding: 4px 6px;
 }
 
@@ -292,7 +308,9 @@ body {
     margin-bottom: 10px;
 }
 
-/* ===== 반응형 ===== */
+/* =========================
+   반응형
+   ========================= */
 @media (max-width: 900px) {
     .page-main {
         padding: 0 16px 24px;
@@ -328,5 +346,15 @@ body {
 
     .btn {
         width: 100%;
+    }
+
+    .notice-item-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .notice-item-actions {
+        justify-content: flex-start;
     }
 }
