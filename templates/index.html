@@ -13,6 +13,10 @@
     <!--#### 랭크 css 스타일시트-->
 </head>
 <body>
+    <script
+    type="text/javascript"
+    src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=bixef1lnm8&submodules=geocoder"
+    ></script>  <!-- 이종민: 수정한 부분 네이버 지도 -->
     <div class="app-shell">
         <header class="topbar">
             <div class="brand-wrap">
@@ -167,14 +171,11 @@
                 <!-- {% include 'user_ranking.html' %} -->
                 <!--#### 랭킹-->
                 <div id="mapCanvas" class="map-canvas">
+                    <div id="naverMap" class="naver-map"></div>
+
                     <div class="map-grid"></div>
                     <div id="mapMarkers" class="map-markers"></div>
-
-                    <div class="map-center-badge">
-                        <strong>지도 영역</strong>
-                        <span>다음 단계에서 네이버 지도 API 연결</span>
-                    </div>
-                </div>
+                </div>  <!-- 이종민 수정한 부분 -->
             </section>
         </main>
 
@@ -237,7 +238,7 @@
                     <span class="side-drawer__icon">↪</span>
                     <span>로그아웃</span>
                 </button>
-                <button type="button" class="side-drawer__item">
+                <button type="button" class="side-drawer__item" id="sellerRegisterBtn"> <!-- 이종민 수정 3월 12일 -->
                     <span class="side-drawer__icon">🏪</span>
                     <span>판매자 등록하기</span>
                 </button>
