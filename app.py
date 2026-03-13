@@ -4,6 +4,10 @@ import os
 
 from db import fetch_categories, fetch_regions, fetch_restaurants
 
+# owner-routes.py import
+from owner_routes import register_owner_routes
+
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -42,26 +46,11 @@ def api_restaurants():
     )
     return jsonify(items)
 
-# Owner 보드 route
-@app.route("/owner/board")
-def owner_board():
-    return render_template("owner_board.html")
-
-# Oner 메뉴관리 route
-@app.route("/owner/menu_management")
-def owner_menu_management():
-    return render_template("owner_menu_management.html")
-
-# Oner 리뷰관리 route
-@app.route("/owner/review_management")
-def owner_review_management():
-    return render_template("owner_review_management.html")
 
 
-# Oner 공지사항 route
-@app.route("/owner/notice_management")
-def owner_notice_management():
-    return render_template("owner_notice_management.html")
+# ===== Owner routes =====
+register_owner_routes(app)
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 
 
 if __name__ == "__main__":

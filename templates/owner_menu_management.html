@@ -5,25 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>흑백로그 | 메뉴 관리</title>
 
-    <!-- 공통 레이아웃 모듈 CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_layout_common.css') }}">
-
-    <!-- 공통 드로어 모듈 CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_drawer.css') }}">
-
-    <!-- 메뉴관리 페이지 전용 CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_menu_management.css') }}">
 
-    <!-- 공통 드로어 모듈 JS -->
     <script defer src="{{ url_for('static', filename='js/owner_drawer.js') }}"></script>
-
-    <!-- 메뉴관리 페이지 전용 JS -->
     <script defer src="{{ url_for('static', filename='js/owner_menu_management.js') }}"></script>
 </head>
 <body>
     <div class="owner-menu-page">
 
-        <!-- 공통 헤더 영역 시작 : owner_layout_common.css 기준 -->
         <header class="top-header">
             <div class="header-left">
                 <a href="{{ url_for('owner_board') }}" class="brand-wrap" aria-label="흑백로그 오너 대시보드로 이동">
@@ -41,11 +32,10 @@
                 <p class="today-date">2026.03.13 FRI</p>
 
                 <div class="store-profile">
-                    <p class="store-name">사장님</p>
+                    <p class="store-name">{{ owner.owner_name }}</p>
                     <div class="profile-circle" aria-hidden="true">👨‍🍳</div>
                 </div>
 
-                <!-- 공통 드로어 열기 버튼 : owner_drawer.js가 menuBtn id를 사용 -->
                 <button
                     type="button"
                     class="menu-toggle"
@@ -58,104 +48,106 @@
                 </button>
             </div>
         </header>
-        <!-- 공통 헤더 영역 끝 -->
 
-        <!-- 메뉴관리 페이지 전용 메인 콘텐츠 -->
         <main class="main-content">
             <section class="menu-form-card">
-                <h2 class="section-title">메뉴 등록</h2>
+                <form action="{{ url_for('owner_menu_management') }}" method="post">
+                    <h2 class="section-title">메뉴 등록</h2>
 
-                <div class="menu-upload-section">
-                    <h3 class="sub-title">메뉴 사진 등록</h3>
+                    <div class="menu-upload-section">
+                        <h3 class="sub-title">메뉴 사진 등록</h3>
 
-                    <div class="upload-form-grid">
-                        <div class="image-upload-box">
-                            <div class="preview-image-wrap">
-                                <img
-                                    src="{{ url_for('static', filename='img/sample_menu.jpg') }}"
-                                    alt="메뉴 이미지 미리보기"
-                                    class="preview-image"
-                                >
+                        <div class="upload-form-grid">
+                            <div class="image-upload-box">
+                                <div class="preview-image-wrap">
+                                    <img
+                                        src="{{ url_for('static', filename='img/sample_menu.jpg') }}"
+                                        alt="메뉴 이미지 미리보기"
+                                        class="preview-image"
+                                    >
+                                </div>
+
+                                <button type="button" class="point-btn upload-btn">이미지 업로드</button>
                             </div>
 
-                            <button type="button" class="point-btn upload-btn">이미지 업로드</button>
-                        </div>
+                            <div class="menu-input-area">
+                                <div class="form-row form-column">
+                                    <label for="menu-name">메뉴명</label>
+                                    <input type="text" id="menu-name" name="menu_name" placeholder="메뉴명을 입력하세요">
+                                </div>
 
-                        <div class="menu-input-area">
-                            <div class="form-row form-column">
-                                <label for="menu-name">메뉴명</label>
-                                <input type="text" id="menu-name" name="menu_name" placeholder="메뉴명을 입력하세요">
-                            </div>
-
-                            <div class="form-row form-column">
-                                <label for="menu-price">가격</label>
-                                <div class="price-input-wrap">
-                                    <input type="number" id="menu-price" name="menu_price" placeholder="가격 입력">
-                                    <span class="price-unit">원</span>
+                                <div class="form-row form-column">
+                                    <label for="menu-price">가격</label>
+                                    <div class="price-input-wrap">
+                                        <input type="number" id="menu-price" name="price" placeholder="가격 입력">
+                                        <span class="price-unit">원</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="menu-detail-section">
-                    <div class="form-row horizontal-row">
-                        <div class="field-group category-group">
-                            <label for="menu-category">카테고리</label>
-                            <select id="menu-category" name="menu_category">
-                                <option value="main">메인</option>
-                                <option value="side">사이드</option>
-                                <option value="drink">음료</option>
-                                <option value="dessert">디저트</option>
-                            </select>
-                        </div>
-
-                        <div class="field-group description-group">
-                            <label for="menu-description">설명</label>
-                            <input type="text" id="menu-description" name="menu_description" placeholder="메뉴 설명을 입력하세요">
+                    <div class="menu-detail-section">
+                        <div class="form-row horizontal-row">
+                            <div class="field-group category-group">
+                                <label for="menu-category">카테고리</label>
+                                <select id="menu-category" name="menu_category_id">
+                                    {% for category in categories %}
+                                        <option value="{{ category.menu_category_id }}">
+                                            {{ category.menu_category_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="menu-option-section">
-                    <h3 class="sub-title">옵션 설정</h3>
+                    <div class="menu-option-section">
+                        <h3 class="sub-title">옵션 설정</h3>
 
-                    <div class="option-group-wrap">
-                        <button type="button" class="outline-btn option-add-btn">＋ 옵션 그룹 추가</button>
+                        <div class="option-group-wrap">
+                            <button type="button" class="outline-btn option-add-btn">＋ 옵션 그룹 추가</button>
+                        </div>
+
+                        <div class="checkbox-row">
+                            <label class="check-item">
+                                <input type="checkbox" name="soldout">
+                                <span>품절 처리</span>
+                            </label>
+                        </div>
                     </div>
 
-                    <div class="checkbox-row">
-                        <label class="check-item">
-                            <input type="checkbox" name="soldout">
-                            <span>품절 처리</span>
-                        </label>
-
-                        <label class="check-item">
-                            <input type="checkbox" name="hidden">
-                            <span>숨김</span>
-                        </label>
+                    <div class="action-btn-row">
+                        <button type="button" class="ghost-btn">취소</button>
+                        <button type="submit" class="point-btn">등록완료</button>
                     </div>
-                </div>
-
-                <div class="action-btn-row">
-                    <button type="button" class="ghost-btn">취소</button>
-                    <button type="button" class="sub-btn">임시저장</button>
-                    <button type="submit" class="point-btn">등록완료</button>
-                </div>
+                </form>
             </section>
 
             <section class="registered-menu-card">
                 <h2 class="section-title">등록된 메뉴</h2>
 
                 <div class="registered-menu-list">
+                    {% for menu in menu_list %}
                     <article class="registered-menu-item">
                         <div class="registered-menu-thumb">
-                            <img src="{{ url_for('static', filename='img/sample_menu.jpg') }}" alt="수원비빔밥 이미지">
+                            <img
+                                src="{{ url_for('static', filename='img/sample_menu.jpg') }}"
+                                alt="{{ menu.menu_name }} 이미지"
+                            >
                         </div>
 
                         <div class="registered-menu-info">
-                            <p class="registered-menu-name">수원비빔밥</p>
-                            <p class="registered-menu-price">12,000원</p>
+                            <p class="registered-menu-name">{{ menu.menu_name }}</p>
+                            <p class="registered-menu-price">{{ "{:,}".format(menu.price) }}원</p>
+                            <p class="registered-menu-category">{{ menu.menu_category_name }}</p>
+                            <p class="registered-menu-status">
+                                {% if menu.status == 'OFF' %}
+                                    품절
+                                {% else %}
+                                    판매중
+                                {% endif %}
+                            </p>
                         </div>
 
                         <div class="registered-menu-actions">
@@ -163,43 +155,11 @@
                             <button type="button" class="menu-delete-btn">삭제</button>
                         </div>
                     </article>
-
-                    <article class="registered-menu-item">
-                        <div class="registered-menu-thumb">
-                            <img src="{{ url_for('static', filename='img/sample_menu.jpg') }}" alt="돌솥비빔밥 이미지">
-                        </div>
-
-                        <div class="registered-menu-info">
-                            <p class="registered-menu-name">돌솥비빔밥</p>
-                            <p class="registered-menu-price">13,000원</p>
-                        </div>
-
-                        <div class="registered-menu-actions">
-                            <button type="button" class="menu-edit-btn">수정</button>
-                            <button type="button" class="menu-delete-btn">삭제</button>
-                        </div>
-                    </article>
-
-                    <article class="registered-menu-item">
-                        <div class="registered-menu-thumb">
-                            <img src="{{ url_for('static', filename='img/sample_menu.jpg') }}" alt="제육비빔밥 이미지">
-                        </div>
-
-                        <div class="registered-menu-info">
-                            <p class="registered-menu-name">제육비빔밥</p>
-                            <p class="registered-menu-price">13,500원</p>
-                        </div>
-
-                        <div class="registered-menu-actions">
-                            <button type="button" class="menu-edit-btn">수정</button>
-                            <button type="button" class="menu-delete-btn">삭제</button>
-                        </div>
-                    </article>
+                    {% endfor %}
                 </div>
             </section>
         </main>
 
-        <!-- 공통 푸터 영역 시작 : owner_layout_common.css 기준 -->
         <footer class="site-footer">
             <div class="footer-inner">
                 <div class="footer-brand">
@@ -214,10 +174,8 @@
                 </div>
             </div>
         </footer>
-        <!-- 공통 푸터 영역 끝 -->
     </div>
 
-    <!-- 공통 드로어 영역 시작 : owner_drawer.css / owner_drawer.js 기준 -->
     <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
 
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
@@ -235,7 +193,7 @@
                 <div class="side-drawer__avatar">
                     <span>👨‍🍳</span>
                 </div>
-                <strong class="side-drawer__name">사장님</strong>
+                <strong class="side-drawer__name">{{ owner.owner_name }}</strong>
             </div>
         </div>
 
@@ -273,6 +231,5 @@
             </div>
         </div>
     </aside>
-    <!-- 공통 드로어 영역 끝 -->
 </body>
 </html>
