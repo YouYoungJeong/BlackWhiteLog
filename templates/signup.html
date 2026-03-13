@@ -1,41 +1,337 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <!-- 한글 인코딩 -->
     <meta charset="UTF-8">
-
-    <!-- 모바일/반응형 화면 설정 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- 브라우저 탭 제목 -->
     <title>회원가입</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-    <!-- 회원가입 전용 CSS 연결 -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}">
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(180deg, #f3f6ee 0%, #e8efe0 100%);
+            font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+            color: #2f3b2f;
+        }
+
+        .logo-wrap {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .signup-logo {
+            width: 190px;
+            height: auto;
+            display: inline-block;
+        }
+
+        .page {
+            max-width: 620px; 
+            margin: 36px auto; 
+            padding: 32px 24px 46px;
+            background: #fbfcf8;
+            border: 1px solid #d7dfb9;
+            border-radius: 24px;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .title {
+            text-align: center;
+            font-size: 25px;
+            font-weight: 800;
+            color: #5F7A61;
+            margin: 8px 0 22px;
+            letter-spacing: -0.8px;
+            font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        }
+
+        .top-line {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 7px;
+            color: #6a7568;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .divider {
+            border-bottom: 1px solid #dde3d4;
+            margin-bottom: 20px;
+        }
+
+        .form-table {
+            width: 100%;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 10px;
+            align-items: center;
+            padding: 4px 0;
+        }
+
+        .label {
+            height: 46px;     
+            display: flex;
+            align-items: center;     
+            justify-content: center;  
+            padding-top: 0;
+            margin: 0;
+            line-height: 1;
+            font-size: 15px;
+            font-weight: 700;
+            color: #435343;
+        }
+
+        .label .req {
+            color: #c0392b;
+            margin-left: 2px;
+        }
+
+        .input-wrap {
+            width: 100%;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input,
+        .select,
+        .birth-input {
+            width: 100%;
+            height: 45px;
+            border: 1px solid #cfd8c2;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 0 14px;
+            font-size: 12px;
+            color: #2f3b2f;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .input::placeholder,
+        .birth-input::placeholder {
+            color: #a0a8a0;
+        }
+
+        .input:focus,
+        .select:focus,
+        .birth-input:focus {
+            border-color: #5f7a61;
+            box-shadow: 0 0 0 4px rgba(95, 122, 97, 0.12);
+        }
+
+        .action-btn {
+            flex: 0 0 120px;
+            height: 45px;
+            border: none;
+            background: #8faa7a;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 12px;
+            box-sizing: border-box;
+            padding: 0 14px;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: #6f8d59;
+        }
+
+        .full-btn {
+            width: 100%;
+            height: 45px;
+            border: none;
+            background: #8faa7a;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 12px;
+            box-sizing: border-box;
+            padding: 0;
+            transition: all 0.2s ease;
+        }
+
+        .full-btn:hover {
+            background: #6f8d59;
+        }
+
+        .check-message {
+            margin-top: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        .check-message.success {
+            color: #2e7d32;
+        }
+
+        .check-message.error {
+            color: #c62828;
+        }
+
+        .check-message.info {
+            color: #7b8579;
+        }
+
+        .gender-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            align-items: center;
+            min-height: 50px;
+            padding-top: 4px;
+        }
+
+        .radio-item,
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #4e5d4e;
+        }
+
+        .radio-item input[type="radio"],
+        .check-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #6f8d59;
+            cursor: pointer;
+        }
+
+        .birth-row {
+            display: grid;
+            grid-template-columns: 1fr 26px 1fr 26px 1fr;
+            gap: 0;
+            align-items: center;
+        }
+
+        .slash {
+            text-align: center;
+            font-size: 22px;
+            color: #b8beb5;
+        }
+
+        .address-block .input {
+            margin-top: 10px;
+        }
+
+        .path-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 24px;
+            padding-top: 8px;
+        }
+
+        .agree-box {
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            padding-top: 8px;
+        }
+
+        .submit-area {
+            margin-top: 34px;
+            text-align: center;
+        }
+
+        .submit-btn {
+            width: 85%;
+            height: 52px;
+            border: none;
+            border-radius: 14px;
+            background: #8faa7a;
+            color: #fff;
+            font-size: 22px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 20px rgba(111, 141, 89, 0.18);
+        }
+
+        .submit-btn:hover {
+            background: #6f8d59;
+        }
+
+        @media (max-width: 768px) {
+            .page {
+                margin: 20px 16px;
+                padding: 24px 18px 36px;
+            }
+
+            .signup-logo {
+                width: 180px;
+            }
+
+            .title {
+                font-size: 24px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .label {
+                padding-top: 0;
+                font-size: 15px;
+            }
+
+            .input-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .action-btn {
+                width: 100%;
+                flex: 0 0 auto;
+            }
+
+            .birth-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .slash {
+                display: none;
+            }
+
+            .path-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .submit-btn {
+                height: 52px;
+                font-size: 16px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- 회원가입 전체 박스 -->
     <div class="page">
-
-        <!-- 상단 로고 영역 -->
         <div class="logo-wrap">
-            <img
-                src="{{ url_for('static', filename='img/main_logo.png') }}"
-                alt="흑백로그 로고"
-                class="signup-logo"
-            >
+            <img src="/static/img/main_logo.png" alt="흑백로그 로고" class="signup-logo">
         </div>
-
         <br>
-
-        <!-- 페이지 제목 -->
         <h1 class="title">회원가입</h1>
 
-        <!-- 안내 문구 / 구분선 -->
         <div class="top-line">* 필수입력사항</div>
         <div class="divider"></div>
 
-        <!-- Flask flash 메시지가 있으면 alert로 출력 -->
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 <script>
@@ -44,118 +340,62 @@
             {% endif %}
         {% endwith %}
 
-        <!-- 회원가입 폼 시작 -->
-        <form action="{{ url_for('signup') }}" method="post" id="signupForm">
-
-            <!-- 이메일 중복확인 여부 저장 -->
+        <form action="/signup" method="post" id="signupForm">
             <input type="hidden" name="email_checked" id="email_checked" value="false">
-
-            <!-- 중복확인 완료된 이메일 값 저장 -->
             <input type="hidden" name="checked_email_value" id="checked_email_value" value="">
+            <input type="hidden" name="nickname_checked" id="nickname_checked" value="false">
+            <input type="hidden" name="checked_nickname_value" id="checked_nickname_value" value="">
 
-            <!-- 입력 항목 전체 묶음 -->
             <div class="form-table">
-
-                <!-- 닉네임 입력 -->
                 <div class="form-row">
-                    <label class="label" for="nickname">
-                        닉네임<span class="req">*</span>
-                    </label>
-
-                    <div class="input-wrap">
-                        <input
-                            type="text"
-                            id="nickname"
-                            name="nickname"
-                            class="input"
-                            placeholder="닉네임을 입력해주세요"
-                            required
-                        >
-                    </div>
-                </div>
-
-                <!-- 이메일 입력 -->
-                <div class="form-row">
-                    <label class="label" for="email">
-                        이메일<span class="req">*</span>
-                    </label>
-
+                    <label class="label" for="email">이메일<span class="req">*</span></label>
                     <div class="input-wrap">
                         <div class="input-row">
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                class="input"
-                                placeholder="예: blackwhitelog@gmail.com"
-                                required
-                            >
-                            <button type="button" class="action-btn" id="checkEmailBtn">
-                                중복 확인
-                            </button>
+                            <input type="email" id="email" name="email" class="input" placeholder="예: blackwhitelog@gmail.com" required>
+                            <button type="button" class="action-btn" id="checkEmailBtn">중복 확인</button>
                         </div>
-
-                        <!-- 이메일 중복 확인 결과 메시지 -->
                         <div id="emailMessage" class="check-message"></div>
                     </div>
                 </div>
 
-                <!-- 비밀번호 입력 -->
                 <div class="form-row">
-                    <label class="label" for="password">
-                        비밀번호<span class="req">*</span>
-                    </label>
-
+                    <label class="label" for="nickname">닉네임<span class="req">*</span></label>
                     <div class="input-wrap">
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            class="input"
-                            placeholder="비밀번호를 입력해주세요"
-                            required
-                        >
+                        <div class="input-row">
+                            <input type="text" id="nickname" name="nickname" class="input" placeholder="닉네임을 입력해주세요" required>
+                            <button type="button" class="action-btn" id="checkNicknameBtn">중복 확인</button>
+                        </div>
+                        <div id="nicknameMessage" class="check-message"></div>
                     </div>
                 </div>
 
-                <!-- 비밀번호 확인 입력 -->
                 <div class="form-row">
-                    <label class="label" for="password_confirm">
-                        비밀번호 확인<span class="req">*</span>
-                    </label>
-
+                    <label class="label" for="password">비밀번호<span class="req">*</span></label>
                     <div class="input-wrap">
-                        <input
-                            type="password"
-                            id="password_confirm"
-                            name="password_confirm"
-                            class="input"
-                            placeholder="비밀번호를 한번 더 입력해주세요"
-                            required
-                        >
+                        <input type="password" id="password" name="password" class="input" placeholder="비밀번호를 입력해주세요" required>
                     </div>
                 </div>
 
-                <br>
-
-                <!-- 성별 선택 -->
                 <div class="form-row">
-                    <label class="label">
-                        성별<span class="req">*</span>
-                    </label>
+                    <label class="label" for="password_confirm">비밀번호 확인<span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <input type="password" id="password_confirm" name="password_confirm" class="input" placeholder="비밀번호를 한번 더 입력해주세요" required>
+                        <div id="passwordMessage" class="check-message"></div>
+                    </div>
+                </div>
 
+                <div class="form-row">
+                    <label class="label">성별<span class="req">*</span></label>
                     <div class="input-wrap">
                         <div class="gender-group">
                             <label class="radio-item">
                                 <input type="radio" name="gender" value="male" required>
                                 남자
                             </label>
-
                             <label class="radio-item">
                                 <input type="radio" name="gender" value="female" required>
                                 여자
                             </label>
-
                             <label class="radio-item">
                                 <input type="radio" name="gender" value="none" required>
                                 선택안함
@@ -164,143 +404,249 @@
                     </div>
                 </div>
 
-                <!-- 생년월일 입력 -->
                 <div class="form-row">
-                    <label class="label">
-                        생년월일<span class="req">*</span>
-                    </label>
-
+                    <label class="label">생년월일<span class="req">*</span></label>
                     <div class="input-wrap">
                         <div class="birth-row">
-                            <input
-                                type="text"
-                                name="birth_year"
-                                class="birth-input"
-                                placeholder="YYYY"
-                                maxlength="4"
-                                required
-                            >
-
+                            <input type="text" name="birth_year" class="birth-input" placeholder="YYYY" maxlength="4" required>
                             <div class="slash">/</div>
-
-                            <input
-                                type="text"
-                                name="birth_month"
-                                class="birth-input"
-                                placeholder="MM"
-                                maxlength="2"
-                                required
-                            >
-
+                            <input type="text" name="birth_month" class="birth-input" placeholder="MM" maxlength="2" required>
                             <div class="slash">/</div>
-
-                            <input
-                                type="text"
-                                name="birth_day"
-                                class="birth-input"
-                                placeholder="DD"
-                                maxlength="2"
-                                required
-                            >
+                            <input type="text" name="birth_day" class="birth-input" placeholder="DD" maxlength="2" required>
                         </div>
                     </div>
                 </div>
-
                 <br>
 
-                <!-- 주소 입력 -->
                 <div class="form-row">
-                    <label class="label">
-                        주소<span class="req">*</span>
-                    </label>
-
+                    <label class="label">주소<span class="req">*</span></label>
                     <div class="input-wrap address-block">
+                        <button type="button" class="full-btn" onclick="execDaumPostcode()"><span>🔍 주소 검색</span></button>
 
-                        <!-- 카카오 우편번호 API 실행 버튼 -->
-                        <button type="button" class="full-btn" onclick="execDaumPostcode()">
-                            <span>🔍 주소 검색</span>
-                        </button>
-
-                        <!-- 우편번호 -->
-                        <input
-                            type="text"
-                            id="postcode"
-                            name="postcode"
-                            class="input"
-                            placeholder="우편번호"
-                            readonly
-                            required
-                        >
-
-                        <!-- 도로명 주소 -->
-                        <input
-                            type="text"
-                            id="roadAddress"
-                            name="roadAddress"
-                            class="input"
-                            placeholder="도로명 주소"
-                            readonly
-                            required
-                        >
-
-                        <!-- 지번 주소 -->
-                        <input
-                            type="text"
-                            id="jibunAddress"
-                            name="jibunAddress"
-                            class="input"
-                            placeholder="지번 주소"
-                            readonly
-                        >
-
-                        <!-- 상세 주소 -->
-                        <input
-                            type="text"
-                            id="detailAddress"
-                            name="detailAddress"
-                            class="input"
-                            placeholder="상세주소를 입력해주세요"
-                            required
-                        >
-
-                        <!-- 참고 항목 -->
-                        <input
-                            type="text"
-                            id="extraAddress"
-                            name="extraAddress"
-                            class="input"
-                            placeholder="참고항목"
-                            readonly
-                        >
+                        <input type="text" id="postcode" name="postcode" class="input" placeholder="우편번호" readonly required>
+                        <input type="text" id="roadAddress" name="roadAddress" class="input" placeholder="도로명 주소" readonly required>
+                        <input type="text" id="jibunAddress" name="jibunAddress" class="input" placeholder="지번 주소" readonly>
+                        <input type="text" id="detailAddress" name="detailAddress" class="input" placeholder="상세주소를 입력해주세요">
+                        <input type="text" id="extraAddress" name="extraAddress" class="input" placeholder="참고항목" readonly>
                     </div>
                 </div>
+                <br><br>
 
-                <br>
-
-                <!-- 혜택 알림 수신 동의 -->
-                <div class="form-row agree-row">
-                    <label class="label agree-label">혜택 알림</label>
-
-                    <div class="input-wrap agree-wrap">
-                        <label class="check-item agree-item">
-                            <input type="checkbox" name="ad_agree" value="Y">
-                            <span>(선택) 이벤트·할인 정보 수신 동의</span>
-                        </label>
+                <div class="form-row">
+                    <label class="label">혜택 알림</label>
+                    <div class="input-wrap">
+                        <div class="agree-box">
+                            <label class="check-item">
+                                <input type="checkbox" name="ad_agree" value="Y">
+                                (선택) 할인 혜택 및 이벤트 정보 수신에 동의합니다.
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 가입 버튼 -->
             <div class="submit-area">
                 <button type="submit" class="submit-btn">가입하기</button>
             </div>
         </form>
     </div>
 
-    <!-- 카카오 주소 검색 API -->
     <script src="//t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+    <script>
+        function execDaumPostcode() {
+            new kakao.Postcode({
+                oncomplete: function(data) {
+                    let roadAddr = data.roadAddress;
+                    let extraRoadAddr = '';
 
-    <!-- 회원가입 전용 JS -->
-    <script src="{{ url_for('static', filename='js/signup.js') }}"></script>
+                    if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
+                        extraRoadAddr += data.bname;
+                    }
+
+                    if (data.buildingName !== '' && data.apartment === 'Y') {
+                        extraRoadAddr += (extraRoadAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+                    }
+
+                    if (extraRoadAddr !== '') {
+                        extraRoadAddr = ' (' + extraRoadAddr + ')';
+                    }
+
+                    document.getElementById('postcode').value = data.zonecode;
+                    document.getElementById('roadAddress').value = roadAddr || '';
+                    document.getElementById('jibunAddress').value = data.jibunAddress || '';
+                    document.getElementById('extraAddress').value = extraRoadAddr;
+                    document.getElementById('detailAddress').focus();
+                }
+            }).open();
+        }
+
+        const emailInput = document.getElementById("email");
+        const nicknameInput = document.getElementById("nickname");
+        const passwordInput = document.getElementById("password");
+        const passwordConfirmInput = document.getElementById("password_confirm");
+
+        const emailMessage = document.getElementById("emailMessage");
+        const nicknameMessage = document.getElementById("nicknameMessage");
+        const passwordMessage = document.getElementById("passwordMessage");
+
+        const emailChecked = document.getElementById("email_checked");
+        const checkedEmailValue = document.getElementById("checked_email_value");
+
+        const nicknameChecked = document.getElementById("nickname_checked");
+        const checkedNicknameValue = document.getElementById("checked_nickname_value");
+
+        function resetEmailCheck() {
+            emailChecked.value = "false";
+            checkedEmailValue.value = "";
+            emailMessage.textContent = "";
+            emailMessage.className = "check-message";
+        }
+
+        function resetNicknameCheck() {
+            nicknameChecked.value = "false";
+            checkedNicknameValue.value = "";
+            nicknameMessage.textContent = "";
+            nicknameMessage.className = "check-message";
+        }
+
+        function checkPasswordMatch() {
+            const password = passwordInput.value;
+            const passwordConfirm = passwordConfirmInput.value;
+
+            if (!password && !passwordConfirm) {
+                passwordMessage.textContent = "";
+                passwordMessage.className = "check-message";
+                return;
+            }
+
+            if (!passwordConfirm) {
+                passwordMessage.textContent = "비밀번호 확인을 입력해주세요.";
+                passwordMessage.className = "check-message info";
+                return;
+            }
+
+            if (password === passwordConfirm) {
+                passwordMessage.textContent = "비밀번호가 일치합니다.";
+                passwordMessage.className = "check-message success";
+            } else {
+                passwordMessage.textContent = "비밀번호가 일치하지 않습니다.";
+                passwordMessage.className = "check-message error";
+            }
+        }
+
+        emailInput.addEventListener("input", resetEmailCheck);
+        nicknameInput.addEventListener("input", resetNicknameCheck);
+        passwordInput.addEventListener("input", checkPasswordMatch);
+        passwordConfirmInput.addEventListener("input", checkPasswordMatch);
+
+        document.getElementById("signupForm").addEventListener("submit", function (e) {
+            const currentEmail = emailInput.value.trim();
+            const currentNickname = nicknameInput.value.trim();
+            const password = passwordInput.value;
+            const passwordConfirm = passwordConfirmInput.value;
+
+            if (emailChecked.value !== "true" || checkedEmailValue.value !== currentEmail) {
+                e.preventDefault();
+                alert("이메일 중복 확인을 해주세요.");
+                emailInput.focus();
+                return;
+            }
+
+            if (nicknameChecked.value !== "true" || checkedNicknameValue.value !== currentNickname) {
+                e.preventDefault();
+                alert("닉네임 중복 확인을 해주세요.");
+                nicknameInput.focus();
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                e.preventDefault();
+                passwordMessage.textContent = "비밀번호가 일치하지 않습니다.";
+                passwordMessage.className = "check-message error";
+                passwordConfirmInput.focus();
+                return;
+            }
+        });
+
+
+
+
+        document.getElementById("checkEmailBtn").addEventListener("click", async function () {
+            const value = emailInput.value.trim();
+
+            if (!value) {
+                alert("이메일을 입력해주세요.");
+                emailInput.focus();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/check-duplicate?type=email&value=${encodeURIComponent(value)}`);
+                const data = await response.json();
+
+                emailMessage.textContent = data.message;
+                emailMessage.className = data.available ? "check-message success" : "check-message error";
+
+                if (data.available) {
+                    emailChecked.value = "true";
+                    checkedEmailValue.value = value;
+                } else {
+                    emailChecked.value = "false";
+                    checkedEmailValue.value = "";
+                    emailInput.focus();
+                }
+            } catch (error) {
+                alert("이메일 중복 확인 중 오류가 발생했습니다.");
+            }
+        });
+
+        document.getElementById("checkNicknameBtn").addEventListener("click", async function () {
+            const value = nicknameInput.value.trim();
+
+            if (!value) {
+                alert("닉네임을 입력해주세요.");
+                nicknameInput.focus();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/check-duplicate?type=nickname&value=${encodeURIComponent(value)}`);
+                const data = await response.json();
+
+                nicknameMessage.textContent = data.message;
+                nicknameMessage.className = data.available ? "check-message success" : "check-message error";
+
+                if (data.available) {
+                    nicknameChecked.value = "true";
+                    checkedNicknameValue.value = value;
+                } else {
+                    nicknameChecked.value = "false";
+                    checkedNicknameValue.value = "";
+                    nicknameInput.focus();
+                }
+            } catch (error) {
+                alert("닉네임 중복 확인 중 오류가 발생했습니다.");
+            }
+        });
+
+        document.getElementById("signupForm").addEventListener("submit", function (e) {
+            const currentEmail = emailInput.value.trim();
+            const currentNickname = nicknameInput.value.trim();
+
+            if (emailChecked.value !== "true" || checkedEmailValue.value !== currentEmail) {
+                e.preventDefault();
+                alert("이메일 중복 확인을 해주세요.");
+                emailInput.focus();
+                return;
+            }
+
+            if (nicknameChecked.value !== "true" || checkedNicknameValue.value !== currentNickname) {
+                e.preventDefault();
+                alert("닉네임 중복 확인을 해주세요.");
+                nicknameInput.focus();
+                return;
+            }
+        });
+    </script>
 </body>
 </html>
