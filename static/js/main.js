@@ -1444,3 +1444,19 @@ function init() {
 }
 
 init();
+
+const profileToggle = document.getElementById("profileToggle");
+const profileDropdown = document.getElementById("profileDropdown");
+
+if (profileToggle && profileDropdown) {
+    profileToggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        profileDropdown.classList.toggle("show");
+    });
+
+    document.addEventListener("click", function (e) {
+        if (!profileToggle.contains(e.target) && !profileDropdown.contains(e.target)) {
+            profileDropdown.classList.remove("show");
+        }
+    });
+}
