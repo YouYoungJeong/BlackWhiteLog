@@ -4,6 +4,9 @@ from flask import Flask, jsonify, render_template, request, redirect, url_for, f
 # .env 파일에 저장한 환경변수 불러오기
 from dotenv import load_dotenv
 
+# 데코레이터 함수 감싸기용
+from functools import wraps
+
 # 운영체제 환경변수 접근용
 import os
 
@@ -13,21 +16,40 @@ import requests
 # OAuth state 값 생성용 (보안)
 import secrets
 
+# 관리자 음식점 관리 블루프린트
+from admin_routes import admin_bp
 
 # db.py 에서 필요한 함수들 import
 from db import (
-    fetch_categories,      # 카테고리 목록 조회
-    fetch_regions,         # 지역 목록 조회
-    fetch_restaurants,     # 음식점 목록 조회
-    verify_user_login,     # 일반 로그인 검증
-    create_user,           # 일반 회원가입
-    find_user_by_email,    # 이메일로 회원 조회
-    find_user_by_social,   # 소셜(provider + social_id)로 회원 조회
-    create_social_user,    # 소셜 회원 생성
+    fetch_categories,
+    fetch_regions,
+    fetch_restaurants,
+    verify_user_login,
+    create_user,
+    find_user_by_email,
+    find_user_by_social,
+    create_social_user,
     withdraw_user,
     restore_user,
+    fetch_all_users,
+    admin_deactivate_user,
+    admin_restore_user,
+    fetch_admin_reviews,
+    update_admin_review_status,
+    fetch_admin_reports,
+    update_admin_report_status,
+    fetch_admin_sanctions,
+    create_admin_sanction,
+    release_admin_sanction,
+    fetch_my_reviews,
+    fetch_my_favorites,
+    fetch_my_visits,
+    fetch_my_achievements,
+    update_user_nickname,
+    find_user_by_nickname,
+    find_email_by_nickname,   # 닉네임으로 이메일 찾기
+    reset_user_password,      # 비밀번호 재설정
 )
-
 
 # .env 파일 로드
 load_dotenv()
@@ -37,6 +59,42 @@ app = Flask(__name__)
 
 # 세션/flash 메시지용 비밀키 설정
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
+
+# 관리자 음식점 관리 블루프린트 등록
+app.register_blueprint(admin_bp)
+
+
+# =========================
+# 관리자 권한 체크 데코레이터
+# =========================
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        # 로그인 안 했으면 로그인 페이지로 이동
+        if "user_id" not in session:
+            flash("로그인이 필요합니다.")
+            return redirect(url_for("login"))
+
+        # role 이 ADMIN 이 아니면 접근 차단
+        if session.get("role") != "ADMIN":
+            flash("관리자만 접근할 수 있습니다.")
+            return redirect(url_for("index"))
+
+        return view_func(*args, **kwargs)
+    return wrapper
+
+
+# =========================
+# 로그인 필수 데코레이터
+# =========================
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            flash("로그인이 필요합니다.")
+            return redirect(url_for("login"))
+        return view_func(*args, **kwargs)
+    return wrapper
 
 
 # =========================
@@ -88,31 +146,69 @@ def api_restaurants():
 
 
 # =========================
+# 이메일 중복 확인 API
+# =========================
+@app.route("/api/check-duplicate")
+def check_duplicate():
+    check_type = request.args.get("type", "").strip()
+    value = request.args.get("value", "").strip()
+
+    if not value:
+        return jsonify({
+            "available": False,
+            "message": "확인할 값이 비어 있습니다."
+        }), 400
+
+    try:
+        if check_type == "email":
+            user = find_user_by_email(value)
+
+            if user:
+                return jsonify({
+                    "available": False,
+                    "message": "이미 사용 중인 이메일입니다."
+                })
+
+            return jsonify({
+                "available": True,
+                "message": "사용 가능한 이메일입니다."
+            })
+
+        return jsonify({
+            "available": False,
+            "message": "잘못된 요청입니다."
+        }), 400
+
+    except Exception as e:
+        print("중복 확인 오류:", e)
+        return jsonify({
+            "available": False,
+            "message": "중복 확인 중 서버 오류가 발생했습니다."
+        }), 500
+
+
+# =========================
 # 일반 로그인
 # =========================
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # POST 요청이면 로그인 처리
     if request.method == "POST":
         email = request.form["email"]
         password = request.form["password"]
 
-        # 이메일/비밀번호 검증
         user = verify_user_login(email, password)
 
-        # 로그인 성공 시 세션 저장
         if user:
             session["user_email"] = user["email"]
             session["user_nickname"] = user["nickname"]
             session["user_id"] = user["user_id"]
-            session["login_provider"] = "local"   # 일반 로그인 표시
+            session["role"] = user.get("role", "USER")
+            session["login_provider"] = "local"
             return redirect(url_for("index"))
-        else:
-            # 실패 시 에러 메시지
-            flash("이메일 또는 비밀번호가 올바르지 않거나 탈퇴한 계정입니다.")
-            return redirect(url_for("login"))
 
-    # GET 요청이면 로그인 페이지 보여주기
+        flash("이메일 또는 비밀번호가 올바르지 않거나 탈퇴한 계정입니다.")
+        return redirect(url_for("login"))
+
     return render_template("login.html")
 
 
@@ -121,66 +217,131 @@ def login():
 # =========================
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
-    # POST 요청이면 회원가입 처리
     if request.method == "POST":
         nickname = request.form.get("nickname", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
+        password_confirm = request.form.get("password_confirm", "").strip()
 
-        # 입력값 검증
+        gender = request.form.get("gender", "").strip()
+        birth_year = request.form.get("birth_year", "").strip()
+        birth_month = request.form.get("birth_month", "").strip()
+        birth_day = request.form.get("birth_day", "").strip()
+        postcode = request.form.get("postcode", "").strip()
+        road_address = request.form.get("roadAddress", "").strip()
+        jibun_address = request.form.get("jibunAddress", "").strip()
+        detail_address = request.form.get("detailAddress", "").strip()
+        extra_address = request.form.get("extraAddress", "").strip()
+        ad_agree = "Y" if request.form.get("ad_agree") == "Y" else "N"
+
         if not nickname or not email or not password:
-            flash("모든 값을 입력해주세요.")
+            flash("필수 입력값을 모두 입력해주세요.")
             return redirect(url_for("signup"))
 
-        # 이메일 중복 확인
+        if password != password_confirm:
+            flash("비밀번호가 일치하지 않습니다.")
+            return redirect(url_for("signup"))
+
+        if not gender:
+            flash("성별을 선택해주세요.")
+            return redirect(url_for("signup"))
+
+        if not birth_year or not birth_month or not birth_day:
+            flash("생년월일을 입력해주세요.")
+            return redirect(url_for("signup"))
+
+        if not postcode or not road_address or not detail_address:
+            flash("주소를 입력해주세요.")
+            return redirect(url_for("signup"))
+
         existing_user = find_user_by_email(email)
         if existing_user:
             flash("이미 가입된 이메일입니다.")
             return redirect(url_for("signup"))
 
-        # 회원 생성
         create_user(nickname, email, password)
 
-        # 회원가입 완료 후 로그인 페이지로 이동
+        _ = (jibun_address, extra_address, ad_agree)
+
         flash("회원가입이 완료되었습니다. 로그인해주세요.")
         return redirect(url_for("login"))
 
-    # GET 요청이면 회원가입 페이지 보여주기
     return render_template("signup.html")
 
 
 # =========================
-# 아이디 찾기 / 비밀번호 찾기 페이지
+# 이메일 찾기
+# 닉네임으로 가입 이메일 조회
 # =========================
-@app.route("/find-id")
+@app.route("/find-id", methods=["GET", "POST"])
 def find_id():
-    return render_template("find_id.html")
+    found_email = None
+
+    if request.method == "POST":
+        nickname = request.form.get("nickname", "").strip()
+
+        if not nickname:
+            flash("닉네임을 입력해주세요.")
+            return redirect(url_for("find_id"))
+
+        user = find_email_by_nickname(nickname)
+
+        if not user:
+            flash("일치하는 회원 정보를 찾을 수 없습니다.")
+            return redirect(url_for("find_id"))
+
+        found_email = user["email"]
+
+    return render_template("find_id.html", found_email=found_email)
 
 
-@app.route("/find-password")
+# =========================
+# 비밀번호 찾기 / 재설정
+# 이메일 + 닉네임 확인 후 새 비밀번호로 변경
+# =========================
+@app.route("/find-password", methods=["GET", "POST"])
 def find_password():
-    return render_template("find_password.html")
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        nickname = request.form.get("nickname", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+        new_password_confirm = request.form.get("new_password_confirm", "").strip()
 
+        if not email or not nickname or not new_password or not new_password_confirm:
+            flash("모든 항목을 입력해주세요.")
+            return redirect(url_for("find_password"))
+
+        if new_password != new_password_confirm:
+            flash("새 비밀번호가 일치하지 않습니다.")
+            return redirect(url_for("find_password"))
+
+        if len(new_password) < 4:
+            flash("비밀번호는 4자 이상 입력해주세요.")
+            return redirect(url_for("find_password"))
+
+        success = reset_user_password(email, nickname, new_password)
+
+        if not success:
+            flash("입력한 정보와 일치하는 회원을 찾을 수 없습니다.")
+            return redirect(url_for("find_password"))
+
+        flash("비밀번호가 재설정되었습니다. 다시 로그인해주세요.")
+        return redirect(url_for("login"))
+
+    return render_template("find_password.html")
 
 # =========================
 # 로그아웃
 # =========================
 @app.route("/logout")
 def logout():
-    # 어떤 방식으로 로그인했는지 확인
     provider = session.get("login_provider")
-
-    # 우리 사이트 세션 정보 먼저 삭제
     session.clear()
 
-    # -------------------------
-    # 카카오 로그아웃
-    # -------------------------
     if provider == "kakao":
         kakao_rest_api_key = os.getenv("KAKAO_REST_API_KEY")
         kakao_logout_redirect_uri = os.getenv("KAKAO_LOGOUT_REDIRECT_URI")
 
-        # 카카오 서버 로그아웃 URL
         logout_url = (
             "https://kauth.kakao.com/oauth/logout"
             f"?client_id={kakao_rest_api_key}"
@@ -188,28 +349,7 @@ def logout():
         )
         return redirect(logout_url)
 
-    # -------------------------
-    # 네이버 로그아웃
-    # -------------------------
-    # 네이버는 카카오처럼 완전한 외부 로그아웃 제어가 제한적이라
-    # 우리 서비스 세션만 끊는 방식이 일반적
-    elif provider == "naver":
-        flash("로그아웃되었습니다.")
-        return redirect(url_for("index"))
-
-    # -------------------------
-    # 구글 로그아웃
-    # -------------------------
-    # 구글도 보통 우리 서비스 세션만 종료
-    # 구글 계정 자체 로그아웃까지 강제하진 않는 경우가 많음
-    elif provider == "google":
-        flash("로그아웃되었습니다.")
-        return redirect(url_for("index"))
-
-    # -------------------------
-    # 일반 로그인(local) 로그아웃
-    # -------------------------
-    else:
+    if provider in ["naver", "google", "local", None]:
         flash("로그아웃되었습니다.")
         return redirect(url_for("index"))
 
@@ -231,11 +371,9 @@ def login_kakao():
     kakao_rest_api_key = os.getenv("KAKAO_REST_API_KEY")
     redirect_uri = os.getenv("KAKAO_REDIRECT_URI")
 
-    # CSRF 방지용 state 생성
     state = secrets.token_urlsafe(16)
     session["oauth_state"] = state
 
-    # 카카오 인가 코드 요청 URL 생성
     auth_url = (
         "https://kauth.kakao.com/oauth/authorize"
         f"?client_id={kakao_rest_api_key}"
@@ -251,21 +389,17 @@ def login_kakao():
 # =========================
 @app.route("/login/kakao/callback")
 def login_kakao_callback():
-    # 카카오가 넘겨준 인가 코드 / state 받기
     code = request.args.get("code")
     state = request.args.get("state")
 
-    # code 없으면 실패
     if not code:
         flash("카카오 로그인에 실패했습니다.")
         return redirect(url_for("login"))
 
-    # state 검증
     if state != session.get("oauth_state"):
         flash("잘못된 요청입니다.")
         return redirect(url_for("login"))
 
-    # 토큰 발급 요청 데이터
     token_data = {
         "grant_type": "authorization_code",
         "client_id": os.getenv("KAKAO_REST_API_KEY"),
@@ -273,12 +407,10 @@ def login_kakao_callback():
         "code": code,
     }
 
-    # 카카오 client secret 이 있으면 함께 전송
     client_secret = os.getenv("KAKAO_CLIENT_SECRET")
     if client_secret:
         token_data["client_secret"] = client_secret
 
-    # access token 요청
     token_res = requests.post(
         "https://kauth.kakao.com/oauth/token",
         data=token_data,
@@ -288,12 +420,10 @@ def login_kakao_callback():
     token_json = token_res.json()
     access_token = token_json.get("access_token")
 
-    # 토큰 발급 실패 시
     if not access_token:
         flash(f"카카오 토큰 발급 실패: {token_json}")
         return redirect(url_for("login"))
 
-    # 사용자 정보 요청
     user_res = requests.get(
         "https://kapi.kakao.com/v2/user/me",
         headers={
@@ -304,7 +434,6 @@ def login_kakao_callback():
 
     user_json = user_res.json()
 
-    # 사용자 정보 파싱
     social_id = str(user_json["id"])
     kakao_account = user_json.get("kakao_account", {})
     profile = kakao_account.get("profile", {})
@@ -316,24 +445,20 @@ def login_kakao_callback():
     nickname = profile.get("nickname") or f"kakao_{social_id}"
     profile_image_url = profile.get("profile_image_url")
 
-    # 기존 소셜 회원인지 확인
     user = find_user_by_social("kakao", social_id)
 
-    # 이미 카카오 계정으로 가입된 회원이면 바로 로그인
     if user:
         session["user_email"] = user["email"]
         session["user_nickname"] = user["nickname"]
         session["user_id"] = user["user_id"]
+        session["role"] = user.get("role", "USER")
         session["login_provider"] = "kakao"
         flash("카카오 로그인 성공")
         return redirect(url_for("index"))
 
-    # 같은 이메일의 기존 회원 확인
     existing_user = find_user_by_email(email)
 
-    # 기존 이메일 회원이 있으면 처리
     if existing_user:
-        # 탈퇴한 계정이면 복구 후 로그인 허용
         if existing_user.get("status") == "DELETED":
             restore_user(existing_user["user_id"])
             user = find_user_by_email(email)
@@ -341,17 +466,15 @@ def login_kakao_callback():
             session["user_email"] = user["email"]
             session["user_nickname"] = user["nickname"]
             session["user_id"] = user["user_id"]
+            session["role"] = user.get("role", "USER")
             session["login_provider"] = "kakao"
 
             flash("탈퇴한 계정이 복구되었습니다.")
             return redirect(url_for("index"))
 
-        # 탈퇴 계정이 아닌데 같은 이메일이 이미 있으면 신규 생성 막기
-        else:
-            flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
-            return redirect(url_for("login"))
+        flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
+        return redirect(url_for("login"))
 
-    # 없으면 신규 소셜 회원 생성
     create_social_user(
         nickname=nickname,
         email=email,
@@ -360,13 +483,12 @@ def login_kakao_callback():
         profile_image_url=profile_image_url,
     )
 
-    # 생성된 회원 다시 조회
     user = find_user_by_social("kakao", social_id)
 
-    # 세션 저장
     session["user_email"] = user["email"]
     session["user_nickname"] = user["nickname"]
     session["user_id"] = user["user_id"]
+    session["role"] = user.get("role", "USER")
     session["login_provider"] = "kakao"
 
     flash("카카오 로그인 성공")
@@ -381,11 +503,9 @@ def login_naver():
     client_id = os.getenv("NAVER_CLIENT_ID")
     redirect_uri = os.getenv("NAVER_REDIRECT_URI")
 
-    # CSRF 방지용 state
     state = secrets.token_urlsafe(16)
     session["oauth_state"] = state
 
-    # 네이버 인가 코드 요청 URL
     auth_url = (
         "https://nid.naver.com/oauth2.0/authorize"
         f"?response_type=code"
@@ -401,21 +521,17 @@ def login_naver():
 # =========================
 @app.route("/login/naver/callback")
 def login_naver_callback():
-    # 네이버가 넘겨준 인가 코드 / state 받기
     code = request.args.get("code")
     state = request.args.get("state")
 
-    # code 없으면 실패
     if not code:
         flash("네이버 로그인에 실패했습니다.")
         return redirect(url_for("login"))
 
-    # state 검증
     if state != session.get("oauth_state"):
         flash("잘못된 요청입니다.")
         return redirect(url_for("login"))
 
-    # access token 요청
     token_res = requests.post(
         "https://nid.naver.com/oauth2.0/token",
         params={
@@ -430,12 +546,10 @@ def login_naver_callback():
     token_json = token_res.json()
     access_token = token_json.get("access_token")
 
-    # 토큰 발급 실패 시
     if not access_token:
         flash(f"네이버 토큰 발급 실패: {token_json}")
         return redirect(url_for("login"))
 
-    # 사용자 정보 요청
     user_res = requests.get(
         "https://openapi.naver.com/v1/nid/me",
         headers={"Authorization": f"Bearer {access_token}"},
@@ -444,7 +558,6 @@ def login_naver_callback():
     user_json = user_res.json()
     response = user_json.get("response", {})
 
-    # 사용자 정보 파싱
     social_id = str(response.get("id"))
     email = response.get("email")
     if not email:
@@ -453,24 +566,20 @@ def login_naver_callback():
     nickname = response.get("nickname") or response.get("name") or f"naver_{social_id}"
     profile_image_url = response.get("profile_image")
 
-    # 기존 소셜 회원인지 확인
     user = find_user_by_social("naver", social_id)
 
-    # 이미 네이버 계정으로 가입된 회원이면 바로 로그인
     if user:
         session["user_email"] = user["email"]
         session["user_nickname"] = user["nickname"]
         session["user_id"] = user["user_id"]
+        session["role"] = user.get("role", "USER")
         session["login_provider"] = "naver"
         flash("네이버 로그인 성공")
         return redirect(url_for("index"))
 
-    # 같은 이메일의 기존 회원 확인
     existing_user = find_user_by_email(email)
 
-    # 기존 이메일 회원이 있으면 처리
     if existing_user:
-        # 탈퇴한 계정이면 복구 후 로그인 허용
         if existing_user.get("status") == "DELETED":
             restore_user(existing_user["user_id"])
             user = find_user_by_email(email)
@@ -478,17 +587,15 @@ def login_naver_callback():
             session["user_email"] = user["email"]
             session["user_nickname"] = user["nickname"]
             session["user_id"] = user["user_id"]
+            session["role"] = user.get("role", "USER")
             session["login_provider"] = "naver"
 
             flash("탈퇴한 계정이 복구되었습니다.")
             return redirect(url_for("index"))
 
-        # 탈퇴 계정이 아닌데 같은 이메일이 이미 있으면 신규 생성 막기
-        else:
-            flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
-            return redirect(url_for("login"))
+        flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
+        return redirect(url_for("login"))
 
-    # 없으면 신규 소셜 회원 생성
     create_social_user(
         nickname=nickname,
         email=email,
@@ -497,17 +604,17 @@ def login_naver_callback():
         profile_image_url=profile_image_url,
     )
 
-    # 생성된 회원 다시 조회
     user = find_user_by_social("naver", social_id)
 
-    # 세션 저장
     session["user_email"] = user["email"]
     session["user_nickname"] = user["nickname"]
     session["user_id"] = user["user_id"]
+    session["role"] = user.get("role", "USER")
     session["login_provider"] = "naver"
 
     flash("네이버 로그인 성공")
     return redirect(url_for("index"))
+
 
 # =========================
 # 구글 로그인 요청
@@ -517,14 +624,11 @@ def login_google():
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
 
-    # CSRF 방지용 state 생성
     state = secrets.token_urlsafe(16)
     session["oauth_state"] = state
 
-    # scope: 어떤 정보까지 요청할지
     scope = "openid email profile"
 
-    # 구글 인가 코드 요청 URL
     auth_url = (
         "https://accounts.google.com/o/oauth2/v2/auth"
         f"?client_id={client_id}"
@@ -541,26 +645,19 @@ def login_google():
 # =========================
 # 구글 로그인 콜백
 # =========================
-# =========================
-# 구글 로그인 콜백
-# =========================
 @app.route("/login/google/callback")
 def login_google_callback():
-    # 구글이 넘겨준 인가 코드 / state 받기
     code = request.args.get("code")
     state = request.args.get("state")
 
-    # code 없으면 실패
     if not code:
         flash("구글 로그인에 실패했습니다.")
         return redirect(url_for("login"))
 
-    # state 검증
     if state != session.get("oauth_state"):
         flash("잘못된 요청입니다.")
         return redirect(url_for("login"))
 
-    # 토큰 발급 요청 데이터
     token_data = {
         "code": code,
         "client_id": os.getenv("GOOGLE_CLIENT_ID"),
@@ -569,7 +666,6 @@ def login_google_callback():
         "grant_type": "authorization_code",
     }
 
-    # access token 요청
     token_res = requests.post(
         "https://oauth2.googleapis.com/token",
         data=token_data,
@@ -579,12 +675,10 @@ def login_google_callback():
     token_json = token_res.json()
     access_token = token_json.get("access_token")
 
-    # 토큰 발급 실패 시
     if not access_token:
         flash(f"구글 토큰 발급 실패: {token_json}")
         return redirect(url_for("login"))
 
-    # 사용자 정보 요청
     user_res = requests.get(
         "https://www.googleapis.com/oauth2/v2/userinfo",
         headers={"Authorization": f"Bearer {access_token}"},
@@ -592,7 +686,6 @@ def login_google_callback():
 
     user_json = user_res.json()
 
-    # 사용자 정보 파싱
     social_id = str(user_json.get("id"))
     email = user_json.get("email")
     if not email:
@@ -601,24 +694,20 @@ def login_google_callback():
     nickname = user_json.get("name") or user_json.get("given_name") or f"google_{social_id}"
     profile_image_url = user_json.get("picture")
 
-    # 기존 소셜 회원인지 확인
     user = find_user_by_social("google", social_id)
 
-    # 이미 구글 계정으로 가입된 회원이면 바로 로그인
     if user:
         session["user_email"] = user["email"]
         session["user_nickname"] = user["nickname"]
         session["user_id"] = user["user_id"]
+        session["role"] = user.get("role", "USER")
         session["login_provider"] = "google"
         flash("구글 로그인 성공")
         return redirect(url_for("index"))
 
-    # 같은 이메일의 기존 회원 확인
     existing_user = find_user_by_email(email)
 
-    # 기존 이메일 회원이 있으면 처리
     if existing_user:
-        # 탈퇴한 계정이면 복구 후 로그인 허용
         if existing_user.get("status") == "DELETED":
             restore_user(existing_user["user_id"])
             user = find_user_by_email(email)
@@ -626,17 +715,15 @@ def login_google_callback():
             session["user_email"] = user["email"]
             session["user_nickname"] = user["nickname"]
             session["user_id"] = user["user_id"]
+            session["role"] = user.get("role", "USER")
             session["login_provider"] = "google"
 
             flash("탈퇴한 계정이 복구되었습니다.")
             return redirect(url_for("index"))
 
-        # 탈퇴 계정이 아닌데 같은 이메일이 이미 있으면 신규 생성 막기
-        else:
-            flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
-            return redirect(url_for("login"))
+        flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
+        return redirect(url_for("login"))
 
-    # 없으면 신규 소셜 회원 생성
     create_social_user(
         nickname=nickname,
         email=email,
@@ -645,27 +732,132 @@ def login_google_callback():
         profile_image_url=profile_image_url,
     )
 
-    # 생성된 회원 다시 조회
     user = find_user_by_social("google", social_id)
 
-    # 세션 저장
     session["user_email"] = user["email"]
     session["user_nickname"] = user["nickname"]
     session["user_id"] = user["user_id"]
+    session["role"] = user.get("role", "USER")
     session["login_provider"] = "google"
 
     flash("구글 로그인 성공")
     return redirect(url_for("index"))
+
+
 # =========================
 # 마이페이지
 # =========================
 @app.route("/mypage")
+@login_required
 def mypage():
-    if "user_id" not in session:
-        flash("로그인이 필요합니다.")
-        return redirect(url_for("login"))
+    return render_template(
+        "mypage/mypage.html",
+        user_nickname=session.get("user_nickname"),
+        user_email=session.get("user_email"),
+    )
 
-    return render_template("mypage.html")
+
+# =========================
+# 닉네임 변경
+# =========================
+@app.route("/mypage/nickname", methods=["POST"])
+@login_required
+def update_nickname():
+    user_id = session["user_id"]
+    current_nickname = session.get("user_nickname", "")
+    new_nickname = request.form.get("nickname", "").strip()
+
+    if not new_nickname:
+        flash("닉네임을 입력해주세요.")
+        return redirect(url_for("mypage"))
+
+    if len(new_nickname) < 2 or len(new_nickname) > 12:
+        flash("닉네임은 2자 이상 12자 이하로 입력해주세요.")
+        return redirect(url_for("mypage"))
+
+    if new_nickname == current_nickname:
+        flash("현재 사용 중인 닉네임입니다.")
+        return redirect(url_for("mypage"))
+
+    existing_user = find_user_by_nickname(new_nickname)
+    if existing_user and existing_user["user_id"] != user_id:
+        flash("이미 사용 중인 닉네임입니다.")
+        return redirect(url_for("mypage"))
+
+    success = update_user_nickname(user_id, new_nickname)
+
+    if success:
+        session["user_nickname"] = new_nickname
+        flash("닉네임이 변경되었습니다.")
+    else:
+        flash("닉네임 변경에 실패했습니다.")
+
+    return redirect(url_for("mypage"))
+
+
+# =========================
+# 내 리뷰 보기
+# =========================
+@app.route("/mypage/reviews")
+@login_required
+def mypage_reviews():
+    user_id = session["user_id"]
+    reviews = fetch_my_reviews(user_id)
+
+    return render_template(
+        "mypage/mypage_reviews.html",
+        reviews=reviews,
+        user_nickname=session.get("user_nickname"),
+    )
+
+
+# =========================
+# 즐겨찾기 보기
+# =========================
+@app.route("/mypage/favorites")
+@login_required
+def mypage_favorites():
+    user_id = session["user_id"]
+    favorites = fetch_my_favorites(user_id)
+
+    return render_template(
+        "mypage/mypage_favorites.html",
+        favorites=favorites,
+        user_nickname=session.get("user_nickname"),
+    )
+
+
+# =========================
+# 방문 기록 보기
+# =========================
+@app.route("/mypage/visits")
+@login_required
+def mypage_visits():
+    user_id = session["user_id"]
+    visits = fetch_my_visits(user_id)
+
+    return render_template(
+        "mypage/mypage_visits.html",
+        visits=visits,
+        user_nickname=session.get("user_nickname"),
+    )
+
+
+# =========================
+# 업적 / 랭킹 보기
+# =========================
+@app.route("/mypage/achievements")
+@login_required
+def mypage_achievements():
+    user_id = session["user_id"]
+    achievements = fetch_my_achievements(user_id)
+
+    return render_template(
+        "mypage/mypage_achievements.html",
+        achievements=achievements,
+        user_nickname=session.get("user_nickname"),
+    )
+
 
 # =========================
 # 회원탈퇴
@@ -683,6 +875,208 @@ def withdraw():
 
     flash("회원탈퇴가 완료되었습니다.")
     return redirect(url_for("index"))
+
+
+# =========================
+# 관리자 페이지
+# =========================
+@app.route("/admin")
+@admin_required
+def admin_page():
+    return render_template("admin/admin_dashboard.html")
+
+
+# =========================
+# 관리자 회원 관리
+# =========================
+@app.route("/admin/users")
+@admin_required
+def admin_users():
+    users = fetch_all_users()
+    return render_template("admin/admin_users.html", users=users)
+
+
+# =========================
+# 관리자 회원 비활성화
+# =========================
+@app.route("/admin/users/<int:user_id>/deactivate", methods=["POST"])
+@admin_required
+def admin_user_deactivate(user_id):
+    admin_deactivate_user(user_id)
+    flash("회원 상태를 DELETED로 변경했습니다.")
+    return redirect(url_for("admin_users"))
+
+
+# =========================
+# 관리자 회원 복구
+# =========================
+@app.route("/admin/users/<int:user_id>/restore", methods=["POST"])
+@admin_required
+def admin_user_restore(user_id):
+    admin_restore_user(user_id)
+    flash("회원 상태를 ACTIVE로 복구했습니다.")
+    return redirect(url_for("admin_users"))
+
+
+# =========================
+# 관리자 리뷰 관리 목록
+# =========================
+@app.route("/admin/reviews")
+@admin_required
+def admin_reviews():
+    keyword = request.args.get("keyword", "").strip()
+    status = request.args.get("status", "").strip()
+
+    reviews = fetch_admin_reviews(keyword=keyword, status=status)
+
+    return render_template(
+        "admin/admin_reviews.html",
+        reviews=reviews,
+        keyword=keyword,
+        status=status,
+    )
+
+
+# =========================
+# 리뷰 숨김 처리
+# =========================
+@app.route("/admin/reviews/<int:review_id>/hide", methods=["POST"])
+@admin_required
+def admin_hide_review(review_id):
+    success = update_admin_review_status(review_id, "HIDDEN")
+    if success:
+        flash("리뷰를 숨김 처리했습니다.")
+    else:
+        flash("리뷰를 찾을 수 없습니다.")
+    return redirect(url_for("admin_reviews"))
+
+
+# =========================
+# 리뷰 삭제 처리
+# =========================
+@app.route("/admin/reviews/<int:review_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_review(review_id):
+    success = update_admin_review_status(review_id, "DELETED")
+    if success:
+        flash("리뷰를 삭제 처리했습니다.")
+    else:
+        flash("리뷰를 찾을 수 없습니다.")
+    return redirect(url_for("admin_reviews"))
+
+
+# =========================
+# 리뷰 복구 처리
+# =========================
+@app.route("/admin/reviews/<int:review_id>/restore", methods=["POST"])
+@admin_required
+def admin_restore_review(review_id):
+    success = update_admin_review_status(review_id, "ACTIVE")
+    if success:
+        flash("리뷰를 복구했습니다.")
+    else:
+        flash("리뷰를 찾을 수 없습니다.")
+    return redirect(url_for("admin_reviews"))
+
+
+# =========================
+# 관리자 신고 관리 목록
+# =========================
+@app.route("/admin/reports")
+@admin_required
+def admin_reports():
+    keyword = request.args.get("keyword", "").strip()
+    status = request.args.get("status", "").strip()
+
+    reports = fetch_admin_reports(keyword=keyword, status=status)
+
+    return render_template(
+        "admin/admin_reports.html",
+        reports=reports,
+        keyword=keyword,
+        status=status,
+    )
+
+
+# =========================
+# 신고 승인 처리
+# =========================
+@app.route("/admin/reports/<int:report_id>/resolve", methods=["POST"])
+@admin_required
+def admin_resolve_report(report_id):
+    success = update_admin_report_status(report_id, "RESOLVED")
+    if success:
+        flash("신고를 처리 완료 상태로 변경했습니다.")
+    else:
+        flash("신고 내역을 찾을 수 없습니다.")
+    return redirect(url_for("admin_reports"))
+
+
+# =========================
+# 신고 반려 처리
+# =========================
+@app.route("/admin/reports/<int:report_id>/reject", methods=["POST"])
+@admin_required
+def admin_reject_report(report_id):
+    success = update_admin_report_status(report_id, "REJECTED")
+    if success:
+        flash("신고를 반려 처리했습니다.")
+    else:
+        flash("신고 내역을 찾을 수 없습니다.")
+    return redirect(url_for("admin_reports"))
+
+
+# =========================
+# 관리자 제재 관리
+# =========================
+@app.route("/admin/sanctions", methods=["GET", "POST"])
+@admin_required
+def admin_sanctions():
+    if request.method == "POST":
+        user_nickname = request.form.get("user_nickname", "").strip()
+        sanction_type = request.form.get("sanction_type", "").strip()
+        reason = request.form.get("reason", "").strip()
+        expire_at = request.form.get("expire_at", "").strip()
+
+        if not user_nickname or not sanction_type or not reason:
+            flash("대상 닉네임, 제재 종류, 사유를 입력해주세요.")
+            return redirect(url_for("admin_sanctions"))
+
+        create_admin_sanction(
+            user_nickname=user_nickname,
+            sanction_type=sanction_type,
+            reason=reason,
+            expire_at=expire_at if expire_at else "-"
+        )
+        flash("제재가 등록되었습니다.")
+        return redirect(url_for("admin_sanctions"))
+
+    keyword = request.args.get("keyword", "").strip()
+    status = request.args.get("status", "").strip()
+
+    sanctions = fetch_admin_sanctions(keyword=keyword, status=status)
+
+    return render_template(
+        "admin/admin_sanctions.html",
+        sanctions=sanctions,
+        keyword=keyword,
+        status=status,
+    )
+
+
+# =========================
+# 제재 해제
+# =========================
+@app.route("/admin/sanctions/<int:sanction_id>/release", methods=["POST"])
+@admin_required
+def admin_release_sanction(sanction_id):
+    success = release_admin_sanction(sanction_id)
+    if success:
+        flash("제재를 해제했습니다.")
+    else:
+        flash("제재 내역을 찾을 수 없습니다.")
+    return redirect(url_for("admin_sanctions"))
+
 
 
 # =========================

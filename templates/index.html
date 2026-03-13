@@ -50,10 +50,19 @@
 
 <div class="topbar-actions">
     {% if user_email %}
-        <span class="user-welcome">{{ user_nickname }}</span>
-        <button class="profile-btn" type="button">
-            <img src="{{ url_for('static', filename='img/profile.png') }}" alt="profile">
-        </button>
+        <div class="profile-menu-wrap">
+            <button class="user-profile-chip" id="profileToggle" type="button">
+                <span class="user-profile-chip__name">{{ user_nickname }}</span>
+                <span class="user-profile-chip__avatar">
+                    <img src="{{ url_for('static', filename='img/profile.png') }}" alt="profile">
+                </span>
+            </button>
+
+            <div class="profile-dropdown" id="profileDropdown">
+                <a href="{{ url_for('mypage') }}" class="profile-dropdown__item">마이페이지</a>
+                <a href="{{ url_for('logout') }}" class="profile-dropdown__item profile-dropdown__item--danger">로그아웃</a>
+            </div>
+        </div>
     {% else %}
         <a href="{{ url_for('login') }}" class="ghost-btn login-link">로그인</a>
     {% endif %}

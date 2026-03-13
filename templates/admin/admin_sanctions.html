@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제재 관리</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+    <div class="admin-page">
+        <div class="admin-container">
+            <div class="admin-header-row">
+                <div>
+                    <h1 class="admin-title">제재 관리</h1>
+                    <p class="admin-subtitle">경고, 정지, 해제 등 제재 내역을 관리할 수 있습니다.</p>
+                </div>
+                <a href="{{ url_for('admin_page') }}" class="admin-outline-btn">관리자 메인으로</a>
+            </div>
+
+            <div class="admin-divider"></div>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="admin-flash-wrap">
+                        {% for message in messages %}
+                            <div class="admin-flash">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="admin-form-box">
+                <h2 class="admin-section-title">제재 등록</h2>
+                <form method="POST" action="{{ url_for('admin_sanctions') }}" class="admin-create-form">
+                    <input type="text" name="user_nickname" class="admin-input" placeholder="대상 닉네임">
+                    <select name="sanction_type" class="admin-select">
+                        <option value="">제재 종류 선택</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="SUSPEND_3D">SUSPEND_3D</option>
+                        <option value="SUSPEND_7D">SUSPEND_7D</option>
+                        <option value="BAN">BAN</option>
+                    </select>
+                    <input type="text" name="expire_at" class="admin-input" placeholder="만료일시 (예: 2026-03-16 18:00:00 / 없으면 비워두기)">
+                    <input type="text" name="reason" class="admin-input" placeholder="제재 사유 입력">
+                    <button type="submit" class="admin-primary-btn">제재 등록</button>
+                </form>
+            </div>
+
+            <div class="admin-filter-box">
+                <form method="GET" action="{{ url_for('admin_sanctions') }}" class="admin-filter-form">
+                    <input
+                        type="text"
+                        name="keyword"
+                        value="{{ keyword }}"
+                        placeholder="제재ID, 닉네임, 제재종류, 사유 검색"
+                        class="admin-input"
+                    >
+
+                    <select name="status" class="admin-select">
+                        <option value="">전체 상태</option>
+                        <option value="ACTIVE" {% if status == 'ACTIVE' %}selected{% endif %}>ACTIVE</option>
+                        <option value="RELEASED" {% if status == 'RELEASED' %}selected{% endif %}>RELEASED</option>
+                    </select>
+
+                    <button type="submit" class="admin-primary-btn">검색</button>
+                </form>
+            </div>
+
+            <div class="admin-table-info">
+                <h2>전체 제재 목록</h2>
+                <span>총 {{ sanctions|length }}개</span>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>제재ID</th>
+                            <th>대상자</th>
+                            <th>제재 종류</th>
+                            <th>사유</th>
+                            <th>상태</th>
+                            <th>등록일</th>
+                            <th>만료일</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if sanctions %}
+                            {% for sanction in sanctions %}
+                                <tr>
+                                    <td>{{ sanction.sanction_id }}</td>
+                                    <td>{{ sanction.user_nickname }}</td>
+                                    <td>{{ sanction.sanction_type }}</td>
+                                    <td>{{ sanction.reason }}</td>
+                                    <td>
+                                        <span class="status-badge
+                                            {% if sanction.status == 'ACTIVE' %}status-active{% endif %}
+                                            {% if sanction.status == 'RELEASED' %}status-released{% endif %}
+                                        ">
+                                            {{ sanction.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ sanction.created_at }}</td>
+                                    <td>{{ sanction.expire_at }}</td>
+                                    <td>
+                                        <div class="admin-action-group">
+                                            {% if sanction.status == 'ACTIVE' %}
+                                                <form method="POST" action="{{ url_for('admin_release_sanction', sanction_id=sanction.sanction_id) }}">
+                                                    <button type="submit" class="admin-action-btn admin-action-btn--warn">해제</button>
+                                                </form>
+                                            {% else %}
+                                                <span class="admin-done-text">해제 완료</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8">
+                                    <div class="admin-empty">표시할 제재 내역이 없습니다.</div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

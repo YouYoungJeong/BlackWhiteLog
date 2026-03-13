@@ -1,3 +1,6 @@
+/* =========================
+   기본 설정
+========================= */
 * {
     box-sizing: border-box;
 }
@@ -10,6 +13,9 @@ body {
     color: #2f3528;
 }
 
+/* =========================
+   전체 회원가입 박스
+========================= */
 .page {
     width: 100%;
     max-width: 760px;
@@ -21,6 +27,9 @@ body {
     box-shadow: 0 18px 40px rgba(98, 116, 86, 0.10);
 }
 
+/* =========================
+   로고 / 제목
+========================= */
 .logo-wrap {
     text-align: center;
     margin-bottom: 10px;
@@ -56,10 +65,14 @@ body {
     margin-bottom: 18px;
 }
 
+/* =========================
+   폼 공통 레이아웃
+========================= */
 .form-table {
     width: 100%;
 }
 
+/* 한 줄 = 라벨 + 입력영역 */
 .form-row {
     display: grid;
     grid-template-columns: 145px 1fr;
@@ -68,28 +81,36 @@ body {
     padding: 10px 0;
 }
 
+/* 왼쪽 라벨 */
 .label {
     padding-top: 14px;
     font-size: 17px;
     font-weight: 700;
     color: #37402d;
+    white-space: nowrap; /* 글자 줄바꿈 방지 */
 }
 
+/* 필수 입력 별표 */
 .label .req {
     color: #7d9374;
     margin-left: 2px;
 }
 
+/* 오른쪽 입력 전체 영역 */
 .input-wrap {
     width: 100%;
 }
 
+/* input + 버튼 한 줄 */
 .input-row {
     display: flex;
     gap: 10px;
     align-items: center;
 }
 
+/* =========================
+   입력창 공통
+========================= */
 .input,
 .select,
 .birth-input {
@@ -118,6 +139,9 @@ body {
     background: #fefffc;
 }
 
+/* =========================
+   버튼
+========================= */
 .action-btn {
     flex: 0 0 118px;
     height: 56px;
@@ -158,6 +182,9 @@ body {
     transform: translateY(-1px);
 }
 
+/* =========================
+   중복 확인 메시지
+========================= */
 .check-message {
     margin-top: 8px;
     padding-left: 4px;
@@ -173,14 +200,9 @@ body {
     color: #c62828;
 }
 
-.gender-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 28px;
-    align-items: center;
-    min-height: 56px;
-}
-
+/* =========================
+   라디오 / 체크박스 공통
+========================= */
 .radio-item,
 .check-item {
     display: flex;
@@ -188,6 +210,7 @@ body {
     gap: 10px;
     font-size: 16px;
     color: #555f49;
+    margin: 0;
 }
 
 .radio-item input[type="radio"],
@@ -196,8 +219,23 @@ body {
     height: 20px;
     accent-color: #7f9774;
     cursor: pointer;
+    margin: 0;
 }
 
+/* =========================
+   성별 영역
+========================= */
+.gender-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    align-items: center;
+    min-height: 56px;
+}
+
+/* =========================
+   생년월일 영역
+========================= */
 .birth-row {
     display: grid;
     grid-template-columns: 1fr 26px 1fr 26px 1fr;
@@ -212,24 +250,55 @@ body {
     font-weight: 700;
 }
 
+/* =========================
+   주소 영역
+========================= */
 .address-block .input {
     margin-top: 10px;
 }
 
-.path-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px 24px;
-    padding-top: 8px;
+/* =========================
+   혜택 알림 동의 영역
+========================= */
+/* form-row 기본 grid 유지, 세로만 가운데 정렬 */
+.agree-row {
+    align-items: center;
 }
 
-.agree-box {
-    min-height: 56px;
+/* 왼쪽 라벨 */
+.agree-label {
+    padding-top: 0;          /* 기본 라벨의 위 여백 제거 */
+    display: flex;
+    align-items: center;     /* 세로 중앙 정렬 */
+    min-height: 56px;        /* 오른쪽 체크박스 높이와 비슷하게 맞춤 */
+}
+
+/* 오른쪽 체크박스 영역 */
+.agree-wrap {
     display: flex;
     align-items: center;
-    padding-top: 8px;
+    min-height: 56px;
 }
 
+/* 체크박스 + 문구 */
+.agree-box {
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    padding-top: 0;
+}
+
+.agree-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* =========================
+   가입 버튼
+========================= */
 .submit-area {
     margin-top: 34px;
 }
@@ -253,6 +322,9 @@ body {
     opacity: 0.96;
 }
 
+/* =========================
+   반응형
+========================= */
 @media (max-width: 768px) {
     .page {
         margin: 20px 14px;
@@ -298,13 +370,14 @@ body {
         display: none;
     }
 
-    .path-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-
     .gender-group {
         gap: 16px;
+    }
+
+    .agree-label,
+    .agree-wrap,
+    .agree-box {
+        min-height: auto;
     }
 
     .submit-btn {
