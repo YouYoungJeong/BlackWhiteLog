@@ -46,6 +46,11 @@ def api_restaurants():
     )
     return jsonify(items)
 
+# 이종민 추가 3월 12일 3번째
+@app.route("/seller/register")
+def seller_register():
+    return render_template("seller_register.html")
+
 
 
 # ===== Owner routes =====
