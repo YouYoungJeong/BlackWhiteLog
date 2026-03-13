@@ -13,7 +13,8 @@ from restaurant_panel import restaurant_panel_bp  # 분리한 파일 임포트
 app.register_blueprint(restaurant_panel_bp) # 앱에 등록
 #### 레스토랑 판넬 블루프린트(모듈화)
 #### 랭크 블루프린트
-
+from user_ranking import user_ranking_bp
+app.register_blueprint(user_ranking_bp)
 #### 랭크 블루프린트
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")

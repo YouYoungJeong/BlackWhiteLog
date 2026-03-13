@@ -1,169 +1,279 @@
 document.addEventListener("DOMContentLoaded", () => {
     // =========================================================
-    // 1. DOM 분리 및 이동 (index.html 구조를 건드리지 않는 마법)
+    // 1. DOM 분리 및 이동 (구조 보존)
     // =========================================================
     const sidebar = document.querySelector('.sidebar');
     const mapPanel = document.querySelector('.map-panel');
     
     const rankingListOverlay = document.getElementById('rankingListOverlay');
     const rankingDashboardOverlay = document.getElementById('rankingDashboardOverlay');
-    // 뱃지 오버레이
     const badgeChangeOverlay = document.getElementById('badgeChangeOverlay');
-    // 왼쪽 랭킹 리스트는 sidebar 영역으로 강제 이동
-    if (sidebar && rankingListOverlay) {
-        sidebar.appendChild(rankingListOverlay);
-    }
+    
+    if (sidebar && rankingListOverlay) sidebar.appendChild(rankingListOverlay);
+    if (mapPanel && rankingDashboardOverlay) mapPanel.appendChild(rankingDashboardOverlay);
+    if (mapPanel && badgeChangeOverlay) mapPanel.appendChild(badgeChangeOverlay);
 
-    // 오른쪽 대시보드는 mapPanel 영역으로 강제 이동
-    if (mapPanel && rankingDashboardOverlay) {
-        mapPanel.appendChild(rankingDashboardOverlay);
-    }
-
-    // 뱃지 오버레이 지도 패널
-    if (mapPanel && badgeChangeOverlay) {
-        mapPanel.appendChild(badgeChangeOverlay);
-    }
     // =========================================================
     // 2. 탭 전환 로직 (랭킹 vs 추천)
     // =========================================================
     const sortChips = document.querySelectorAll('.sort-chip');
-    
-    // 숨기거나 보여줘야 할 기존 요소들
     const restaurantList = document.getElementById('restaurantList');
     const mapCanvas = document.getElementById('mapCanvas');
     const mapNotice = document.getElementById('mapNotice');
     const restaurantDetailPanel = document.getElementById('restaurantDetailPanel');
 
     sortChips.forEach(chip => {
-        chip.addEventListener('click', () => {
+        chip.addEventListener('click', async () => {
             const sortType = chip.getAttribute('data-sort');
             
             if (sortType === 'rating') {
-                // -----------------------------------
-                // [랭킹] 탭을 눌렀을 때
-                // -----------------------------------
-                // 1. 랭킹 UI 보이기
                 rankingListOverlay.classList.remove('hidden-view');
                 rankingDashboardOverlay.classList.remove('hidden-view');
-                // 탭 이동 시 뱃지 화면은 초기화(숨김)
                 badgeChangeOverlay.classList.add('hidden-view');
 
-                // 2. 기존 식당 리스트 & 지도 숨기기
                 if (restaurantList) restaurantList.style.display = 'none';
                 if (mapCanvas) mapCanvas.style.display = 'none';
                 if (mapNotice) mapNotice.style.display = 'none';
-                
-                // 만약 식당 상세 패널이 열려있다면 닫아주기
                 if (restaurantDetailPanel && !restaurantDetailPanel.classList.contains('hidden')) {
                     restaurantDetailPanel.classList.add('hidden');
                 }
+
+                // 🌟 [추가] 랭킹 탭을 누르면 DB 데이터를 가져와 렌더링합니다.
+                await loadRankingData();
+
             } else {
-                // -----------------------------------
-                // [추천] 등 다른 탭을 눌렀을 때 (원상 복구)
-                // -----------------------------------
-                // 1. 랭킹 UI 숨기기
                 rankingListOverlay.classList.add('hidden-view');
                 rankingDashboardOverlay.classList.add('hidden-view');
                 badgeChangeOverlay.classList.add('hidden-view');
                 
-                // 2. 기존 식당 리스트 & 지도 다시 보이기
-                if (restaurantList) restaurantList.style.display = 'flex'; // 기존 style.css 속성이 flex임
+                if (restaurantList) restaurantList.style.display = 'flex';
                 if (mapCanvas) mapCanvas.style.display = 'block';
                 if (mapNotice) mapNotice.style.display = 'flex';
             }
         });
     });
+
     // =========================================================
-    // 3. 뱃지 변경 창 열기/닫기 로직 (새로 추가)
+    // 3. 뱃지 변경 창 열기/닫기 로직 (이벤트 위임 방식으로 안전하게 처리)
     // =========================================================
-    const btnChange = document.querySelector('.btn-change');
-    const btnBackToDash = document.getElementById('btnBackToDash');
-
-    // 1) "변경 >" 버튼 클릭 시
-    if (btnChange) {
-        btnChange.addEventListener('click', () => {
-            rankingDashboardOverlay.classList.add('hidden-view'); // 대시보드 숨김
-            badgeChangeOverlay.classList.remove('hidden-view');   // 뱃지 화면 노출
-        });
-    }
-
-    // 2) "< 뒤로 가기" 버튼 클릭 시
-    if (btnBackToDash) {
-        btnBackToDash.addEventListener('click', () => {
-            badgeChangeOverlay.classList.add('hidden-view');      // 뱃지 화면 숨김
-            rankingDashboardOverlay.classList.remove('hidden-view'); // 대시보드 복구
-        });
-    }
-});
-
-// =========================================================
-// 4. 뱃지 교체(Swap) 로직 (새로 추가)
-// =========================================================
-const badgeSlots = document.querySelectorAll('.badge-slot');
-const badgeItems = document.querySelectorAll('.badge-item-selectable');
-const dashboardBadgeCircles = document.querySelectorAll('.dash-card.badge-card .badge-circle');
-const dashboardBadgeNames = document.querySelectorAll('.dash-card.badge-card .badge-item span');
-
-// HTML 수정 없이 이름을 동기화하기 위한 더미 데이터 맵핑
-const badgeNameMap = {
-    '🍜': '면치기 달인', '🗺️': '강남구 정복자', '📸': '포토그래퍼',
-    '🌶️': '맵찔이 탈출', '🥩': '고기 러버',     '🐟': '바다의 왕자',
-    '☕': '카페 투어러', '🍔': '패스트푸더',   '🍰': '디저트 요정',
-    '🥢': '아시안 미식가', '🍙': '간편식 마스터', '🍻': '회식의 신'
-};
-
-// 1) 좌측 장착중인 슬롯 클릭 시 활성화 테두리 변경
-badgeSlots.forEach(slot => {
-    slot.addEventListener('click', () => {
-        // 기존 선택된 슬롯 해제 후 클릭한 슬롯 활성화
-        badgeSlots.forEach(s => s.classList.remove('active-slot'));
-        slot.classList.add('active-slot');
-    });
-});
-
-// 2) 우측 보유 뱃지 클릭 시 교체 및 갱신 로직
-badgeItems.forEach(item => {
-    item.addEventListener('click', () => {
-        // 이미 장착된 뱃지면 아무 동작 안 함
-        if (item.classList.contains('equipped-mark')) return;
-
-        // 현재 활성화된 슬롯(파란 테두리) 찾기
-        const activeSlot = document.querySelector('.badge-slot.active-slot');
-        if (!activeSlot) return;
-
-        // 새롭게 선택한 뱃지 데이터 추출
-        const newEmoji = item.getAttribute('data-badge');
-        const newColor = item.getAttribute('data-color');
-        const newBg = item.getAttribute('data-bg');
-        const newName = badgeNameMap[newEmoji] || '새로운 업적';
-
-        // 활성화된 슬롯에 원래 껴있던 옛날 뱃지 이모지 확인
-        const activeCircle = activeSlot.querySelector('.badge-circle');
-        const oldEmoji = activeCircle.textContent.trim();
-
-        // --- UI 3곳(우측 목록, 좌측 슬롯, 대시보드 본화면) 일괄 업데이트 ---
-
-        // ① 우측 리스트 체크마크 이동 (옛날 뱃지 해제 -> 새 뱃지 장착)
-        badgeItems.forEach(bItem => {
-            if (bItem.getAttribute('data-badge') === oldEmoji) {
-                bItem.classList.remove('equipped-mark'); 
-            }
-        });
-        item.classList.add('equipped-mark'); 
-
-        // ② 좌측 선택된 슬롯 아이콘/색상 변경
-        activeCircle.textContent = newEmoji;
-        activeCircle.style.borderColor = newColor;
-        activeCircle.style.background = newBg;
-
-        // ③ 메인 대시보드 화면 동기화 (뒤로가기 했을 때 바로 적용되도록)
-        // data-slot 속성값이 "1", "2", "3" 이므로 배열 인덱스(0, 1, 2)에 맞추기 위해 -1
-        const slotIndex = parseInt(activeSlot.getAttribute('data-slot')) - 1;
-        
-        if (dashboardBadgeCircles[slotIndex] && dashboardBadgeNames[slotIndex]) {
-            dashboardBadgeCircles[slotIndex].textContent = newEmoji;
-            dashboardBadgeCircles[slotIndex].style.borderColor = newColor;
-            dashboardBadgeNames[slotIndex].textContent = newName;
+    document.body.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-change')) {
+            rankingDashboardOverlay.classList.add('hidden-view');
+            badgeChangeOverlay.classList.remove('hidden-view');
+        } else if (e.target.closest('#btnBackToDash')) {
+            badgeChangeOverlay.classList.add('hidden-view');
+            rankingDashboardOverlay.classList.remove('hidden-view');
         }
     });
 });
+
+// =========================================================
+// 4. 데이터 Fetch 및 화면 렌더링 로직
+// =========================================================
+async function loadRankingData() {
+    try {
+        const [listRes, meRes] = await Promise.all([
+            fetch('/api/ranking/list'),
+            fetch('/api/ranking/me')
+        ]);
+
+        const users = await listRes.json();
+        const me = await meRes.json();
+
+        // 1) 좌측 패널: 실시간 랭킹 리스트
+        const listContainer = document.querySelector(".ranking-list-body");
+        if (listContainer && users.length > 0) {
+            listContainer.innerHTML = users.map((u, i) => {
+                let rankClass = "bronze";
+                if (i === 0) rankClass = "gold";
+                else if (i === 1) rankClass = "silver";
+                else if (i > 2) rankClass = "";
+
+                const isMe = u.user_id === me.user_id;
+                const highlightClass = isMe ? "my-rank-highlight" : (i < 3 ? "top-rank" : "");
+                const meBadge = isMe ? `<span class="me-badge">ME</span>` : "";
+
+                return `
+                    <div class="rank-item ${highlightClass}">
+                        <span class="rank-num ${rankClass}">${i + 1}</span>
+                        <div class="rank-info">
+                            <strong>${u.nickname} ${meBadge}</strong>
+                            <span class="rank-tier">💍 ${u.tier}</span>
+                        </div>
+                        <div class="rank-pts">${(u.point || 0).toLocaleString()} <span>pts</span></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 2) 우측 패널: 나의 랭킹 대시보드 내 정보
+        const profileName = document.querySelector('.profile-card h3');
+        const tierBadge = document.querySelector('.tier-badge');
+        const gaugePts = document.querySelector('.gauge-pts strong');
+        const gaugeFill = document.querySelector('.gauge-bar-fill');
+
+        if (profileName) profileName.innerText = me.nickname;
+        if (tierBadge) tierBadge.innerText = `💍 ${me.tier} 티어`;
+        if (gaugePts) gaugePts.innerText = (me.point || 0).toLocaleString();
+        
+        const percent = Math.min(((me.point || 0) / 10000) * 100, 100);
+        if (gaugeFill) gaugeFill.style.width = percent + "%";
+
+        // 3) 뱃지 데이터 처리 (이모지 -> 실제 DB 이미지)
+        const allBadges = me.achievements_data.all_achievements;
+        const myBadges = me.achievements_data.user_achievements;
+        const myBadgeIds = myBadges.map(b => b.achievement_id);
+
+        // 3-1. 대시보드 메인 화면: 내가 보유한 대표 뱃지 렌더링 (최대 3개)
+        const dashboardBadgeList = document.querySelector('.badge-list');
+        if (dashboardBadgeList) {
+            const displayBadges = myBadges.slice(0, 3);
+            if (displayBadges.length === 0) {
+                dashboardBadgeList.innerHTML = `<p style="color:var(--subtext); font-size:13px; text-align:center; width:100%;">아직 획득한 뱃지가 없습니다.</p>`;
+            } else {
+                dashboardBadgeList.innerHTML = displayBadges.map(badge => `
+                    <div class="badge-item dash-badge-item">
+                        <div class="badge-circle" style="border: 2px solid #ddd; overflow:hidden;">
+                            <img src="${badge.icon_url}" alt="${badge.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='/static/img/main_logo.png'">
+                        </div>
+                        <span>${badge.name}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // 3-2. 뱃지 변경 창: 모든 뱃지 리스트 렌더링
+        const allBadgesGrid = document.querySelector('.all-badges-grid');
+        if (allBadgesGrid) {
+            allBadgesGrid.innerHTML = allBadges.map(badge => {
+                const hasBadge = myBadgeIds.includes(badge.achievement_id);
+                const opacityStyle = hasBadge ? "1" : "0.3"; 
+                // 장착된 뱃지인지 확인 (최대 3개 안에 포함되는지)
+                const equippedClass = (hasBadge && myBadges.slice(0,3).some(b => b.achievement_id === badge.achievement_id)) ? "equipped-mark" : "";
+
+                return `
+                    <div class="badge-item-selectable ${equippedClass}" 
+                         data-id="${badge.achievement_id}" 
+                         data-name="${badge.name}" 
+                         data-url="${badge.icon_url}"
+                         style="opacity: ${opacityStyle};">
+                        <div class="badge-circle" style="border: 2px solid #ddd; overflow:hidden; background: #fff;">
+                            <img src="${badge.icon_url}" alt="${badge.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='/static/img/main_logo.png'">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 3-3. 뱃지 변경 창: 좌측 선택 슬롯 (최대 3개 고정)
+        const equippedSlotsContainer = document.querySelector('.equipped-slots');
+        if (equippedSlotsContainer) {
+            let slotsHtml = "";
+            for(let i=0; i<3; i++) {
+                let activeClass = i === 0 ? "active-slot" : ""; // 첫 번째 슬롯 기본 활성화
+                let badge = myBadges[i];
+                if (badge) {
+                    slotsHtml += `
+                        <div class="badge-slot ${activeClass}" data-slot="${i+1}">
+                            <div class="badge-circle" style="border: 2px solid #ddd; overflow:hidden;">
+                                <img src="${badge.icon_url}" data-id="${badge.achievement_id}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='/static/img/main_logo.png'">
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    slotsHtml += `
+                        <div class="badge-slot ${activeClass}" data-slot="${i+1}">
+                            <div class="badge-circle" style="border: 2px solid transparent; background: #f5f5f5;"></div>
+                        </div>
+                    `;
+                }
+            }
+            equippedSlotsContainer.innerHTML = slotsHtml;
+        }
+
+        // 렌더링이 완료된 후, 동적으로 생성된 요소들에 대해 교체(Swap) 이벤트를 연결합니다.
+        bindBadgeSwapEvents();
+
+    } catch (e) {
+        console.error("데이터 렌더링 중 오류:", e);
+    }
+}
+
+// =========================================================
+// 5. 이미지 기반 뱃지 교체(Swap) 로직
+// =========================================================
+function bindBadgeSwapEvents() {
+    const badgeSlots = document.querySelectorAll('.badge-slot');
+    const badgeItems = document.querySelectorAll('.badge-item-selectable');
+
+    // 1) 좌측 장착중인 슬롯 클릭 시 활성화 테두리 변경
+    badgeSlots.forEach(slot => {
+        slot.addEventListener('click', () => {
+            badgeSlots.forEach(s => s.classList.remove('active-slot'));
+            slot.classList.add('active-slot');
+        });
+    });
+
+    // 2) 우측 보유 뱃지 클릭 시 교체 및 갱신 로직
+    badgeItems.forEach(item => {
+        item.addEventListener('click', () => {
+            // 획득하지 못한 뱃지(투명도 0.3)는 클릭 방지
+            if (item.style.opacity === "0.3") return alert("아직 획득하지 못한 업적입니다.");
+            
+            // 이미 장착된 뱃지면 아무 동작 안 함
+            if (item.classList.contains('equipped-mark')) return;
+
+            const activeSlot = document.querySelector('.badge-slot.active-slot');
+            if (!activeSlot) return;
+
+            // 새롭게 선택한 뱃지 데이터 추출
+            const newId = item.getAttribute('data-id');
+            const newUrl = item.getAttribute('data-url');
+            const newName = item.getAttribute('data-name');
+
+            // 활성화된 슬롯에 원래 껴있던 옛날 뱃지 ID 확인
+            const activeCircle = activeSlot.querySelector('.badge-circle');
+            const oldImg = activeCircle.querySelector('img');
+            const oldId = oldImg ? oldImg.getAttribute('data-id') : null;
+
+            // ① 우측 리스트 체크마크 이동
+            badgeItems.forEach(bItem => {
+                if (bItem.getAttribute('data-id') === oldId) {
+                    bItem.classList.remove('equipped-mark'); 
+                }
+            });
+            item.classList.add('equipped-mark'); 
+
+            // ② 좌측 선택된 슬롯 아이콘 변경
+            activeCircle.innerHTML = `<img src="${newUrl}" data-id="${newId}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='/static/img/main_logo.png'">`;
+            activeCircle.style.border = "2px solid #ddd";
+            activeCircle.style.background = "transparent";
+
+            // ③ 메인 대시보드 화면 동기화 (현재 장착된 3개의 슬롯을 읽어와 대시보드를 통째로 갱신)
+            const dashboardBadgeList = document.querySelector('.badge-list');
+            if (dashboardBadgeList) {
+                let dashHtml = "";
+                document.querySelectorAll('.badge-slot').forEach(slot => {
+                    const img = slot.querySelector('img');
+                    if(img) {
+                        const id = img.getAttribute('data-id');
+                        const url = img.getAttribute('src');
+                        // 우측 리스트에서 이름을 찾아옵니다
+                        const sourceItem = document.querySelector(`.badge-item-selectable[data-id="${id}"]`);
+                        const name = sourceItem ? sourceItem.getAttribute('data-name') : '이름 없음';
+                        
+                        dashHtml += `
+                            <div class="badge-item dash-badge-item">
+                                <div class="badge-circle" style="border: 2px solid #ddd; overflow:hidden;">
+                                    <img src="${url}" alt="${name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='/static/img/main_logo.png'">
+                                </div>
+                                <span>${name}</span>
+                            </div>
+                        `;
+                    }
+                });
+                dashboardBadgeList.innerHTML = dashHtml;
+            }
+        });
+    });
+}
