@@ -168,47 +168,6 @@ register_owner_routes(app)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 
 
-# =========================
-# 이메일 중복 확인 API
-# =========================
-@app.route("/api/check-duplicate")
-def check_duplicate():
-    check_type = request.args.get("type", "").strip()
-    value = request.args.get("value", "").strip()
-
-    if not value:
-        return jsonify({
-            "available": False,
-            "message": "확인할 값이 비어 있습니다."
-        }), 400
-
-    try:
-        if check_type == "email":
-            user = find_user_by_email(value)
-
-            if user:
-                return jsonify({
-                    "available": False,
-                    "message": "이미 사용 중인 이메일입니다."
-                })
-
-            return jsonify({
-                "available": True,
-                "message": "사용 가능한 이메일입니다."
-            })
-
-        return jsonify({
-            "available": False,
-            "message": "잘못된 요청입니다."
-        }), 400
-
-    except Exception as e:
-        print("중복 확인 오류:", e)
-        return jsonify({
-            "available": False,
-            "message": "중복 확인 중 서버 오류가 발생했습니다."
-        }), 500
-
 
 # =========================
 # 일반 로그인
@@ -246,51 +205,104 @@ def signup():
         password = request.form.get("password", "").strip()
         password_confirm = request.form.get("password_confirm", "").strip()
 
-        gender = request.form.get("gender", "").strip()
-        birth_year = request.form.get("birth_year", "").strip()
-        birth_month = request.form.get("birth_month", "").strip()
-        birth_day = request.form.get("birth_day", "").strip()
-        postcode = request.form.get("postcode", "").strip()
-        road_address = request.form.get("roadAddress", "").strip()
-        jibun_address = request.form.get("jibunAddress", "").strip()
-        detail_address = request.form.get("detailAddress", "").strip()
-        extra_address = request.form.get("extraAddress", "").strip()
-        ad_agree = "Y" if request.form.get("ad_agree") == "Y" else "N"
+        email_checked = request.form.get("email_checked", "false")
+        checked_email_value = request.form.get("checked_email_value", "").strip()
 
-        if not nickname or not email or not password:
-            flash("필수 입력값을 모두 입력해주세요.")
+        nickname_checked = request.form.get("nickname_checked", "false")
+        checked_nickname_value = request.form.get("checked_nickname_value", "").strip()
+
+        # 필수값 검사
+        if not nickname or not email or not password or not password_confirm:
+            flash("모든 값을 입력해주세요.")
             return redirect(url_for("signup"))
 
+        # 비밀번호 확인 일치 여부
         if password != password_confirm:
-            flash("비밀번호가 일치하지 않습니다.")
+            flash("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
             return redirect(url_for("signup"))
 
-        if not gender:
-            flash("성별을 선택해주세요.")
+        # 이메일 중복확인 여부 검사
+        if email_checked != "true" or checked_email_value != email:
+            flash("이메일 중복 확인을 해주세요.")
             return redirect(url_for("signup"))
 
-        if not birth_year or not birth_month or not birth_day:
-            flash("생년월일을 입력해주세요.")
+        # 닉네임 중복확인 여부 검사
+        if nickname_checked != "true" or checked_nickname_value != nickname:
+            flash("닉네임 중복 확인을 해주세요.")
             return redirect(url_for("signup"))
 
-        if not postcode or not road_address or not detail_address:
-            flash("주소를 입력해주세요.")
-            return redirect(url_for("signup"))
-
+        # 서버에서 한 번 더 이메일 중복 검사
+        # 프론트만 믿으면 안 되므로 DB에서 다시 확인
         existing_user = find_user_by_email(email)
         if existing_user:
             flash("이미 가입된 이메일입니다.")
             return redirect(url_for("signup"))
 
-        create_user(nickname, email, password)
+        # 서버에서 닉네임 중복 검사
+        existing_nickname = find_user_by_nickname(nickname)
+        if existing_nickname:
+            flash("이미 사용 중인 닉네임입니다.")
+            return redirect(url_for("signup"))
 
-        _ = (jibun_address, extra_address, ad_agree)
+        # 회원 생성
+        create_user(nickname, email, password)
 
         flash("회원가입이 완료되었습니다. 로그인해주세요.")
         return redirect(url_for("login"))
 
     return render_template("signup.html")
 
+# =========================
+# 회원가입 시 이메일 중복 확인
+# =========================
+@app.route("/api/check-duplicate")
+def check_duplicate():
+    # 프론트에서 type=email, value=입력값 형태로 보냄
+    check_type = request.args.get("type", "").strip()
+    value = request.args.get("value", "").strip()
+
+    # 값이 비어 있으면 바로 에러 응답
+    if not value:
+        return jsonify({
+            "available": False,
+            "message": "값을 입력해주세요."
+        })
+
+    # 이메일 중복 확인
+    if check_type == "email":
+        user = find_user_by_email(value)
+
+        if user:
+            return jsonify({
+                "available": False,
+                "message": "이미 사용 중인 이메일입니다."
+            })
+        else:
+            return jsonify({
+                "available": True,
+                "message": "사용 가능한 이메일입니다."
+            })
+
+    # 필요하면 닉네임 중복 확인도 여기에 추가 가능
+    elif check_type == "nickname":
+        user = find_user_by_nickname(value)
+
+        if user:
+            return jsonify({
+                "available": False,
+                "message": "이미 사용 중인 닉네임입니다."
+            })
+        else:
+            return jsonify({
+                "available": True,
+                "message": "사용 가능한 닉네임입니다."
+            })
+
+    # 지원하지 않는 타입일 때
+    return jsonify({
+        "available": False,
+        "message": "잘못된 요청입니다."
+    })
 
 # =========================
 # 이메일 찾기
