@@ -6,7 +6,7 @@ def register_owner_routes(app):
 
     @app.route("/owner/board", endpoint="owner_board")
     def owner_board():
-        return render_template("owner_board.html")
+        return render_template("owner/owner_board.html")
 
     @app.route("/owner/menu_management", methods=["GET", "POST"], endpoint="owner_menu_management")
     def owner_menu_management():
@@ -37,7 +37,7 @@ def register_owner_routes(app):
         menu_list = owner_db.get_menu_list_by_owner(owner_id)
 
         return render_template(
-            "owner_menu_management.html",
+            "owner/owner_menu_management.html",
             owner=owner,
             restaurant=restaurant,
             categories=categories,
@@ -46,8 +46,8 @@ def register_owner_routes(app):
 
     @app.route("/owner/review_management", endpoint="owner_review_management")
     def owner_review_management():
-        return render_template("owner_review_management.html")
+        return render_template("owner/owner_review_management.html")
 
     @app.route("/owner/notice_management", endpoint="owner_notice_management")
     def owner_notice_management():
-        return render_template("owner_notice_management.html")
+        return render_template("owner/owner_notice_management.html")
