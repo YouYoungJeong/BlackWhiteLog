@@ -18,6 +18,12 @@ const state = {
     lastKeyword: ""
 };
 
+/* 이종민 수정한 부분 */
+let naverMap = null;
+let naverMarkers = [];
+let activeInfoWindow = null;
+let activeRestaurantId = null;
+
 /************************************************************
  * DOM 요소 모음
  * ----------------------------------------------------------
@@ -50,6 +56,9 @@ const menuBtn = document.getElementById("menuBtn");
 const sideDrawer = document.getElementById("sideDrawer");
 const sideDrawerBackdrop = document.getElementById("sideDrawerBackdrop");
 const sideDrawerCloseBtn = document.getElementById("sideDrawerCloseBtn");
+
+/* 이종민 수정 3월 12일 2번째 */
+const sellerRegisterBtn = document.getElementById("sellerRegisterBtn");
 
 /************************************************************
  * 상수(Constant)
@@ -638,7 +647,11 @@ async function fetchRestaurants() {
         state.items = Array.isArray(filteredData) ? filteredData : [];
         state.allItems = Array.isArray(allData) ? allData : [];
 
-        applyKeywordSearch();
+        renderRestaurantList(state.items);
+        /* 이종민 추가 3월 12일 - 지도 마커 렌더링 완료 후 검색 결과에 맞게 지도 포커스 */
+        await renderMapMarkers(state.items);/*여기*/
+        focusMapOnSearchResult(state.items);
+        
     } catch (error) {
         console.error(error);
         showError();
@@ -744,11 +757,97 @@ function bindRestaurantCardEvents() {
             const item = findRestaurantById(restaurantId);
 
             if (item) {
+                setActiveRestaurantCard(item.restaurant_id);
                 highlightMarker(item.restaurant_id);
             }
         });
     });
 }
+
+/* 이종민 수정 부분 S*/
+function initNaverMap() {
+    const mapElement = document.getElementById("naverMap");
+    if (!mapElement || !window.naver?.maps) return;
+
+    naverMap = new naver.maps.Map(mapElement, {
+        center: new naver.maps.LatLng(37.5665, 126.9780),
+        zoom: 14
+    });
+}
+
+function clearNaverMarkers() {
+    naverMarkers.forEach((marker) => marker.setMap(null));
+    naverMarkers = [];
+
+    if (activeInfoWindow) {
+        activeInfoWindow.close();
+        activeInfoWindow = null;
+    }
+}
+
+function getLatLngFromItem(item) {
+    const lat = Number(item.latitude ?? item.lat);
+    const lng = Number(item.longitude ?? item.lng);
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return new naver.maps.LatLng(lat, lng);
+    }
+
+    return null;
+}
+
+function createInfoWindowContent(item) {
+    const title = escapeHtml(item.name || "이름 없음");
+    const category = escapeHtml(item.category_name || "카테고리 미지정");
+    const address = escapeHtml(item.road_address || item.address || "주소 정보 없음");
+    const rating = formatRating(item.avg_rating);
+    const visits = toNumber(item.visit_count);
+    const reviews = toNumber(item.review_count);
+
+    return `
+        <div style="padding:12px; min-width:220px; line-height:1.5;">
+            <strong style="font-size:15px;">${title}</strong><br>
+            <span>${category}</span><br>
+            <span>${address}</span><br>
+            <span>★ ${rating} · 방문 ${visits} · 리뷰 ${reviews}</span>
+        </div>
+    `;
+}
+
+function geocodeAddress(address) {
+    return Promise.resolve(null);
+}
+
+/**
+ * 지도에 마커를 그린다.
+ * 현재는 상위 10개만 표시한다.
+ */
+
+/* 이종민 추가 3월 12일 - 검색 시 첫 번째 결과 매장으로 지도 이동 */
+function focusMapOnSearchResult(items) {
+    if (!naverMap || !Array.isArray(items) || items.length === 0) return;
+
+    const keyword = (keywordInput?.value || "").trim();
+    const selectedRegion = regionSelect?.value || "";
+    const selectedCategory = categorySelect?.value || "";
+
+    const hasSearchCondition =
+        keyword.length > 0 ||
+        (selectedRegion && selectedRegion !== "전체") ||
+        selectedCategory.length > 0;
+
+    if (!hasSearchCondition) {
+        return;
+    }
+
+    const targetItem = items[0];
+    if (!targetItem) return;
+
+    requestAnimationFrame(() => {
+        highlightMarker(targetItem.restaurant_id);
+    });
+}
+/* 이종민 수정 부분 E*/
 
 /************************************************************
  * 룰렛 결과 표시
@@ -784,6 +883,8 @@ function focusRestaurantCard(restaurantId) {
     const targetCard = document.querySelector(`.restaurant-card[data-id="${restaurantId}"]`);
     if (!targetCard) return;
 
+    setActiveRestaurantCard(restaurantId);
+
     targetCard.scrollIntoView({
         behavior: "smooth",
         block: "center"
@@ -795,6 +896,17 @@ function focusRestaurantCard(restaurantId) {
     setTimeout(() => {
         targetCard.style.boxShadow = "";
     }, CARD_HIGHLIGHT_DURATION);
+}
+
+function setActiveRestaurantCard(restaurantId) {
+    document.querySelectorAll(".restaurant-card").forEach((card) => {
+        card.classList.toggle(
+            "is-active",
+            Number(card.dataset.id) === Number(restaurantId)
+        );
+    });
+
+    activeRestaurantId = Number(restaurantId);
 }
 
 /**
@@ -1001,56 +1113,74 @@ function pickRandomCategory() {
  * 지도 마커 렌더링
  ************************************************************/
 
-/**
- * 지도가 아직 실제 API와 연결되지 않았기 때문에
- * 임시 위치 배열을 사용해 마커를 배치한다.
- */
-function getFallbackMarkerPositions() {
-    return [
-        { x: 28, y: 22 },
-        { x: 43, y: 27 },
-        { x: 35, y: 39 },
-        { x: 26, y: 35 },
-        { x: 40, y: 49 },
-        { x: 32, y: 57 },
-        { x: 53, y: 32 },
-        { x: 58, y: 67 },
-        { x: 70, y: 48 },
-        { x: 63, y: 22 }
-    ];
-}
+/* 이종민 수정 3월 12일 - DB 위도/경도만 사용해서 지도 마커 표시 */
+async function renderMapMarkers(items) {
+    if (!naverMap) return;
 
-/**
- * 지도에 마커를 그린다.
- * 현재는 상위 10개만 표시한다.
- */
-function renderMapMarkers(items) {
+    clearNaverMarkers();
+
     if (!items.length) {
-        mapMarkers.innerHTML = "";
         return;
     }
 
-    const fallbackPositions = getFallbackMarkerPositions();
+    const bounds = new naver.maps.LatLngBounds();
+    let hasMarker = false; // 이종민 추가 3월 12일 - 실제 마커 생성 여부 확인
 
-    mapMarkers.innerHTML = items
-        .slice(0, 10)
-        .map((item, index) => {
-            const pos = fallbackPositions[index % fallbackPositions.length];
+    /* 이종민 수정 3월 12일 - 검색 결과 전체를 지도에 표시 */
+    for (const item of items) {
+        const position = getLatLngFromItem(item);
 
-            return `
-                <div
-                    class="map-marker"
-                    data-id="${item.restaurant_id}"
-                    style="left:${pos.x}%; top:${pos.y}%;"
-                    title="${escapeHtml(item.name || "이름 없음")}"
-                >
-                    <span>${index + 1}</span>
-                </div>
-            `;
-        })
-        .join("");
+        /* 이종민 수정 3월 12일 - DB 위경도가 없으면 마커를 찍지 않음 */
+        if (!position) continue;
 
-    bindMapMarkerEvents();
+        hasMarker = true;
+
+        const marker = new naver.maps.Marker({
+            position: position,
+            map: naverMap,
+            title: item.name || "이름 없음"
+        });
+
+        marker.restaurantId = Number(item.restaurant_id);
+
+        const infoWindow = new naver.maps.InfoWindow({
+            content: createInfoWindowContent(item)
+        });
+
+        naver.maps.Event.addListener(marker, "click", () => {
+            if (activeInfoWindow) {
+                activeInfoWindow.close();
+            }
+
+            infoWindow.open(naverMap, marker);
+            activeInfoWindow = infoWindow;
+
+            // 좌측 음식점 카드로 포커스 이동
+            focusRestaurantCard(item.restaurant_id);
+
+            // 상세 패널 열기
+            // map-panel 클릭 닫기 이벤트보다 늦게 실행되도록 한 템포 뒤에 호출
+            setTimeout(() => {
+                openDetailPanel(item.restaurant_id);
+            }, 0);
+        });
+
+        naverMarkers.push(marker);
+        bounds.extend(position);
+    }
+
+    /* 이종민 수정 3월 12일 - bounds.isEmpty() 대신 실제 마커 존재 여부로 판단 */
+    /* 이종민 수정 3월 12일 - bounds에 맞춘 뒤 한 단계 더 축소해서 조금 멀리서 보이게 */
+    if (hasMarker) {
+        /* 이종민 수정 3월 12일 - 줌 단계 조절 대신 fitBounds 여백으로 미세 조정 */
+        naverMap.fitBounds(bounds, {
+            top: 40,
+            right: 40,
+            bottom: 40,
+            left: 40,
+            maxZoom: 16
+        });
+    }
 }
 
 /**
@@ -1074,18 +1204,28 @@ function bindMapMarkerEvents() {
 /**
  * 특정 음식점 마커를 강조한다.
  */
+/* 이종민 수정 3월 11일 */
 function highlightMarker(restaurantId) {
-    document.querySelectorAll(".map-marker").forEach((marker) => {
-        marker.style.filter = "";
-        marker.style.transform = "rotate(-45deg)";
+    const targetMarker = naverMarkers.find(
+        (marker) => Number(marker.restaurantId) === Number(restaurantId)
+    );
+
+    if (!targetMarker || !naverMap) return;
+
+    naverMap.panTo(targetMarker.getPosition());
+
+    const item = findRestaurantById(restaurantId);
+    if (!item) return;
+
+    if (activeInfoWindow) {
+        activeInfoWindow.close();
+    }
+
+    activeInfoWindow = new naver.maps.InfoWindow({
+        content: createInfoWindowContent(item)
     });
 
-    const targetMarker = document.querySelector(`.map-marker[data-id="${restaurantId}"]`);
-
-    if (targetMarker) {
-        targetMarker.style.filter = "brightness(0.9) saturate(1.2)";
-        targetMarker.style.transform = "rotate(-45deg) scale(1.12)";
-    }
+    activeInfoWindow.open(naverMap, targetMarker);
 }
 
 /************************************************************
@@ -1260,6 +1400,13 @@ function bindMapNoticeEvents() {
 function bindSideDrawerEvents() {
     if (menuBtn) {
         menuBtn.addEventListener("click", openSideDrawer);
+        if (sellerRegisterBtn) {
+            sellerRegisterBtn.addEventListener("click", () => {
+                closeSideDrawer();
+                window.location.href = "/seller/register";
+            });
+        }
+    
     }
 
     if (sideDrawerCloseBtn) {
@@ -1287,6 +1434,7 @@ function bindSideDrawerEvents() {
  * - 첫 데이터 로드
  */
 function init() {
+    initNaverMap();
     bindSortChipEvents();
     bindSearchEvents();
     bindRouletteEvents();
