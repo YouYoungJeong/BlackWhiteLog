@@ -13,6 +13,10 @@ import os
 # 외부 API 요청용
 import requests
 
+# owner-routes.py import
+from owner_routes import register_owner_routes
+
+
 # OAuth state 값 생성용 (보안)
 import secrets
 
@@ -156,6 +160,12 @@ def api_restaurants():
 @app.route("/seller/register")
 def seller_register():
     return render_template("seller_register.html")
+
+
+
+# ===== Owner routes =====
+register_owner_routes(app)
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 
 
 # =========================

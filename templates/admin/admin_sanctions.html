@@ -4,84 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>제재 관리</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_manage.css') }}">
 </head>
 <body>
     <div class="admin-page">
         <div class="admin-container">
-            <div class="admin-header-row">
-                <div>
-                    <h1 class="admin-title">제재 관리</h1>
-                    <p class="admin-subtitle">경고, 정지, 해제 등 제재 내역을 관리할 수 있습니다.</p>
-                </div>
-                <a href="{{ url_for('admin_page') }}" class="admin-outline-btn">관리자 메인으로</a>
+            <div class="admin-header">
+                <h1>제재 관리</h1>
+                <p>회원 제재 내역을 확인하고 경고, 정지, 해제 등을 관리할 수 있습니다.</p>
             </div>
-
-            <div class="admin-divider"></div>
 
             {% with messages = get_flashed_messages() %}
                 {% if messages %}
-                    <div class="admin-flash-wrap">
+                    <div class="flash-wrap">
                         {% for message in messages %}
-                            <div class="admin-flash">{{ message }}</div>
+                            <div class="flash-message">{{ message }}</div>
                         {% endfor %}
                     </div>
                 {% endif %}
             {% endwith %}
 
-            <div class="admin-form-box">
-                <h2 class="admin-section-title">제재 등록</h2>
-                <form method="POST" action="{{ url_for('admin_sanctions') }}" class="admin-create-form">
-                    <input type="text" name="user_nickname" class="admin-input" placeholder="대상 닉네임">
-                    <select name="sanction_type" class="admin-select">
-                        <option value="">제재 종류 선택</option>
-                        <option value="WARNING">WARNING</option>
-                        <option value="SUSPEND_3D">SUSPEND_3D</option>
-                        <option value="SUSPEND_7D">SUSPEND_7D</option>
-                        <option value="BAN">BAN</option>
-                    </select>
-                    <input type="text" name="expire_at" class="admin-input" placeholder="만료일시 (예: 2026-03-16 18:00:00 / 없으면 비워두기)">
-                    <input type="text" name="reason" class="admin-input" placeholder="제재 사유 입력">
-                    <button type="submit" class="admin-primary-btn">제재 등록</button>
+            <div class="admin-form-card">
+                <h2>제재 등록</h2>
+                <form action="{{ url_for('admin_sanctions') }}" method="POST" class="admin-form">
+                    <div>
+                        <label for="user_nickname">대상 닉네임</label>
+                        <input type="text" id="user_nickname" name="user_nickname" required>
+                    </div>
+
+                    <div>
+                        <label for="sanction_type">제재 종류</label>
+                        <select id="sanction_type" name="sanction_type" required>
+                            <option value="">선택</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="SUSPENSION">SUSPENSION</option>
+                            <option value="BAN">BAN</option>
+                        </select>
+                    </div>
+
+                    <div class="full">
+                        <label for="reason">사유</label>
+                        <textarea id="reason" name="reason" required></textarea>
+                    </div>
+
+                    <div>
+                        <label for="expire_at">만료일</label>
+                        <input type="text" id="expire_at" name="expire_at" placeholder="예: 2026-03-20 또는 비워두기">
+                    </div>
+
+                    <div style="display:flex; align-items:end;">
+                        <button type="submit" class="primary-btn">제재 등록</button>
+                    </div>
                 </form>
             </div>
 
-            <div class="admin-filter-box">
-                <form method="GET" action="{{ url_for('admin_sanctions') }}" class="admin-filter-form">
-                    <input
-                        type="text"
-                        name="keyword"
-                        value="{{ keyword }}"
-                        placeholder="제재ID, 닉네임, 제재종류, 사유 검색"
-                        class="admin-input"
-                    >
-
-                    <select name="status" class="admin-select">
+            <div class="admin-topbar">
+                <form method="GET" action="{{ url_for('admin_sanctions') }}" class="search-form">
+                    <input type="text" name="keyword" value="{{ keyword }}" placeholder="닉네임 / 사유 검색">
+                    <select name="status">
                         <option value="">전체 상태</option>
                         <option value="ACTIVE" {% if status == 'ACTIVE' %}selected{% endif %}>ACTIVE</option>
                         <option value="RELEASED" {% if status == 'RELEASED' %}selected{% endif %}>RELEASED</option>
                     </select>
-
-                    <button type="submit" class="admin-primary-btn">검색</button>
+                    <button type="submit">검색</button>
                 </form>
             </div>
 
-            <div class="admin-table-info">
-                <h2>전체 제재 목록</h2>
-                <span>총 {{ sanctions|length }}개</span>
-            </div>
-
-            <div class="admin-table-wrap">
+            <div class="table-wrap">
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>제재ID</th>
-                            <th>대상자</th>
+                            <th>ID</th>
+                            <th>대상 닉네임</th>
                             <th>제재 종류</th>
                             <th>사유</th>
+                            <th>만료일</th>
                             <th>상태</th>
                             <th>등록일</th>
-                            <th>만료일</th>
                             <th>관리</th>
                         </tr>
                     </thead>
@@ -92,39 +91,32 @@
                                     <td>{{ sanction.sanction_id }}</td>
                                     <td>{{ sanction.user_nickname }}</td>
                                     <td>{{ sanction.sanction_type }}</td>
-                                    <td>{{ sanction.reason }}</td>
-                                    <td>
-                                        <span class="status-badge
-                                            {% if sanction.status == 'ACTIVE' %}status-active{% endif %}
-                                            {% if sanction.status == 'RELEASED' %}status-released{% endif %}
-                                        ">
-                                            {{ sanction.status }}
-                                        </span>
-                                    </td>
-                                    <td>{{ sanction.created_at }}</td>
+                                    <td class="left">{{ sanction.reason }}</td>
                                     <td>{{ sanction.expire_at }}</td>
-                                    <td>
-                                        <div class="admin-action-group">
-                                            {% if sanction.status == 'ACTIVE' %}
-                                                <form method="POST" action="{{ url_for('admin_release_sanction', sanction_id=sanction.sanction_id) }}">
-                                                    <button type="submit" class="admin-action-btn admin-action-btn--warn">해제</button>
-                                                </form>
-                                            {% else %}
-                                                <span class="admin-done-text">해제 완료</span>
-                                            {% endif %}
-                                        </div>
+                                    <td>{{ sanction.status }}</td>
+                                    <td>{{ sanction.created_at }}</td>
+                                    <td class="action-cell">
+                                        {% if sanction.status != 'RELEASED' %}
+                                            <form action="{{ url_for('admin_release_sanction', sanction_id=sanction.sanction_id) }}" method="POST" class="inline-form">
+                                                <button type="submit" class="secondary-btn">해제</button>
+                                            </form>
+                                        {% else %}
+                                            <span>-</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="8">
-                                    <div class="admin-empty">표시할 제재 내역이 없습니다.</div>
-                                </td>
+                                <td colspan="8" class="empty-row">제재 데이터가 없습니다.</td>
                             </tr>
                         {% endif %}
                     </tbody>
                 </table>
+            </div>
+
+            <div class="bottom-link-wrap">
+                <a href="{{ url_for('admin_page') }}" class="back-link">관리자 메인으로 돌아가기</a>
             </div>
         </div>
     </div>

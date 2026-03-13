@@ -4,68 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>신고 관리</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_manage.css') }}">
 </head>
 <body>
     <div class="admin-page">
         <div class="admin-container">
-            <div class="admin-header-row">
-                <div>
-                    <h1 class="admin-title">신고 관리</h1>
-                    <p class="admin-subtitle">신고 내역을 확인하고 처리 상태를 변경할 수 있습니다.</p>
-                </div>
-                <a href="{{ url_for('admin_page') }}" class="admin-outline-btn">관리자 메인으로</a>
+            <div class="admin-header">
+                <h1>신고 관리</h1>
+                <p>신고 목록을 확인하고 처리 완료 또는 반려 상태로 변경할 수 있습니다.</p>
             </div>
-
-            <div class="admin-divider"></div>
 
             {% with messages = get_flashed_messages() %}
                 {% if messages %}
-                    <div class="admin-flash-wrap">
+                    <div class="flash-wrap">
                         {% for message in messages %}
-                            <div class="admin-flash">{{ message }}</div>
+                            <div class="flash-message">{{ message }}</div>
                         {% endfor %}
                     </div>
                 {% endif %}
             {% endwith %}
 
-            <div class="admin-filter-box">
-                <form method="GET" action="{{ url_for('admin_reports') }}" class="admin-filter-form">
-                    <input
-                        type="text"
-                        name="keyword"
-                        value="{{ keyword }}"
-                        placeholder="신고ID, 리뷰ID, 닉네임, 음식점명, 사유 검색"
-                        class="admin-input"
-                    >
-
-                    <select name="status" class="admin-select">
+            <div class="admin-topbar">
+                <form method="GET" action="{{ url_for('admin_reports') }}" class="search-form">
+                    <input type="text" name="keyword" value="{{ keyword }}" placeholder="신고자 / 대상 / 사유 검색">
+                    <select name="status">
                         <option value="">전체 상태</option>
                         <option value="PENDING" {% if status == 'PENDING' %}selected{% endif %}>PENDING</option>
                         <option value="RESOLVED" {% if status == 'RESOLVED' %}selected{% endif %}>RESOLVED</option>
                         <option value="REJECTED" {% if status == 'REJECTED' %}selected{% endif %}>REJECTED</option>
                     </select>
-
-                    <button type="submit" class="admin-primary-btn">검색</button>
+                    <button type="submit">검색</button>
                 </form>
             </div>
 
-            <div class="admin-table-info">
-                <h2>전체 신고 목록</h2>
-                <span>총 {{ reports|length }}개</span>
-            </div>
-
-            <div class="admin-table-wrap">
+            <div class="table-wrap">
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>신고ID</th>
-                            <th>리뷰ID</th>
-                            <th>피신고자</th>
+                            <th>ID</th>
                             <th>신고자</th>
-                            <th>음식점</th>
-                            <th>신고 사유</th>
-                            <th>리뷰 내용</th>
+                            <th>대상</th>
+                            <th>유형</th>
+                            <th>사유</th>
                             <th>상태</th>
                             <th>신고일</th>
                             <th>관리</th>
@@ -76,48 +56,35 @@
                             {% for report in reports %}
                                 <tr>
                                     <td>{{ report.report_id }}</td>
-                                    <td>{{ report.review_id }}</td>
-                                    <td>{{ report.reported_user_nickname }}</td>
-                                    <td>{{ report.report_user_nickname }}</td>
-                                    <td>{{ report.restaurant_name }}</td>
-                                    <td>{{ report.reason }}</td>
-                                    <td class="review-content-cell">{{ report.review_content }}</td>
-                                    <td>
-                                        <span class="status-badge
-                                            {% if report.status == 'PENDING' %}status-pending{% endif %}
-                                            {% if report.status == 'RESOLVED' %}status-resolved{% endif %}
-                                            {% if report.status == 'REJECTED' %}status-rejected{% endif %}
-                                        ">
-                                            {{ report.status }}
-                                        </span>
-                                    </td>
+                                    <td>{{ report.reporter_nickname }}</td>
+                                    <td>{{ report.target_nickname }}</td>
+                                    <td>{{ report.report_type }}</td>
+                                    <td class="left">{{ report.reason }}</td>
+                                    <td>{{ report.status }}</td>
                                     <td>{{ report.created_at }}</td>
-                                    <td>
-                                        <div class="admin-action-group">
-                                            {% if report.status == 'PENDING' %}
-                                                <form method="POST" action="{{ url_for('admin_resolve_report', report_id=report.report_id) }}">
-                                                    <button type="submit" class="admin-action-btn admin-action-btn--success">처리</button>
-                                                </form>
-                                                <form method="POST" action="{{ url_for('admin_reject_report', report_id=report.report_id) }}">
-                                                    <button type="submit" class="admin-action-btn admin-action-btn--danger">반려</button>
-                                                </form>
-                                            {% else %}
-                                                <span class="admin-done-text">처리 완료</span>
-                                            {% endif %}
-                                        </div>
+                                    <td class="action-cell">
+                                        <form action="{{ url_for('admin_resolve_report', report_id=report.report_id) }}" method="POST" class="inline-form">
+                                            <button type="submit" class="primary-btn">승인</button>
+                                        </form>
+                                        <form action="{{ url_for('admin_reject_report', report_id=report.report_id) }}" method="POST" class="inline-form">
+                                            <button type="submit" class="danger-btn">반려</button>
+                                        </form>
                                     </td>
                                 </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="10">
-                                    <div class="admin-empty">표시할 신고 내역이 없습니다.</div>
-                                </td>
+                                <td colspan="8" class="empty-row">신고 데이터가 없습니다.</td>
                             </tr>
                         {% endif %}
                     </tbody>
                 </table>
             </div>
+
+            <div class="bottom-link-wrap">
+                <a href="{{ url_for('admin_page') }}" class="back-link">관리자 메인으로 돌아가기</a>
+            </div>
         </div>
     </div>
 </body>
+</html>
