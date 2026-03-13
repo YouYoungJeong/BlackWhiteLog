@@ -711,7 +711,6 @@ function createRestaurantCardHtml(item, index) {
                 <div class="card-stats">
                     <span class="stat-pill">방문 ${visitCount}</span>
                     <span class="stat-pill">리뷰 ${reviewCount}</span>
-                    <span class="stat-pill">평점 ${avgRating}</span>
                 </div>
             </div>
         </article>
