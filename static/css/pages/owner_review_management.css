@@ -2,9 +2,13 @@
 
 /* =========================
    전체 초기화
+<<<<<<< HEAD
    - 브라우저 기본 margin/padding 제거
    - box-sizing: border-box로 크기 계산 일관화
    ========================= */
+=======
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 * {
     margin: 0;
     padding: 0;
@@ -12,6 +16,7 @@
 }
 
 /* =========================
+<<<<<<< HEAD
    전역 커스텀 속성(CSS 변수)
    - 페이지 전체에서 공통으로 사용하는 색상/반경/그림자 값
    - 유지보수 시 여기 값만 바꾸면 전체 톤 변경 가능
@@ -31,14 +36,37 @@
     --radius-lg: 22px; /* 카드 기본 라운드 값 */
     --radius-md: 16px; /* 중간 라운드 값 */
     --radius-sm: 12px; /* 작은 버튼/요소 라운드 값 */
+=======
+   전역 커스텀 속성
+========================= */
+:root {
+    --bg: #f5f6f2;
+    --panel: #ffffff;
+    --line: #e7e9e3;
+    --text: #222222;
+    --sub-text: #666666;
+    --muted: #8c8c8c;
+    --point: #9caf7f;
+    --point-dark: #82956a;
+    --point-light: #eef3e8;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    --radius-xl: 28px;
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --radius-sm: 12px;
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 }
 
 /* =========================
    body 기본 설정
+<<<<<<< HEAD
    - 전체 폰트 지정
    - 상단은 옅은 블루 톤, 아래는 기본 배경으로 이어지는 그라데이션 배경
    - 전체 기본 텍스트 색상 설정
    ========================= */
+=======
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 body {
     font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
     background: linear-gradient(180deg, #eef2fb 0 92px, var(--bg) 92px 100%);
@@ -46,6 +74,7 @@ body {
 }
 
 /* =========================
+<<<<<<< HEAD
    버튼 기본 초기화
    - 브라우저 기본 버튼 스타일 제거
    - 상속 폰트 사용
@@ -75,6 +104,10 @@ a {
    - 화면 높이를 최소 viewport 높이만큼 유지
    - 상하 패딩으로 숨쉴 공간 확보
    ========================= */
+=======
+   전체 페이지 래퍼
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .owner-board-page {
     width: min(1380px, calc(100% - 32px));
     min-height: 100vh;
@@ -83,6 +116,7 @@ a {
 }
 
 /* =========================
+<<<<<<< HEAD
    헤더 영역
    - 상단 공통 헤더 박스
    - flex로 좌우 정렬
@@ -175,6 +209,10 @@ a {
    공통 카드 스타일
    - 여러 section/article에서 공용 사용
    ========================= */
+=======
+   공통 카드 스타일
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .card {
     background: var(--panel);
     border: 1px solid var(--line);
@@ -184,9 +222,13 @@ a {
 
 /* =========================
    메인 리뷰 페이지 레이아웃
+<<<<<<< HEAD
    - 세로 스택 구조
    - 각 블럭 사이 간격 통일
    ========================= */
+=======
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-page {
     display: flex;
     flex-direction: column;
@@ -194,9 +236,14 @@ a {
 }
 
 /* =========================
+<<<<<<< HEAD
    채워진 스타일 버튼
    - 등록 같은 주요 액션 버튼
    ========================= */
+=======
+   버튼 스타일
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .fill-btn {
     min-width: 120px;
     height: 50px;
@@ -206,18 +253,27 @@ a {
     color: #fff;
     font-size: 1rem;
     font-weight: 700;
+<<<<<<< HEAD
     transition: 0.2s ease; /* hover 부드럽게 */
 }
 
 /* 주요 버튼 hover 상태 */
+=======
+    transition: 0.2s ease;
+}
+
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .fill-btn:hover {
     background: var(--point-dark);
 }
 
+<<<<<<< HEAD
 /* =========================
    외곽선 버튼
    - 수정/삭제 같은 보조 액션 버튼
    ========================= */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .ghost-btn {
     min-width: 110px;
     height: 50px;
@@ -230,7 +286,10 @@ a {
     font-weight: 700;
 }
 
+<<<<<<< HEAD
 /* 경고 성격 버튼 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .ghost-btn.warning {
     color: #7f8f69;
     border-color: #cfd9c3;
@@ -239,38 +298,59 @@ a {
 
 /* =========================
    페이지 타이틀 카드
+<<<<<<< HEAD
    - 상단 안내 영역
    ========================= */
+=======
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .page-title-card {
     padding: 28px 30px;
 }
 
+<<<<<<< HEAD
 /* 타이틀 카드 내부 텍스트 묶음 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .page-title-left {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
+<<<<<<< HEAD
 /* 작은 라벨 칩 */
 .page-chip {
     display: inline-flex;
     align-self: flex-start; /* 내용 길이에 맞게만 표시 */
     padding: 7px 14px;
     border-radius: 999px; /* pill 형태 */
+=======
+.page-chip {
+    display: inline-flex;
+    align-self: flex-start;
+    padding: 7px 14px;
+    border-radius: 999px;
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
     background: var(--point-light);
     color: var(--point-dark);
     font-size: 0.92rem;
     font-weight: 700;
 }
 
+<<<<<<< HEAD
 /* 페이지 메인 제목 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .page-title-left h2 {
     font-size: 2rem;
     font-weight: 800;
 }
 
+<<<<<<< HEAD
 /* 페이지 설명 문장 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .page-title-left p {
     color: #666;
     font-size: 1.04rem;
@@ -279,15 +359,22 @@ a {
 
 /* =========================
    통계 카드 그리드
+<<<<<<< HEAD
    - 4칸 균등 배치
    ========================= */
+=======
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-summary-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 18px;
 }
 
+<<<<<<< HEAD
 /* 개별 통계 카드 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-card {
     padding: 24px 24px 22px;
     display: flex;
@@ -296,55 +383,86 @@ a {
     overflow: hidden;
 }
 
+<<<<<<< HEAD
 /* 선택/강조된 통계 카드 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-card.active {
     border-color: #d7e3cb;
     background: linear-gradient(180deg, #fbfdf8 0%, #f4f8ef 100%);
 }
 
+<<<<<<< HEAD
 /* 경고 계열 통계 카드 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-card.warning {
     background: linear-gradient(180deg, #ffffff 0%, #f7faf4 100%);
 }
 
+<<<<<<< HEAD
 /* 줄바꿈 방지 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-label,
 .summary-value {
     white-space: nowrap;
 }
 
+<<<<<<< HEAD
 /* 통계 라벨 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-label {
     color: #666;
     font-size: 1rem;
     font-weight: 600;
+<<<<<<< HEAD
     white-space: nowrap;
 }
 
 /* 통계 숫자 */
+=======
+}
+
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .summary-value {
     font-size: 2rem;
     font-weight: 800;
     color: #222;
+<<<<<<< HEAD
     white-space: nowrap;
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 }
 
 /* =========================
    필터 카드
+<<<<<<< HEAD
    - 상태 탭 + 검색창 영역
    ========================= */
+=======
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-filter-card {
     padding: 18px;
 }
 
+<<<<<<< HEAD
 /* 상단 필터 줄 */
 .filter-top {
     display: flex;
     justify-content: space-between; /* 탭 왼쪽 / 검색 오른쪽 */
+=======
+.filter-top {
+    display: flex;
+    justify-content: space-between;
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
     gap: 16px;
     margin-bottom: 14px;
 }
 
+<<<<<<< HEAD
 /* 탭 버튼 묶음 */
 .tab-group {
     display: flex;
@@ -353,6 +471,14 @@ a {
 }
 
 /* 개별 탭 버튼 */
+=======
+.tab-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .tab-btn {
     min-width: 100px;
     height: 46px;
@@ -365,24 +491,37 @@ a {
     font-weight: 700;
 }
 
+<<<<<<< HEAD
 /* 활성화된 탭 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .tab-btn.active {
     background: var(--point);
     border-color: var(--point);
     color: #fff;
 }
 
+<<<<<<< HEAD
 /* 검색창 전체 래퍼 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .search-box {
     display: flex;
     width: min(360px, 100%);
     border: 1px solid #dfe4da;
     border-radius: 16px;
+<<<<<<< HEAD
     overflow: hidden; /* 내부 요소가 모서리 밖으로 튀는 것 방지 */
     background: #fff;
 }
 
 /* 검색 입력창 */
+=======
+    overflow: hidden;
+    background: #fff;
+}
+
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .search-box input {
     flex: 1;
     height: 46px;
@@ -393,7 +532,10 @@ a {
     background: transparent;
 }
 
+<<<<<<< HEAD
 /* 검색 버튼 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .search-box button {
     width: 58px;
     background: var(--point);
@@ -402,14 +544,20 @@ a {
     font-weight: 700;
 }
 
+<<<<<<< HEAD
 /* 하단 필터 칩 영역 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .filter-bottom {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
 }
 
+<<<<<<< HEAD
 /* 정렬/기간 선택 칩 버튼 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .filter-chip {
     height: 42px;
     padding: 0 16px;
@@ -423,17 +571,25 @@ a {
 
 /* =========================
    리뷰 테이블 영역
+<<<<<<< HEAD
    ========================= */
+=======
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-board {
     padding: 18px;
 }
 
+<<<<<<< HEAD
 /* 가로 스크롤 허용 래퍼
    - 모바일/좁은 화면에서 테이블이 잘리지 않게 함 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table-wrap {
     overflow-x: auto;
 }
 
+<<<<<<< HEAD
 /* 실제 리뷰 테이블 */
 .review-table {
     width: 100%;
@@ -442,6 +598,14 @@ a {
 }
 
 /* 테이블 헤더 셀 */
+=======
+.review-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 980px;
+}
+
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table thead th {
     background: linear-gradient(90deg, #242424 0%, #353535 100%);
     color: #fff;
@@ -451,17 +615,26 @@ a {
     text-align: center;
 }
 
+<<<<<<< HEAD
 /* 헤더 첫 번째 칸 좌상단 라운드 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table thead th:first-child {
     border-top-left-radius: 14px;
 }
 
+<<<<<<< HEAD
 /* 헤더 마지막 칸 우상단 라운드 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table thead th:last-child {
     border-top-right-radius: 14px;
 }
 
+<<<<<<< HEAD
 /* 본문 셀 공통 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table tbody td {
     padding: 18px 14px;
     border-bottom: 1px solid #ecefe8;
@@ -471,22 +644,34 @@ a {
     background: #fff;
 }
 
+<<<<<<< HEAD
 /* 마우스 오버한 행 강조 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table tbody tr:hover td {
     background: #fafbf8;
 }
 
+<<<<<<< HEAD
 /* 현재 선택된 리뷰 행 강조 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table tbody tr.is-selected td {
     background: #f6faf1;
 }
 
+<<<<<<< HEAD
 /* 리뷰내용 컬럼(3번째)은 왼쪽 정렬 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-table tbody td:nth-child(3) {
     text-align: left;
 }
 
+<<<<<<< HEAD
 /* 상태 뱃지 공통 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .state-badge {
     display: inline-flex;
     align-items: center;
@@ -499,13 +684,19 @@ a {
     font-weight: 700;
 }
 
+<<<<<<< HEAD
 /* 미답변 상태 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .state-badge.pending {
     background: #edf4e6;
     color: #6f8559;
 }
 
+<<<<<<< HEAD
 /* 답변완료 상태 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .state-badge.done {
     background: #f2f3f1;
     color: #555;
@@ -513,7 +704,11 @@ a {
 
 /* =========================
    페이지네이션
+<<<<<<< HEAD
    ========================= */
+=======
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .pagination {
     display: flex;
     justify-content: center;
@@ -521,7 +716,10 @@ a {
     margin-top: 18px;
 }
 
+<<<<<<< HEAD
 /* 페이지 버튼 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .pagination button {
     width: 42px;
     height: 42px;
@@ -533,7 +731,10 @@ a {
     font-weight: 700;
 }
 
+<<<<<<< HEAD
 /* 현재 활성 페이지 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .pagination button.active {
     background: var(--point-light);
     color: var(--point-dark);
@@ -542,13 +743,20 @@ a {
 
 /* =========================
    리뷰 상세 카드
+<<<<<<< HEAD
    ========================= */
+=======
+========================= */
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .review-detail-card {
     padding: 24px;
 }
 
+<<<<<<< HEAD
 /* 리뷰 메타 정보 줄
    - 작성자/별점/작성일/상태 등을 한 줄 또는 여러 줄로 배치 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-meta {
     display: flex;
     flex-wrap: wrap;
@@ -560,27 +768,39 @@ a {
     font-size: 1rem;
 }
 
+<<<<<<< HEAD
 /* 상세 본문 세로 배치 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-content {
     display: flex;
     flex-direction: column;
     gap: 18px;
 }
 
+<<<<<<< HEAD
 /* 리뷰/답변 한 블럭 단위 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-row {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
+<<<<<<< HEAD
 /* 리뷰/답변 제목 텍스트 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-row strong {
     font-size: 1rem;
     font-weight: 800;
 }
 
+<<<<<<< HEAD
 /* 실제 리뷰 본문 박스 */
+=======
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 .detail-row p {
     min-height: 70px;
     padding: 18px;
@@ -591,11 +811,18 @@ a {
     line-height: 1.7;
 }
 
+<<<<<<< HEAD
 /* 답변 입력창 */
 .answer-row textarea {
     width: 100%;
     min-height: 140px;
     resize: vertical; /* 세로 방향 크기 조절 허용 */
+=======
+.answer-row textarea {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
     border: 1px solid #dfe4da;
     border-radius: 16px;
     padding: 16px;
@@ -605,6 +832,7 @@ a {
     background: #fff;
 }
 
+<<<<<<< HEAD
 /* 답변 입력창 포커스 상태 */
 .answer-row textarea:focus {
     border-color: var(--point);
@@ -773,6 +1001,53 @@ a {
    - 카드 내부 패딩/텍스트 크기 축소
    ========================= */
 @media (max-width: 768px) {
+=======
+.answer-row textarea:focus {
+    border-color: var(--point);
+    box-shadow: 0 0 0 4px rgba(156, 175, 127, 0.14);
+}
+
+.detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+/* =========================
+   반응형
+========================= */
+@media (max-width: 1100px) {
+    .filter-top {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .owner-board-page {
+        width: min(100%, calc(100% - 20px));
+        padding: 16px 0 24px;
+    }
+
+    .page-title-card {
+        padding: 24px 20px;
+    }
+
+    .page-title-left h2 {
+        font-size: 1.7rem;
+    }
+
+    .page-title-left p {
+        font-size: 0.96rem;
+    }
+
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
     .review-summary-grid {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -788,4 +1063,46 @@ a {
     .summary-value {
         font-size: 1.8rem;
     }
+<<<<<<< HEAD
+=======
+
+    .review-filter-card,
+    .review-board,
+    .review-detail-card {
+        padding: 16px;
+    }
+
+    .tab-btn {
+        min-width: auto;
+        flex: 1 1 calc(50% - 5px);
+    }
+
+    .filter-chip {
+        flex: 1 1 auto;
+    }
+
+    .detail-actions {
+        flex-direction: column;
+    }
+
+    .fill-btn,
+    .ghost-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    .review-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tab-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .tab-btn {
+        width: 100%;
+    }
+>>>>>>> c86e29fade650ef09ce8087fa73d1c997fb43074
 }
