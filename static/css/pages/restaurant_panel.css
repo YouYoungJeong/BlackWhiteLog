@@ -18,6 +18,7 @@
     
     /* 3. 둥근 모서리 및 그림자 (style.css의 기존 변수 활용) */
     border-radius: var(--radius-lg); 
+    border: 1px solid var(--line);
     overflow: hidden; /* 내부 이미지나 헤더가 둥근 모서리를 튀어나오지 않게 함 */
     box-shadow: var(--shadow); 
     
