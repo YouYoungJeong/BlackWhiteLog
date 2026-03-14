@@ -38,8 +38,6 @@ from db import (
     fetch_all_users,
     admin_deactivate_user,
     admin_restore_user,
-    fetch_admin_reviews,
-    update_admin_review_status,
     fetch_admin_reports,
     update_admin_report_status,
     fetch_admin_sanctions,
@@ -53,8 +51,6 @@ from db import (
     find_user_by_nickname,
     find_email_by_nickname,   # 닉네임으로 이메일 찾기
     reset_user_password,      # 비밀번호 재설정
-    fetch_admin_review_restaurants,
-    fetch_admin_reviews_by_restaurant,
 )
 
 # .env 파일 로드
@@ -954,88 +950,6 @@ def admin_user_restore(user_id):
     flash("회원 상태를 ACTIVE로 복구했습니다.")
     return redirect(url_for("admin_users"))
 
-
-# =========================
-# 관리자 리뷰 관리 - 리뷰가 등록된 가게 목록
-# =========================
-@app.route("/admin/reviews")
-@admin_required
-def admin_reviews():
-    keyword = request.args.get("keyword", "").strip()
-
-    restaurants = fetch_admin_review_restaurants(keyword=keyword)
-
-    return render_template(
-        "admin/admin_reviews.html",
-        restaurants=restaurants,
-        keyword=keyword,
-    )
-
-
-# =========================
-# 관리자 리뷰 관리 - 특정 가게 리뷰 목록
-# =========================
-@app.route("/admin/reviews/restaurant/<int:restaurant_id>")
-@admin_required
-def admin_reviews_by_restaurant(restaurant_id):
-    reviews = fetch_admin_reviews_by_restaurant(restaurant_id)
-
-    restaurant_name = reviews[0]["restaurant_name"] if reviews else "가게 리뷰"
-
-    return render_template(
-        "admin/admin_reviews_detail.html",
-        reviews=reviews,
-        restaurant_id=restaurant_id,
-        restaurant_name=restaurant_name,
-    )
-
-# =========================
-# 리뷰 숨김 처리
-# =========================
-@app.route("/admin/reviews/<int:review_id>/hide", methods=["POST"])
-@admin_required
-def admin_hide_review(review_id):
-    restaurant_id = request.form.get("restaurant_id", type=int)
-
-    success = update_admin_review_status(review_id, "HIDDEN")
-    if success:
-        flash("리뷰를 숨김 처리했습니다.")
-    else:
-        flash("리뷰를 찾을 수 없습니다.")
-
-    return redirect(url_for("admin_reviews_by_restaurant", restaurant_id=restaurant_id))
-# =========================
-# 리뷰 삭제 처리
-# =========================
-@app.route("/admin/reviews/<int:review_id>/delete", methods=["POST"])
-@admin_required
-def admin_delete_review(review_id):
-    restaurant_id = request.form.get("restaurant_id", type=int)
-
-    success = update_admin_review_status(review_id, "DELETED")
-    if success:
-        flash("리뷰를 삭제 처리했습니다.")
-    else:
-        flash("리뷰를 찾을 수 없습니다.")
-
-    return redirect(url_for("admin_reviews_by_restaurant", restaurant_id=restaurant_id))
-
-
-# =========================
-# 리뷰 복구 처리
-# =========================
-@app.route("/admin/reviews/<int:review_id>/restore", methods=["POST"])
-@admin_required
-def admin_restore_review(review_id):
-    restaurant_id = request.form.get("restaurant_id", type=int)
-
-    success = update_admin_review_status(review_id, "ACTIVE")
-    if success:
-        flash("리뷰를 복구했습니다.")
-    else:
-        flash("리뷰를 찾을 수 없습니다.")
-
-    return redirect(url_for("admin_reviews_by_restaurant", restaurant_id=restaurant_id))
 
 # =========================
 # 관리자 신고 / 제재 통합 관리
