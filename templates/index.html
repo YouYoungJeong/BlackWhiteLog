@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/restaurant_panel.css') }}" />
     <!--#### restaurant_panel css 스타일시트-->
     <!--#### 랭크 css 스타일시트-->
-    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/user_ranking.css') }}" /> -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/user_ranking.css') }}" />
     <!--#### 랭크 css 스타일시트-->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mainrank.css') }}" />
 
@@ -224,7 +224,7 @@
                 {% include 'restaurant_panel.html' %}
                 <!--#### 레스토랑 판넬 -->
                 <!--#### 랭킹-->
-                <!-- {% include 'user_ranking.html' %} -->
+                {% include 'user_ranking.html' %}
                 <!--#### 랭킹-->
                 <div id="mapCanvas" class="map-canvas">
                     <div id="naverMap" class="naver-map"></div>
@@ -348,7 +348,7 @@
     <script src="{{ url_for('static', filename='js/pages/restaurant_panel.js') }}"></script>
     <!--####레스토랑 판넬 js-->
     <!--####랭킹 js-->
-    <!-- <script src="{{ url_for('static', filename='js/pages/user_ranking.js') }}"></script> -->
+    <script src="{{ url_for('static', filename='js/pages/user_ranking.js') }}"></script>
     <!--####랭킹 js-->
 </body>
 </html>
