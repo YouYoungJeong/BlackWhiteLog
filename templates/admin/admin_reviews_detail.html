@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ restaurant_name }} 리뷰 관리</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_manage.css') }}">
+</head>
+<body>
+    <div class="admin-page">
+        <div class="admin-container">
+            <div class="admin-header">
+                <h1>{{ restaurant_name }} 리뷰 관리</h1>
+                <p>이 가게에 등록된 리뷰 목록입니다.</p>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="flash-wrap">
+                        {% for message in messages %}
+                            <div class="flash-message">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>작성자</th>
+                            <th>평점</th>
+                            <th>내용</th>
+                            <th>작성일</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if reviews %}
+                            {% for review in reviews %}
+                                <tr>
+                                    <td>{{ review.review_id }}</td>
+                                    <td>{{ review.user_nickname }}</td>
+                                    <td>{{ review.rating }}</td>
+                                    <td class="left">{{ review.content }}</td>
+                                    <td>{{ review.created_at }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="empty-row">이 가게에 등록된 리뷰가 없습니다.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bottom-link-wrap">
+                <a href="{{ url_for('admin_reviews') }}" class="back-link">가게 목록으로 돌아가기</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

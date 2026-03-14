@@ -883,3 +883,64 @@ def reset_user_password(email, nickname, new_password):
             return cursor.rowcount > 0
     finally:
         conn.close()
+
+# =========================
+# 관리자 리뷰 관리 - 리뷰가 등록된 가게 목록 조회
+# =========================
+def fetch_admin_review_restaurants(keyword=""):
+    sql = """
+        SELECT
+            r.restaurant_id,
+            r.name AS restaurant_name,
+            COUNT(rv.review_id) AS review_count
+        FROM reviews rv
+        INNER JOIN visits v
+            ON rv.visit_id = v.visit_id
+        INNER JOIN restaurants r
+            ON v.restaurant_id = r.restaurant_id
+        WHERE (%s = '' OR r.name LIKE CONCAT('%%', %s, '%%'))
+        GROUP BY r.restaurant_id, r.name
+        ORDER BY review_count DESC, r.name ASC
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (keyword, keyword))
+            return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+
+# =========================
+# 관리자 리뷰 관리 - 특정 가게 리뷰 목록 조회
+# =========================
+def fetch_admin_reviews_by_restaurant(restaurant_id):
+    sql = """
+        SELECT
+            rv.review_id,
+            r.restaurant_id,
+            r.name AS restaurant_name,
+            u.nickname AS user_nickname,
+            rv.rating,
+            rv.content,
+            rv.created_at
+        FROM reviews rv
+        INNER JOIN visits v
+            ON rv.visit_id = v.visit_id
+        INNER JOIN users u
+            ON v.user_id = u.user_id
+        INNER JOIN restaurants r
+            ON v.restaurant_id = r.restaurant_id
+        WHERE r.restaurant_id = %s
+        ORDER BY rv.created_at DESC
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (restaurant_id,))
+            return cursor.fetchall()
+    finally:
+        conn.close()
