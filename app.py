@@ -178,6 +178,8 @@ def login():
 
         user = verify_user_login(email, password)
 
+        print("LOGIN ROLE:", user.get("role")) # 임시
+
         if user:
             session["user_email"] = user["email"]
             session["user_nickname"] = user["nickname"]
