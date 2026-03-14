@@ -11,6 +11,7 @@ function confirmDelete() {
 document.addEventListener("DOMContentLoaded", function () {
     const imageInput = document.getElementById("menu-image-input");
     const previewImage = document.getElementById("previewImage");
+    const previewEmpty = document.getElementById("previewEmpty");
 
     if (!imageInput || !previewImage) {
         return;
@@ -20,7 +21,17 @@ document.addEventListener("DOMContentLoaded", function () {
         const file = event.target.files && event.target.files[0];
 
         if (!file) {
-            previewImage.src = imageInput.dataset.defaultImage || previewImage.src;
+            const defaultImage = imageInput.dataset.defaultImage;
+
+            if (defaultImage) {
+                previewImage.src = defaultImage;
+                previewImage.style.display = "block";
+                if (previewEmpty) previewEmpty.style.display = "none";
+            } else {
+                previewImage.src = "";
+                previewImage.style.display = "none";
+                if (previewEmpty) previewEmpty.style.display = "block";
+            }
             return;
         }
 
@@ -28,6 +39,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         reader.onload = function (loadEvent) {
             previewImage.src = loadEvent.target.result;
+            previewImage.style.display = "block";
+            if (previewEmpty) previewEmpty.style.display = "none";
         };
 
         reader.readAsDataURL(file);

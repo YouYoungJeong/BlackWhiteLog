@@ -86,8 +86,8 @@
 
                         <div class="upload-form-grid">
                             <div class="image-upload-box">
-                                <div class="preview-image-wrap">
-                                    <!--  수정 모드면 DB의 thumb_url 출력 -->
+                                <!--  수정 모드면 DB의 thumb_url 출력 -->
+                                <div class="preview-image-wrap" id="previewImageWrap">
                                     {% if edit_menu and edit_menu.thumb_url %}
                                         <img
                                             src="{{ url_for('static', filename=edit_menu.thumb_url) }}"
@@ -103,16 +103,18 @@
                                             id="previewImage"
                                         >
                                     {% else %}
+                                        <div class="preview-empty" id="previewEmpty"></div>
                                         <img
-                                            src="{{ url_for('static', filename='img/sample_menu.jpg') }}"
+                                            src=""
                                             alt="메뉴 이미지 미리보기"
                                             class="preview-image"
                                             id="previewImage"
+                                            style="display: none;"
                                         >
                                     {% endif %}
                                 </div>
 
-<!-- - 업로드 이미지는 기존처럼 미리보기 가능하게 두고 수정 모드에서는 DB 저장 경로 이미지를 우선 출력 -->
+                                <!-- - 업로드 이미지는 기존처럼 미리보기 가능하게 두고 수정 모드에서는 DB 저장 경로 이미지를 우선 출력 -->
                                 <label for="menu-image-input" class="point-btn upload-btn">이미지 업로드</label>
 
                                 <input
@@ -121,7 +123,7 @@
                                     name="menu_image"
                                     accept="image/*"
                                     class="image-file-input"
-                                    data-default-image="{% if edit_menu and edit_menu.thumb_url %}{{ url_for('static', filename=edit_menu.thumb_url) }}{% elif edit_menu and edit_menu.image_url %}{{ url_for('static', filename=edit_menu.image_url) }}{% else %}{{ url_for('static', filename='img/sample_menu.jpg') }}{% endif %}"
+                                    data-default-image="{% if edit_menu and edit_menu.thumb_url %}{{ url_for('static', filename=edit_menu.thumb_url) }}{% elif edit_menu and edit_menu.image_url %}{{ url_for('static', filename=edit_menu.image_url) }}{% else %}{% endif %}"
                                 >
 
                                 <p class="image-guide-text" id="imageGuideText">
@@ -132,7 +134,7 @@
                                     {% endif %}
                                 </p>
 
-<!-- - 수정 시 이미지만 삭제할 수 있도록 체크박스 추가 -->
+                                <!-- - 수정 시 이미지만 삭제할 수 있도록 체크박스 추가 -->
                                 {% if edit_menu %}
                                     <label class="check-item image-remove-check">
                                         <input
@@ -252,7 +254,7 @@
                         {% for menu in menu_list %}
                             <article class="registered-menu-item">
                                 <div class="registered-menu-thumb">
-<!-- - 등록된 메뉴 카드도 restaurant_images의 thumb_url 또는 image_url을 실제 출력하도록 수정 -->
+                                <!-- - 등록된 메뉴 카드도 restaurant_images의 thumb_url 또는 image_url을 실제 출력하도록 수정 -->
                                     {% if menu.thumb_url %}
                                         <img
                                             src="{{ url_for('static', filename=menu.thumb_url) }}"
@@ -264,7 +266,7 @@
                                             alt="{{ menu.menu_name }} 이미지"
                                         >
                                     {% else %}
-                                        <div class="registered-menu-thumb-empty">이미지 없음</div>
+                                        <div class="registered-menu-thumb-empty"></div>
                                     {% endif %}
                                 </div>
 
