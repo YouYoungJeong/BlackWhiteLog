@@ -1,3 +1,4 @@
+import os
 from db import get_connection
 
 def get_restaurant_detail(restaurant_id):
@@ -67,7 +68,7 @@ def get_restaurant_reviews(restaurant_id):
     finally:
         conn.close()
         
-def save_restaurant_review(restaurant_id, user_id, rating, content):
+def save_restaurant_review(restaurant_id, user_id, rating, content, image_urls=None):
     """
     [명세서 준수] visits는 필수 외래키만, reviews는 created_at 포함하여 저장
     """
@@ -89,7 +90,18 @@ def save_restaurant_review(restaurant_id, user_id, rating, content):
                 VALUES (%s, %s, %s, NOW())
             """
             cursor.execute(review_sql, (visit_id, rating, content))
+            review_id = cursor.lastrowid  # 방금 생성된 리뷰 ID 가져오기
             
+            # 3. review_images 테이블 삽입 (이미지가 있을 경우)
+            if image_urls:
+                image_sql = """
+                    INSERT INTO review_images (review_id, image_url, sort_order)
+                    VALUES (%s, %s, %s)
+                """
+                for idx, url in enumerate(image_urls):
+                    # 명세서에 따라 원본 이미지 경로(image_url)와 출력 순서(sort_order) 저장
+                    cursor.execute(image_sql, (review_id, url, idx + 1))
+                    
             conn.commit()
             return True
     except Exception as e:
@@ -115,31 +127,51 @@ def delete_review_transaction(review_id, user_id):
 
             visit_id = res['visit_id']
 
-            # 2. 자식(리뷰) 삭제
+            # 2. 삭제할 이미지 경로 미리 조회 (DB 지우기 전에 백업)
+            cursor.execute("SELECT image_url FROM review_images WHERE review_id = %s", (review_id,))
+            image_rows = cursor.fetchall()
+            image_paths_to_delete = []
+            
+            for row in image_rows:
+                img_url = row.get('image_url')
+                if img_url:
+                    # DB에는 '/static/img/...' 로 저장되어 있으므로 앞의 '/'를 제거하여 실제 상대 경로로 변환
+                    file_path = img_url.lstrip('/')
+                    image_paths_to_delete.append(file_path)
+            
+            # 리뷰이미지 아이디 데이터 삭제
+            cursor.execute("DELETE FROM review_images WHERE review_id = %s", (review_id,))
+            # 리뷰 삭제
             cursor.execute("DELETE FROM reviews WHERE review_id = %s", (review_id,))
-            
-            # 3. 부모(방문기록) 삭제
+            # 방문기록 삭제
             cursor.execute("DELETE FROM visits WHERE visit_id = %s", (visit_id,))
-
-            # # 4. AUTO_INCREMENT 최적화 
-            # # 마지막 번호를 지웠을 때 다음 번호가 건너뛰지 않도록 현재 최대값으로 조정
-            # cursor.execute("SELECT MAX(review_id) AS max_id FROM reviews")
-            # max_id = cursor.fetchone()['max_id'] or 0
-            # cursor.execute(f"ALTER TABLE reviews AUTO_INCREMENT = {max_id + 1}")
             
-            # 3. reviews 테이블 AUTO_INCREMENT 초기화
+            # review_images 테이블 초기화
+            cursor.execute("SELECT MAX(review_image_id) AS max_id FROM review_images")
+            row_img = cursor.fetchone()
+            max_img_id = row_img['max_id'] if row_img['max_id'] is not None else 0
+            cursor.execute(f"ALTER TABLE review_images AUTO_INCREMENT = {max_img_id + 1}")
+            # reviews 테이블 AUTO_INCREMENT 초기화
             cursor.execute("SELECT MAX(review_id) AS max_id FROM reviews")
             row_rev = cursor.fetchone()
             max_rev_id = row_rev['max_id'] if row_rev['max_id'] is not None else 0
             cursor.execute(f"ALTER TABLE reviews AUTO_INCREMENT = {max_rev_id + 1}")
-
-            # 4. visits 테이블 AUTO_INCREMENT 초기화 (추가됨)
+            # visits 테이블 AUTO_INCREMENT 초기화
             cursor.execute("SELECT MAX(visit_id) AS max_id FROM visits")
             row_vis = cursor.fetchone()
             max_vis_id = row_vis['max_id'] if row_vis['max_id'] is not None else 0
             cursor.execute(f"ALTER TABLE visits AUTO_INCREMENT = {max_vis_id + 1}")
 
             conn.commit()
+            
+            # 물리적 이미지 파일 삭제 (DB 삭제가 완벽히 성공한 후에만 실행)
+            for file_path in image_paths_to_delete:
+                if os.path.exists(file_path):
+                    try:
+                        os.remove(file_path)
+                    except Exception as file_e:
+                        print(f"⚠️ 파일 삭제 권한 없음/실패: {file_path} - {file_e}")
+            
             return True
     except Exception as e:
         conn.rollback()
