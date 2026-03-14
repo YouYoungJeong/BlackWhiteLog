@@ -32,6 +32,10 @@ def get_connection():
         autocommit=False
     )
 
+
+#====================================================================================
+# owner_menu_management.html
+#-------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------
 # 이미지 파일 처리 - menu_management
 #-------------------------------------------------------------------------------------
@@ -372,8 +376,6 @@ def get_menu_detail_by_id(owner_id, menu_id):
     finally:
         conn.close()
 
-
-
 #------------------------------------------------------------------------------------
 # 메뉴 등록 (insert) - menu_management
 #------------------------------------------------------------------------------------
@@ -433,38 +435,6 @@ def insert_menu(owner_id, menu_category_id, menu_name, price, status, image_file
     finally:
         conn.close()
 
-#------------------------------------------------------------------------------------
-# 메뉴 수정 (update) - menu_management
-#------------------------------------------------------------------------------------
-
-# 수정 버튼 눌렀을 때 기존 메뉴 정보 1건 조회후 화면 출력
-# def get_menu_detail_by_id(owner_id, menu_id):
-#     conn = get_connection()
-#     try:
-#         with conn.cursor() as cursor:
-#             sql = """
-#                 SELECT
-#                     rm.menu_id,
-#                     rm.menu_name,
-#                     rm.price,
-#                     rm.status,
-#                     rm.menu_category_id,
-#                     mc.menu_category_name
-#                 FROM restaurant_menus rm
-#                 INNER JOIN restaurants r
-#                     ON rm.restaurant_id = r.restaurant_id
-#                 LEFT JOIN menu_categories mc
-#                     ON rm.menu_category_id = mc.menu_category_id
-#                 WHERE r.owner_id = %s
-#                     AND rm.menu_id = %s
-#                 LIMIT 1
-#             """
-#             cursor.execute(sql, (owner_id, menu_id))
-#             return cursor.fetchone()
-#     finally:
-#         conn.close()
-
-
 def update_menu(owner_id, menu_id, menu_category_id, menu_name, price, status, image_file=None, remove_image=False):
     conn = get_connection()
     try:
@@ -501,10 +471,10 @@ def update_menu(owner_id, menu_id, menu_category_id, menu_name, price, status, i
                 )
             )
 
-# menu_id 단독이 아니라 restaurant_id + menu_id 기준으로 현재 이미지 조회 후 수정/삭제 처리하도록 정리
+            # 현재 "이미지" 조회 후 수정/삭제 처리하도록 정리
             current_image = get_menu_image_by_menu_id(cursor, restaurant_id, menu_id)
 
-#  수정 화면에서 이미지 삭제 체크만 해도 기존 파일과 DB row를 함께 지우도록 추가
+            # 수정 화면에서 "이미지" 삭제 체크만 해도 기존 파일과 DB row를 함께 지우도록 추가
             if remove_image:
                 delete_menu_image_by_menu_id(cursor, restaurant_id, menu_id)
                 current_image = None

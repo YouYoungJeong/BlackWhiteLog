@@ -1,5 +1,5 @@
 from flask import render_template, request, redirect, url_for, flash
-import routes.owner.owner_db as owner_db
+import routes.owner.owner_menu_db as owner_db
 import math
 
 
@@ -8,8 +8,18 @@ def register_owner_routes(app):
 # 오너 보드 페이지
 # -------------------------------------------------------------------------------------
     @app.route("/owner/board", endpoint="owner_board")
+
+
     def owner_board():
-        return render_template("owner/owner_board.html")
+        owner_id = 1
+        total_menu_count = owner_db.get_menu_count_by_owner(owner_id)
+
+        return render_template(
+            "owner/owner_board.html",
+            total_menu_count=total_menu_count
+        )
+    
+
 
 
 
