@@ -340,7 +340,7 @@
             {% endif %}
         {% endwith %}
 
-        <form action="/signup" method="post" id="signupForm">
+        <form action="/signup" method="post" id="signupForm" novalidate>
             <input type="hidden" name="email_checked" id="email_checked" value="false">
             <input type="hidden" name="checked_email_value" id="checked_email_value" value="">
             <input type="hidden" name="nickname_checked" id="nickname_checked" value="false">
@@ -495,6 +495,15 @@
         const nicknameChecked = document.getElementById("nickname_checked");
         const checkedNicknameValue = document.getElementById("checked_nickname_value");
 
+        const postcodeInput = document.getElementById("postcode");
+        const roadAddressInput = document.getElementById("roadAddress");
+        const detailAddressInput = document.getElementById("detailAddress");
+
+        const birthYearInput = document.querySelector('input[name="birth_year"]');
+        const birthMonthInput = document.querySelector('input[name="birth_month"]');
+        const birthDayInput = document.querySelector('input[name="birth_day"]');
+        const genderInputs = document.querySelectorAll('input[name="gender"]');
+
         function resetEmailCheck() {
             emailChecked.value = "false";
             checkedEmailValue.value = "";
@@ -539,23 +548,19 @@
         passwordInput.addEventListener("input", checkPasswordMatch);
         passwordConfirmInput.addEventListener("input", checkPasswordMatch);
 
+
         document.getElementById("signupForm").addEventListener("submit", function (e) {
-            const currentEmail = emailInput.value.trim();
-            const currentNickname = nicknameInput.value.trim();
             const password = passwordInput.value;
             const passwordConfirm = passwordConfirmInput.value;
+            const postcode = postcodeInput.value.trim();
+            const roadAddress = roadAddressInput.value.trim();
+            const detailAddress = detailAddressInput.value.trim();
 
-            if (emailChecked.value !== "true" || checkedEmailValue.value !== currentEmail) {
+            // 가입하기에서는 브라우저 말풍선 말고 alert로만 처리
+            if (!emailInput.checkValidity()) {
                 e.preventDefault();
-                alert("이메일 중복 확인을 해주세요.");
+                alert("이메일 형식을 먼저 올바르게 입력해주세요.");
                 emailInput.focus();
-                return;
-            }
-
-            if (nicknameChecked.value !== "true" || checkedNicknameValue.value !== currentNickname) {
-                e.preventDefault();
-                alert("닉네임 중복 확인을 해주세요.");
-                nicknameInput.focus();
                 return;
             }
 
@@ -566,16 +571,21 @@
                 passwordConfirmInput.focus();
                 return;
             }
+
+            if (!postcode || !roadAddress) {
+                e.preventDefault();
+                alert("주소 검색을 통해 주소를 입력해주세요.");
+                document.querySelector(".full-btn").focus();
+                return;
+            }
         });
-
-
 
 
         document.getElementById("checkEmailBtn").addEventListener("click", async function () {
             const value = emailInput.value.trim();
 
-            if (!value) {
-                alert("이메일을 입력해주세요.");
+            if (!emailInput.checkValidity()) {
+                emailInput.reportValidity();
                 emailInput.focus();
                 return;
             }
@@ -599,6 +609,7 @@
                 alert("이메일 중복 확인 중 오류가 발생했습니다.");
             }
         });
+
 
         document.getElementById("checkNicknameBtn").addEventListener("click", async function () {
             const value = nicknameInput.value.trim();
@@ -629,10 +640,40 @@
             }
         });
 
+
         document.getElementById("signupForm").addEventListener("submit", function (e) {
             const currentEmail = emailInput.value.trim();
             const currentNickname = nicknameInput.value.trim();
+            const password = passwordInput.value;
+            const passwordConfirm = passwordConfirmInput.value;
 
+            const birthYear = birthYearInput.value.trim();
+            const birthMonth = birthMonthInput.value.trim();
+            const birthDay = birthDayInput.value.trim();
+
+            const postcode = postcodeInput.value.trim();
+            const roadAddress = roadAddressInput.value.trim();
+            const detailAddress = detailAddressInput.value.trim();
+
+            const genderChecked = Array.from(genderInputs).some(input => input.checked);
+
+            // 1. 이메일 입력
+            if (!currentEmail) {
+                e.preventDefault();
+                alert("이메일을 입력해주세요.");
+                emailInput.focus();
+                return;
+            }
+
+            // 2. 이메일 형식
+            if (!emailInput.checkValidity()) {
+                e.preventDefault();
+                alert("이메일 형식을 올바르게 입력해주세요.");
+                emailInput.focus();
+                return;
+            }
+
+            // 3. 이메일 중복확인
             if (emailChecked.value !== "true" || checkedEmailValue.value !== currentEmail) {
                 e.preventDefault();
                 alert("이메일 중복 확인을 해주세요.");
@@ -640,10 +681,82 @@
                 return;
             }
 
+            // 4. 닉네임 입력
+            if (!currentNickname) {
+                e.preventDefault();
+                alert("닉네임을 입력해주세요.");
+                nicknameInput.focus();
+                return;
+            }
+
+            // 5. 닉네임 중복확인
             if (nicknameChecked.value !== "true" || checkedNicknameValue.value !== currentNickname) {
                 e.preventDefault();
                 alert("닉네임 중복 확인을 해주세요.");
                 nicknameInput.focus();
+                return;
+            }
+
+            // 6. 비밀번호 입력
+            if (!password) {
+                e.preventDefault();
+                alert("비밀번호를 입력해주세요.");
+                passwordInput.focus();
+                return;
+            }
+
+            // 7. 비밀번호 확인 입력
+            if (!passwordConfirm) {
+                e.preventDefault();
+                alert("비밀번호 확인을 입력해주세요.");
+                passwordConfirmInput.focus();
+                return;
+            }
+
+            // 8. 비밀번호 일치
+            if (password !== passwordConfirm) {
+                e.preventDefault();
+                passwordMessage.textContent = "비밀번호가 일치하지 않습니다.";
+                passwordMessage.className = "check-message error";
+                passwordConfirmInput.focus();
+                return;
+            }
+
+            // 9. 성별
+            if (!genderChecked) {
+                e.preventDefault();
+                alert("성별을 선택해주세요.");
+                genderInputs[0].focus();
+                return;
+            }
+
+            // 10. 생년월일
+            if (!birthYear) {
+                e.preventDefault();
+                alert("출생연도를 입력해주세요.");
+                birthYearInput.focus();
+                return;
+            }
+
+            if (!birthMonth) {
+                e.preventDefault();
+                alert("출생월을 입력해주세요.");
+                birthMonthInput.focus();
+                return;
+            }
+
+            if (!birthDay) {
+                e.preventDefault();
+                alert("출생일을 입력해주세요.");
+                birthDayInput.focus();
+                return;
+            }
+
+            // 11. 주소검색
+            if (!postcode || !roadAddress) {
+                e.preventDefault();
+                alert("주소 검색을 통해 주소를 입력해주세요.");
+                document.querySelector(".full-btn").focus();
                 return;
             }
         });
