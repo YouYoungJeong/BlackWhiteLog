@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for
+from flask import render_template, request, redirect, url_for, flash
 import routes.owner.owner_db as owner_db
 import math
 
@@ -35,15 +35,35 @@ def register_owner_routes(app):
             page = 1
 
         if request.method == "POST":
+            # 값 받아오기
             menu_id = request.form.get("menu_id", "").strip()
             menu_name = request.form.get("menu_name", "").strip()
             price = request.form.get("price", "").strip()
             menu_category_id = request.form.get("menu_category_id", "").strip()
+            image_file = request.files.get("menu_image")
+            remove_image = request.form.get("remove_image")
 
             soldout = request.form.get("soldout")
             status = "OFF" if soldout else "ON"
+            
+            # 이미지 수정 시 기존 이미지 삭제 체크값을 함께 전달받도록 추가
+            # 필수값 검증과 확장자 검증 추가
+            if not menu_name or not price or not menu_category_id:
+                flash("메뉴명, 가격, 카테고리는 필수입니다.")
+                return redirect(
+                    url_for("owner_menu_management", edit_menu_id=menu_id)
+                    if menu_id else url_for("owner_menu_management")
+                )
+
+            if image_file and image_file.filename and not owner_db.allowed_file(image_file.filename):
+                flash("허용 확장자: jpg, jpeg, png, gif, webp")
+                return redirect(
+                    url_for("owner_menu_management", edit_menu_id=menu_id)
+                    if menu_id else url_for("owner_menu_management")
+                )
 
             # 메뉴 수정 : menu_id가 있으면 UPDATE
+            # 이미지 삭제 여부까지 update_menu로 전달하도록 수정
             if menu_id and menu_name and price and menu_category_id:
                 owner_db.update_menu(
                     owner_id=owner_id,
@@ -51,9 +71,11 @@ def register_owner_routes(app):
                     menu_category_id=menu_category_id,
                     menu_name=menu_name,
                     price=price,
-                    status=status
+                    status=status,
+                    image_file=image_file,
+                    remove_image=True if remove_image else False
                 )
-                return redirect(url_for("owner_menu_management"))            
+                return redirect(url_for("owner_menu_management"))         
 
             # 메뉴 추가 : menu_id가 없으면 INSERT
             if menu_name and price and menu_category_id:
@@ -62,7 +84,8 @@ def register_owner_routes(app):
                     menu_category_id=menu_category_id,
                     menu_name=menu_name,
                     price=price,
-                    status=status
+                    status=status,
+                    image_file=image_file
                 )
 
             return redirect(url_for("owner_menu_management"))
