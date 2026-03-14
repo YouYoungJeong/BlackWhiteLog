@@ -1,3 +1,5 @@
+import os
+import uuid
 from flask import Blueprint, jsonify, request, session
 from restaurant_panel_db import get_restaurant_detail, get_restaurant_menus, get_restaurant_reviews, save_restaurant_review
 
@@ -26,22 +28,40 @@ def api_restaurant_reviews(restaurant_id):
 @restaurant_panel_bp.route("/api/restaurants/<int:restaurant_id>/reviews", methods=["POST"])
 def api_add_review(restaurant_id):
     try:
-        # 1. 데이터 수신 및 타입 변환
+        # 데이터 수신 및 타입 변환
         rating = request.form.get("rating")
         content = request.form.get("content")
-        
-        # [디버깅] 데이터가 잘 왔는지 서버 터미널에서 확인
-        print(f">>> [리뷰등록 요청] 식당ID: {restaurant_id}, 별점: {rating}, 내용: {content}")
+        images = request.files.getlist("images") # 프론트에서 보낸 파일들 받기
 
         if not rating or not content:
             return jsonify({"success": False, "message": "데이터가 부족합니다."}), 400
 
-        # 2. 유저 ID 설정 (반드시 DB에 존재하는 ID여야 함)
+        # 유저 ID 설정 (반드시 DB에 존재하는 ID여야 함)
         user_id = session.get('user_id', 1) 
 
-        # 3. DB 함수 호출 (4개의 인자 확인)
-        from restaurant_panel_db import save_restaurant_review
-        success = save_restaurant_review(restaurant_id, user_id, int(rating), content)
+        # 로컬 폴더에 이미지 저장 로직
+        image_urls = []
+        if images and images[0].filename != '':
+            # 폴더 경로 설정 및 없으면 생성
+            upload_dir = os.path.join("static", "img", "review_img")
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            for img in images:
+                if img and img.filename:
+                    # 파일명 중복 방지를 위해 UUID 사용 (확장자 유지)
+                    ext = img.filename.rsplit('.', 1)[-1].lower() if '.' in img.filename else 'jpg'
+                    unique_filename = f"{uuid.uuid4().hex}.{ext}"
+                    filepath = os.path.join(upload_dir, unique_filename)
+                    
+                    # 파일 실제 저장
+                    img.save(filepath)
+                    
+                    # DB에 저장할 웹 접근 경로 생성 (윈도우의 \를 /로 변경)
+                    web_path = f"/{filepath.replace(os.sep, '/')}"
+                    image_urls.append(web_path)
+                    
+        # DB 함수 호출 
+        success = save_restaurant_review(restaurant_id, user_id, int(rating), content, image_urls)
         
         if success:
             return jsonify({"success": True})

@@ -9,10 +9,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/restaurant_panel.css') }}" />
     <!--#### restaurant_panel css 스타일시트-->
     <!--#### 랭크 css 스타일시트-->
-    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/user_ranking.css') }}" /> -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/user_ranking.css') }}" />
     <!--#### 랭크 css 스타일시트-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mainrank.css') }}" />
+
+    
 </head>
 <body>
+    <script
+    type="text/javascript"
+    src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=bixef1lnm8&submodules=geocoder"
+    ></script>  <!-- 이종민: 수정한 부분 네이버 지도 -->
     <div class="app-shell">
         <header class="topbar">
             <div class="brand-wrap">
@@ -58,14 +65,67 @@
                 </div>
             </section>
 
-            <div class="topbar-actions">
-                <button class="ghost-btn">로그인</button>
-                <button class="icon-btn" id="menuBtn" aria-label="메뉴" type="button">☰</button>
+<div class="topbar-actions">
+    {% if user_email %}
+        <div class="profile-menu-wrap">
+            <button class="user-profile-chip" id="profileToggle" type="button">
+                <span class="user-profile-chip__name">{{ user_nickname }}</span>
+                <span class="user-profile-chip__avatar">
+                    <img src="{{ url_for('static', filename='img/profile.png') }}" alt="profile">
+                </span>
+            </button>
+
+            <div class="profile-dropdown" id="profileDropdown">
+                <a href="{{ url_for('mypage') }}" class="profile-dropdown__item">마이페이지</a>
+                <a href="{{ url_for('logout') }}" class="profile-dropdown__item profile-dropdown__item--danger">로그아웃</a>
             </div>
+        </div>
+    {% else %}
+        <a href="{{ url_for('login') }}" class="ghost-btn login-link">로그인</a>
+    {% endif %}
+
+    <button class="icon-btn" id="menuBtn" aria-label="메뉴" type="button">☰</button>
+</div>
+
         </header>
 
+
+        
         <main class="content-grid">
             <aside class="sidebar">
+                <a href="/ranking" class="activity-summary-link">
+                    <section class="activity-summary-card">
+                        <div class="activity-summary-top">
+                            <strong class="activity-summary-title">내 활동 현황</strong>
+
+                            <div class="activity-summary-progress">
+                                <div class="activity-summary-progress-bar">
+                                    <div class="activity-summary-progress-fill"></div>
+                                </div>
+                                <span class="activity-summary-progress-text">68%</span>
+                            </div>
+                        </div>
+
+                        <div class="activity-summary-stats">
+                            <div class="activity-summary-stat">
+                                <span class="activity-summary-label">방문 도장</span>
+                                <strong class="activity-summary-value">127</strong>
+                            </div>
+
+                            <div class="activity-summary-stat">
+                                <span class="activity-summary-label">내 랭킹</span>
+                                <strong class="activity-summary-value">#42</strong>
+                            </div>
+
+                            <div class="activity-summary-stat">
+                                <span class="activity-summary-label">최근 획득 배지</span>
+                                <strong class="activity-summary-badge">첫 방문 마스터</strong>
+                            </div>
+                        </div>
+                    </section>
+                </a>
+
+
                 <div class="sidebar-head">
                     <div class="sidebar-top-row">
                         <div class="sort-chip-row">
@@ -164,17 +224,14 @@
                 {% include 'restaurant_panel.html' %}
                 <!--#### 레스토랑 판넬 -->
                 <!--#### 랭킹-->
-                <!-- {% include 'user_ranking.html' %} -->
+                {% include 'user_ranking.html' %}
                 <!--#### 랭킹-->
                 <div id="mapCanvas" class="map-canvas">
+                    <div id="naverMap" class="naver-map"></div>
+
                     <div class="map-grid"></div>
                     <div id="mapMarkers" class="map-markers"></div>
-
-                    <div class="map-center-badge">
-                        <strong>지도 영역</strong>
-                        <span>다음 단계에서 네이버 지도 API 연결</span>
-                    </div>
-                </div>
+                </div>  <!-- 이종민 수정한 부분 -->
             </section>
         </main>
 
@@ -211,14 +268,15 @@
                 ×
             </button>
 
-            <div class="side-drawer__profile">
-                <div class="side-drawer__avatar">
-                    <span>👤</span>
-                </div>
-                <strong class="side-drawer__name">열일하는 판다님</strong>
-            </div>
+        <a href="{{ url_for('mypage') }}" class="side-drawer__profile">
+        <div class="side-drawer__avatar">
+        <span>👤</span>
         </div>
-
+        <strong class="side-drawer__name">
+        {{ user_nickname }}
+        </strong>
+        </a>
+    </div>
         <div class="side-drawer__body">
             <nav class="side-drawer__nav">
                 <button type="button" class="side-drawer__item">
@@ -237,7 +295,7 @@
                     <span class="side-drawer__icon">↪</span>
                     <span>로그아웃</span>
                 </button>
-                <button type="button" class="side-drawer__item">
+                <button type="button" class="side-drawer__item" id="sellerRegisterBtn"> <!-- 이종민 수정 3월 12일 -->
                     <span class="side-drawer__icon">🏪</span>
                     <span>판매자 등록하기</span>
                 </button>
@@ -267,7 +325,7 @@
     <script src="{{ url_for('static', filename='js/pages/restaurant_panel.js') }}"></script>
     <!--####레스토랑 판넬 js-->
     <!--####랭킹 js-->
-    <!-- <script src="{{ url_for('static', filename='js/pages/user_ranking.js') }}"></script> -->
+    <script src="{{ url_for('static', filename='js/pages/user_ranking.js') }}"></script>
     <!--####랭킹 js-->
 </body>
 </html>

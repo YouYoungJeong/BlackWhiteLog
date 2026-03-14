@@ -1,0 +1,280 @@
+/* =========================
+   기본 공통 설정
+   ========================= */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #f4f6ef;
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    color: #222;
+}
+
+
+/* =========================
+   페이지 공통 레이아웃
+   ========================= */
+
+.admin-page {
+    padding: 40px 20px;
+}
+
+.admin-container {
+    max-width: 1180px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 1px solid #dbe2cc;
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+
+.admin-header {
+    margin-bottom: 24px;
+}
+
+.admin-header h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    font-weight: 800;
+    color: #2c341f;
+}
+
+.admin-header p {
+    margin: 0;
+    font-size: 14px;
+    color: #687255;
+    line-height: 1.5;
+}
+
+
+/* =========================
+   flash 메시지
+   ========================= */
+
+.flash-wrap {
+    margin-bottom: 18px;
+}
+
+.flash-message {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f7faef;
+    border: 1px solid #d9e4bf;
+    color: #5f7540;
+    font-size: 14px;
+}
+
+
+/* =========================
+   상단 검색 / 액션 영역
+   ========================= */
+
+.admin-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.search-form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.search-form input,
+.search-form select,
+.admin-form input,
+.admin-form select,
+.admin-form textarea {
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid #cfd8b8;
+    border-radius: 12px;
+    outline: none;
+    font-size: 14px;
+    background: #fff;
+}
+
+.search-form input {
+    min-width: 220px;
+}
+
+.admin-form textarea {
+    height: 120px;
+    padding: 12px 14px;
+    resize: vertical;
+}
+
+
+/* =========================
+   버튼 공통
+   ========================= */
+
+.search-form button,
+.primary-btn,
+.secondary-btn,
+.danger-btn,
+.back-link,
+.inline-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.search-form button,
+.primary-btn,
+.inline-btn {
+    background: #8ea867;
+    color: #fff;
+}
+
+.secondary-btn,
+.back-link {
+    background: #edf2e3;
+    border: 1px solid #cfd8b8;
+    color: #526833;
+}
+
+.danger-btn {
+    background: #e05c55;
+    color: #fff;
+}
+
+.back-link:hover,
+.secondary-btn:hover {
+    background: #dfe8c8;
+    color: #3f4d27;
+}
+
+.primary-btn:hover,
+.inline-btn:hover {
+    background: #7e965b;
+}
+
+.danger-btn:hover {
+    background: #cf4d47;
+}
+
+
+/* =========================
+   테이블
+   ========================= */
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 920px;
+}
+
+.admin-table th,
+.admin-table td {
+    border: 1px solid #e5ead7;
+    padding: 14px 12px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 14px;
+}
+
+.admin-table th {
+    background: #f7f9f2;
+    color: #3b442c;
+    font-weight: 800;
+}
+
+.admin-table td.left {
+    text-align: left;
+}
+
+.action-cell {
+    white-space: nowrap;
+}
+
+.inline-form {
+    display: inline;
+}
+
+.empty-row {
+    color: #7a7a7a;
+    padding: 24px 12px;
+}
+
+
+/* =========================
+   하단 링크
+   ========================= */
+
+.bottom-link-wrap {
+    margin-top: 24px;
+}
+
+
+/* =========================
+   제재 등록 폼
+   ========================= */
+
+.admin-form-card {
+    margin-bottom: 24px;
+    padding: 20px;
+    border: 1px solid #dbe2cc;
+    border-radius: 18px;
+    background: #fbfcf8;
+}
+
+.admin-form-card h2 {
+    margin: 0 0 14px;
+    font-size: 20px;
+    font-weight: 800;
+    color: #2c341f;
+}
+
+.admin-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.admin-form .full {
+    grid-column: 1 / -1;
+}
+
+.admin-form label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #2f3723;
+}
+
+
+/* =========================
+   반응형
+   ========================= */
+
+@media (max-width: 900px) {
+    .admin-form {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-table {
+        min-width: 760px;
+    }
+}
