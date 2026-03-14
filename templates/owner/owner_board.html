@@ -6,7 +6,7 @@
     <title>흑백로그 | 오너보드</title>
 
     <!-- 현재 페이지 전용 CSS 연결 -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner_board.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_board.css') }}">
     
 <body>
     <!-- =========================================================
@@ -248,7 +248,7 @@
                                 </div>
 
                                 <div class="menu-count-box">
-                                    메뉴 종류 갯수 <strong>0개</strong>
+                                    메뉴 종류 갯수 <strong>{{total_menu_count}}</strong>
                                 </div>
                             </div>
 
@@ -488,7 +488,7 @@
     </aside>
 
     <!-- 드로어 동작용 JS 연결 -->
-    <script src="{{ url_for('static', filename='js/owner_drawer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/pages/owner_drawer.js') }}"></script>
     
 </body>
 </html>
