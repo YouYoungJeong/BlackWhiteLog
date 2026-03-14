@@ -202,7 +202,7 @@ def verify_user_login(email, password):
         SELECT *
         FROM users
         WHERE email = %s
-          AND (status IS NULL OR status <> 'DELETED')
+        AND (status IS NULL OR status <> 'DELETED')
         LIMIT 1
     """
 
@@ -225,16 +225,36 @@ def verify_user_login(email, password):
 # =========================
 def find_user_by_email(email):
     sql = """
-        SELECT user_id, email, nickname, status, role
+        SELECT user_id, email, nickname, status
         FROM users
         WHERE email = %s
+        LIMIT 1
+        """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (email,))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+# -----------------------------
+# 닉네임 중복 확인용 함수
+# -----------------------------
+def find_user_by_nickname(nickname):
+    sql = """
+        SELECT user_id, email, nickname, status
+        FROM users
+        WHERE nickname = %s
         LIMIT 1
     """
 
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (email,))
+            cursor.execute(sql, (nickname,))
             return cursor.fetchone()
     finally:
         conn.close()
@@ -246,23 +266,23 @@ def find_user_by_email(email):
 # email / password_hash / nickname 만 저장
 # =========================
 def create_user(nickname, email, password):
+    # 입력받은 비밀번호를 안전하게 해시 처리
+    password_hash = generate_password_hash(password)
     """
     회원가입 시 비밀번호를 해시로 변환해서 저장
     실제 DB 컬럼명은 password가 아니라 password_hash
     """
-
-    conn = get_connection()
-
-    # 입력받은 비밀번호를 안전하게 해시 처리
-    password_hash = generate_password_hash(password)
 
     sql = """
         INSERT INTO users (email, password_hash, nickname)
         VALUES (%s, %s, %s)
     """
 
+    conn = get_connection()
+    
     try:
         with conn.cursor() as cursor:
+            # 컬럼 순서: email, password_hash, nickname
             cursor.execute(sql, (email, password_hash, nickname))
         conn.commit()
     finally:
@@ -278,8 +298,8 @@ def find_user_by_social(provider, social_id):
         SELECT *
         FROM users
         WHERE provider = %s
-          AND social_id = %s
-          AND (status IS NULL OR status <> 'DELETED')
+        AND social_id = %s
+        AND (status IS NULL OR status <> 'DELETED')
         LIMIT 1
     """
 
@@ -848,7 +868,7 @@ def find_email_by_nickname(nickname):
         SELECT user_id, nickname, email
         FROM users
         WHERE nickname = %s
-          AND (status IS NULL OR status <> 'DELETED')
+        AND (status IS NULL OR status <> 'DELETED')
         LIMIT 1
     """
 
