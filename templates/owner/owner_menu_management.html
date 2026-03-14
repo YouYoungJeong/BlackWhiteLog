@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_drawer.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_menu_management.css') }}">
 
-    <script defer src="{{ url_for('static', filename='js/pages/owner_drawer.js') }}"></script>
-    <script defer src="{{ url_for('static', filename='js/owner/owner_menu_management.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='js/pages/owner/owner_drawer.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='js/pages/owner/owner_menu_management.js') }}"></script>
 </head>
 <body>
     <div class="owner-menu-page">
@@ -52,7 +52,23 @@
         <main class="main-content">
             <section class="menu-form-card">
                 <form action="{{ url_for('owner_menu_management') }}" method="post">
-                    <h2 class="section-title">메뉴 등록</h2>
+                    <!-- 수정 모드 / 등록 모드 제목 분기 -->
+                    <h2 class="section-title">
+                        {% if edit_menu %}
+                            메뉴 수정
+                        {% else %}
+                            메뉴 등록
+                        {% endif %}
+                    </h2>
+
+                    <!-- 수정: hidden input이 h2 내부에 들어가 있던 구조를 분리
+                         제목 태그 안에 form input이 들어가면 DOM 구조가 비정상적으로 해석될 수 있음 -->
+                    <!-- [추가] 수정 시 어떤 menu를 수정할지 넘기는 hidden 값 -->
+                    <input
+                        type="hidden"
+                        name="menu_id"
+                        value="{% if edit_menu %}{{ edit_menu.menu_id }}{% endif %}"
+                    >
 
                     <div class="menu-upload-section">
                         <h3 class="sub-title">메뉴 사진 등록</h3>
@@ -70,16 +86,32 @@
                                 <button type="button" class="point-btn upload-btn">이미지 업로드</button>
                             </div>
 
+                            <!-- 수정: 메뉴명/가격 입력 영역을 같은 menu-input-area 내부에 유지
+                                 기존 코드는 menu-input-area가 먼저 닫혀서 가격칸이 카드 흐름 밖으로 밀릴 수 있었음 -->
                             <div class="menu-input-area">
                                 <div class="form-row form-column">
                                     <label for="menu-name">메뉴명</label>
-                                    <input type="text" id="menu-name" name="menu_name" placeholder="메뉴명을 입력하세요">
+                                    <!-- 수정 모드일 때 기존 메뉴명 자동 채우기 -->
+                                    <input
+                                        type="text"
+                                        id="menu-name"
+                                        name="menu_name"
+                                        placeholder="메뉴명을 입력하세요"
+                                        value="{% if edit_menu %}{{ edit_menu.menu_name }}{% endif %}"
+                                    >
                                 </div>
 
                                 <div class="form-row form-column">
                                     <label for="menu-price">가격</label>
                                     <div class="price-input-wrap">
-                                        <input type="number" id="menu-price" name="price" placeholder="가격 입력">
+                                        <!-- 수정: 수정 모드에서도 가격이 유지되도록 value 추가 -->
+                                        <input
+                                            type="number"
+                                            id="menu-price"
+                                            name="price"
+                                            placeholder="가격 입력"
+                                            value="{% if edit_menu %}{{ edit_menu.price }}{% endif %}"
+                                        >
                                         <span class="price-unit">원</span>
                                     </div>
                                 </div>
@@ -93,7 +125,11 @@
                                 <label for="menu-category">카테고리</label>
                                 <select id="menu-category" name="menu_category_id">
                                     {% for category in categories %}
-                                        <option value="{{ category.menu_category_id }}">
+                                        <!-- 수정: 수정 모드일 때 기존 카테고리 selected 유지 -->
+                                        <option
+                                            value="{{ category.menu_category_id }}"
+                                            {% if edit_menu and edit_menu.menu_category_id == category.menu_category_id %}selected{% endif %}
+                                        >
                                             {{ category.menu_category_name }}
                                         </option>
                                     {% endfor %}
@@ -102,6 +138,8 @@
                         </div>
                     </div>
 
+                    <!-- 수정: 옵션/품절처리/버튼 영역이 반드시 form 내부 카드 흐름에 남도록
+                         upload/detail 섹션과 같은 레벨로 구조 정리 -->
                     <div class="menu-option-section">
                         <h3 class="sub-title">옵션 설정</h3>
 
@@ -111,19 +149,40 @@
 
                         <div class="checkbox-row">
                             <label class="check-item">
-                                <input type="checkbox" name="soldout">
+                                <!-- [추가] 수정 모드에서 기존 품절 여부 반영 -->
+                                <input
+                                    type="checkbox"
+                                    name="soldout"
+                                    {% if edit_menu and edit_menu.status == 'OFF' %}
+                                        checked
+                                    {% endif %}
+                                >
                                 <span>품절 처리</span>
                             </label>
                         </div>
                     </div>
 
+                    <!-- 수정: 취소/등록 버튼도 form 내부 마지막 영역으로 유지
+                         확대/축소 시 카드 밖으로 분리되지 않도록 카드의 하단 구성요소로 고정 -->
                     <div class="action-btn-row">
-                        <button type="button" class="ghost-btn">취소</button>
-                        <button type="submit" class="point-btn">등록완료</button>
+                        <!-- 수정 모드 취소하면 일반 등록 모드로 복귀 -->
+                        <a href="{{ url_for('owner_menu_management') }}" class="ghost-btn">취소</a>
+
+                        <!-- [추가] 수정/등록 버튼 문구 분기 -->
+                        <button type="submit" class="point-btn">
+                            {% if edit_menu %}
+                                수정완료
+                            {% else %}
+                                등록완료
+                            {% endif %}
+                        </button>
                     </div>
                 </form>
             </section>
 
+            <!-- 수정: 메인 화면은 큰 카드 2개 구조 유지
+                 1) 메뉴 등록 카드 2) 등록된 메뉴 카드
+                 등록된 메뉴 카드는 항상 메뉴 등록 바로 아래에 오도록 배치 -->
             <section class="registered-menu-card">
                 <h2 class="section-title">등록된 메뉴</h2>
 
@@ -151,8 +210,24 @@
                         </div>
 
                         <div class="registered-menu-actions">
-                            <button type="button" class="menu-edit-btn">수정</button>
-                            <button type="button" class="menu-delete-btn">삭제</button>
+                            <!-- 수정 버튼 클릭 -> 확인창 -> GET 수정 모드 진입 -->
+                            <form
+                                action="{{ url_for('owner_menu_management') }}"
+                                method="get"
+                                onsubmit="return confirmEdit();"
+                            >
+                                <input type="hidden" name="edit_menu_id" value="{{ menu.menu_id }}">
+                                <button type="submit" class="menu-edit-btn">수정</button>
+                            </form>
+
+                            <!-- [유지] 삭제 버튼 클릭 -> 확인창 -> POST 삭제 -->
+                            <form
+                                action="{{ url_for('delete_menu', menu_id=menu.menu_id) }}"
+                                method="post"
+                                onsubmit="return confirmDelete();"
+                            >
+                                <button type="submit" class="menu-delete-btn">삭제</button>
+                            </form>
                         </div>
                     </article>
                     {% endfor %}

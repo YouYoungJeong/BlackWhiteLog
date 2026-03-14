@@ -14,7 +14,7 @@ import os
 import requests
 
 # owner-routes.py import
-from owner_routes import register_owner_routes
+from routes.owner.owner_routes import register_owner_routes
 
 
 # OAuth state 값 생성용 (보안)

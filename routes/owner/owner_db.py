@@ -141,3 +141,96 @@ def insert_menu(owner_id, menu_category_id, menu_name, price, status="ON"):
 
     finally:
         conn.close()
+
+# [추가] 수정 버튼 눌렀을 때 기존 메뉴 정보 1건 조회
+def get_menu_detail_by_id(owner_id, menu_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT
+                    rm.menu_id,
+                    rm.menu_name,
+                    rm.price,
+                    rm.status,
+                    rm.menu_category_id,
+                    mc.menu_category_name
+                FROM restaurant_menus rm
+                INNER JOIN restaurants r
+                    ON rm.restaurant_id = r.restaurant_id
+                LEFT JOIN menu_categories mc
+                    ON rm.menu_category_id = mc.menu_category_id
+                WHERE r.owner_id = %s
+                    AND rm.menu_id = %s
+                LIMIT 1
+            """
+            cursor.execute(sql, (owner_id, menu_id))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+# [추가] 실제 수정 처리
+def update_menu(owner_id, menu_id, menu_category_id, menu_name, price, status="ON"):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                UPDATE restaurant_menus rm
+                INNER JOIN restaurants r
+                    ON rm.restaurant_id = r.restaurant_id
+                SET
+                    rm.menu_category_id = %s,
+                    rm.menu_name = %s,
+                    rm.price = %s,
+                    rm.status = %s
+                WHERE r.owner_id = %s
+                    AND rm.menu_id = %s
+            """
+            cursor.execute(
+                sql,
+                (
+                    menu_category_id,
+                    menu_name,
+                    price,
+                    status,
+                    owner_id,
+                    menu_id
+                )
+            )
+
+        conn.commit()
+        return True
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
+
+# [추가] 실제 삭제 처리
+def delete_menu(owner_id, menu_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                DELETE rm
+                FROM restaurant_menus rm
+                INNER JOIN restaurants r
+                    ON rm.restaurant_id = r.restaurant_id
+                WHERE r.owner_id = %s
+                    AND rm.menu_id = %s
+            """
+            cursor.execute(sql, (owner_id, menu_id))
+
+        conn.commit()
+        return True
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()

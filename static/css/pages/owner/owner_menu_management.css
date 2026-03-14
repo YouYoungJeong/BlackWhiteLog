@@ -1,112 +1,77 @@
-@charset "UTF-8";
-
-/* =========================
-   메뉴관리 페이지 전용 토큰
-   - 공통 헤더/푸터/드로어 스타일은 owner_layout_common.css / owner_drawer.css에서 관리
-   ========================= */
 :root {
     --color-black: #111111;
-    --color-text: #222222;
     --color-white: #ffffff;
-    --color-bg: #f5f5f2;
+    --color-text: #333333;
     --color-line: #d8ddd2;
-    --color-line-soft: #e8ece3;
+    --color-line-soft: #e9ede4;
     --color-sage: #98ad8a;
-    --color-sage-dark: #7f9672;
+    --color-sage-dark: #6f8164;
     --color-sage-light: #edf3e8;
-    --color-gray-btn: #f3f4f2;
-    --shadow-card: 0 8px 24px rgba(17, 17, 17, 0.06);
-    --radius-lg: 24px;
+    --color-gray-btn: #f4f5f1;
+    --radius-lg: 22px;
     --radius-md: 16px;
-    --radius-sm: 10px;
+    --shadow-card: 0 10px 30px rgba(17, 17, 17, 0.06);
 }
 
-* {
-    box-sizing: border-box;
-}
-
-html,
-body {
-    margin: 0;
-    padding: 0;
-    font-family: "Pretendard", "Noto Sans KR", sans-serif;
-    background: var(--color-bg);
+.owner-menu-page {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top, rgba(152, 173, 138, 0.08), transparent 28%),
+        linear-gradient(180deg, #f7f8f4 0%, #eff2eb 100%);
     color: var(--color-text);
 }
 
-body {
-    min-height: 100vh;
-}
-
-img {
-    display: block;
-    max-width: 100%;
-}
-
-/* =========================
-   페이지 레이아웃
-   ========================= */
-.owner-menu-page {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
 .main-content {
-    width: min(100%, 760px);
+    width: min(1120px, calc(100% - 48px));
     margin: 0 auto;
-    padding: 0 16px 40px;
+    padding: 24px 0 42px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 12px;
 }
 
-/* =========================
-   공통 카드
-   ========================= */
 .menu-form-card,
 .registered-menu-card {
-    background: var(--color-white);
-    border: 1px solid var(--color-line-soft);
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(216, 221, 210, 0.9);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-card);
-    padding: 28px 26px;
+    padding: 28px 30px;
+    backdrop-filter: blur(10px);
 }
 
 .section-title {
-    margin: 0 0 24px;
-    font-size: 1.95rem;
+    margin: 0 0 22px;
+    font-size: 1.8rem;
     font-weight: 800;
     color: var(--color-black);
     letter-spacing: -0.03em;
 }
 
 .sub-title {
-    margin: 0 0 18px;
+    margin: 0 0 14px;
     font-size: 1.05rem;
     font-weight: 700;
     color: var(--color-black);
 }
 
 /* =========================
-   메뉴 등록 폼
+   메뉴 등록
    ========================= */
 .menu-upload-section,
 .menu-detail-section,
 .menu-option-section {
-    padding-top: 18px;
-    border-top: 1px solid var(--color-line-soft);
-}
-
-.menu-detail-section,
-.menu-option-section {
-    margin-top: 16px;
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--color-line-soft);
 }
 
 .upload-form-grid {
     display: grid;
-    grid-template-columns: 160px 1fr;
-    gap: 18px;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 22px;
     align-items: start;
 }
 
@@ -167,6 +132,7 @@ select {
     outline: none;
     font: inherit;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
 }
 
 input[type="text"]:focus,
@@ -217,7 +183,6 @@ select:focus {
 
 /* =========================
    버튼
-   - 공통 헤더 버튼은 owner_layout_common.css 사용
    ========================= */
 .point-btn,
 .sub-btn,
@@ -233,6 +198,7 @@ select:focus {
     cursor: pointer;
     font-family: inherit;
     transition: all 0.2s ease;
+    box-sizing: border-box;
 }
 
 .point-btn {
@@ -275,7 +241,7 @@ select:focus {
 }
 
 .option-group-wrap {
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
 .checkbox-row {
@@ -304,19 +270,30 @@ select:focus {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    margin-top: 22px;
-    padding-top: 18px;
+    margin-top: 16px;
+    padding-top: 16px;
     border-top: 1px solid var(--color-line-soft);
     flex-wrap: wrap;
 }
 
+a.ghost-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
 /* =========================
-   등록된 메뉴 카드
+   등록된 메뉴
    ========================= */
+.registered-menu-card {
+    margin-top: 0;
+}
+
 .registered-menu-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
 }
 
 .registered-menu-item {
@@ -362,10 +339,23 @@ select:focus {
     font-weight: 700;
 }
 
+.registered-menu-category,
+.registered-menu-status {
+    margin: 4px 0 0;
+    color: #666666;
+    font-size: 0.95rem;
+}
+
 .registered-menu-actions {
     display: flex;
+    align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+}
+
+.registered-menu-actions form {
+    margin: 0;
+    display: inline-flex;
 }
 
 .menu-edit-btn,
@@ -401,6 +391,7 @@ select:focus {
     .main-content {
         width: min(100%, calc(100% - 20px));
         padding: 0 0 28px;
+        gap: 10px;
     }
 
     .menu-form-card,
@@ -435,6 +426,10 @@ select:focus {
         width: 100%;
     }
 
+    a.ghost-btn {
+        width: 100%;
+    }
+
     .registered-menu-actions {
         justify-content: flex-start;
     }
@@ -455,6 +450,7 @@ select:focus {
         flex-direction: column;
     }
 
+    .registered-menu-actions form,
     .menu-edit-btn,
     .menu-delete-btn {
         width: 100%;
