@@ -32,7 +32,7 @@ from db import (
     create_user,
     find_user_by_email,
     find_user_by_social,
-    create_social_user,
+    create_social_user_with_form,
     withdraw_user,
     restore_user,
     fetch_all_users,
@@ -59,6 +59,7 @@ load_dotenv()
 # Flask 앱 생성
 app = Flask(__name__)
 
+
 #### 레스토랑 판넬 블루프린트(모듈화)  
 from restaurant_panel import restaurant_panel_bp  # 분리한 파일 임포트
 app.register_blueprint(restaurant_panel_bp) # 앱에 등록
@@ -68,7 +69,6 @@ from user_ranking import user_ranking_bp
 app.register_blueprint(user_ranking_bp)
 #### 랭크 블루프린트
 
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 
 # 관리자 음식점 관리 블루프린트 등록
 app.register_blueprint(admin_bp)
@@ -197,11 +197,33 @@ def login():
 # =========================
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+    if request.method == "GET":
+        mode = request.args.get("mode", "").strip()
+
+        # 일반 회원가입으로 들어온 경우 소셜 세션 제거
+        if mode == "local":
+            session.pop("social_signup_data", None)
+
+    social_data = session.get("social_signup_data", {})
+
     if request.method == "POST":
         nickname = request.form.get("nickname", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
         password_confirm = request.form.get("password_confirm", "").strip()
+
+        gender = request.form.get("gender", "").strip()
+        birth_year = request.form.get("birth_year", "").strip()
+        birth_month = request.form.get("birth_month", "").strip()
+        birth_day = request.form.get("birth_day", "").strip()
+
+        postcode = request.form.get("postcode", "").strip()
+        road_address = request.form.get("roadAddress", "").strip()
+        jibun_address = request.form.get("jibunAddress", "").strip()
+        detail_address = request.form.get("detailAddress", "").strip()
+        extra_address = request.form.get("extraAddress", "").strip()
+
+        ad_agree = request.form.get("ad_agree", "")
 
         email_checked = request.form.get("email_checked", "false")
         checked_email_value = request.form.get("checked_email_value", "").strip()
@@ -209,46 +231,127 @@ def signup():
         nickname_checked = request.form.get("nickname_checked", "false")
         checked_nickname_value = request.form.get("checked_nickname_value", "").strip()
 
-        # 필수값 검사
-        if not nickname or not email or not password or not password_confirm:
-            flash("모든 값을 입력해주세요.")
-            return redirect(url_for("signup"))
+        form_data = {
+            "email": email,
+            "nickname": nickname,
+            "gender": gender,
+            "birth_year": birth_year,
+            "birth_month": birth_month,
+            "birth_day": birth_day,
+            "postcode": postcode,
+            "roadAddress": road_address,
+            "jibunAddress": jibun_address,
+            "detailAddress": detail_address,
+            "extraAddress": extra_address,
+            "ad_agree": ad_agree,
+        }
 
-        # 비밀번호 확인 일치 여부
-        if password != password_confirm:
-            flash("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
-            return redirect(url_for("signup"))
+        def render_signup_with_error(message):
+            flash(message)
+            return render_template(
+                "signup.html",
+                social_data=social_data,
+                form_data=form_data,
+            )
 
-        # 이메일 중복확인 여부 검사
-        if email_checked != "true" or checked_email_value != email:
-            flash("이메일 중복 확인을 해주세요.")
-            return redirect(url_for("signup"))
+        if not nickname or not email:
+            return render_signup_with_error("이메일과 닉네임을 입력해주세요.")
 
-        # 닉네임 중복확인 여부 검사
-        if nickname_checked != "true" or checked_nickname_value != nickname:
-            flash("닉네임 중복 확인을 해주세요.")
-            return redirect(url_for("signup"))
+        if not gender:
+            return render_signup_with_error("성별을 선택해주세요.")
 
-        # 서버에서 한 번 더 이메일 중복 검사
-        # 프론트만 믿으면 안 되므로 DB에서 다시 확인
+        if not birth_year or not birth_month or not birth_day:
+            return render_signup_with_error("생년월일을 입력해주세요.")
+
+        if not postcode or not road_address:
+            return render_signup_with_error("주소 검색을 통해 주소를 입력해주세요.")
+
         existing_user = find_user_by_email(email)
         if existing_user:
-            flash("이미 가입된 이메일입니다.")
-            return redirect(url_for("signup"))
+            if not social_data or existing_user["email"] != social_data.get("email"):
+                return render_signup_with_error("이미 가입된 이메일입니다.")
 
-        # 서버에서 닉네임 중복 검사
         existing_nickname = find_user_by_nickname(nickname)
         if existing_nickname:
-            flash("이미 사용 중인 닉네임입니다.")
-            return redirect(url_for("signup"))
+            if not social_data or existing_nickname["nickname"] != social_data.get("nickname"):
+                return render_signup_with_error("이미 사용 중인 닉네임입니다.")
 
-        # 회원 생성
+        # 소셜 회원가입
+        if social_data:
+            provider = social_data.get("provider")
+            social_id = social_data.get("social_id")
+            profile_image_url = social_data.get("profile_image_url")
+
+            if not provider or not social_id:
+                flash("소셜 회원가입 정보가 올바르지 않습니다. 다시 시도해주세요.")
+                session.pop("social_signup_data", None)
+                return redirect(url_for("login"))
+
+            if not password or not password_confirm:
+                return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
+
+            if password != password_confirm:
+                return render_signup_with_error("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
+
+            if nickname_checked != "true" or checked_nickname_value != nickname:
+                return render_signup_with_error("닉네임 중복 확인을 해주세요.")
+
+            create_social_user_with_form(
+                nickname=nickname,
+                email=email,
+                password=password,
+                provider=provider,
+                social_id=social_id,
+                profile_image_url=profile_image_url,
+            )
+
+            user = find_user_by_social(provider, social_id)
+
+            if not user:
+                return render_signup_with_error("소셜 회원가입 후 사용자 조회에 실패했습니다.")
+
+            session["user_email"] = user["email"]
+            session["user_nickname"] = user["nickname"]
+            session["user_id"] = user["user_id"]
+            session["role"] = user.get("role", "USER")
+            session["login_provider"] = provider.lower()
+
+            session.pop("social_signup_data", None)
+
+            flash("간편 회원가입이 완료되었습니다.")
+            return redirect(url_for("index"))
+
+        # 일반 회원가입
+        if not password or not password_confirm:
+            return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
+
+        if password != password_confirm:
+            return render_signup_with_error("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
+
+        if email_checked != "true" or checked_email_value != email:
+            return render_signup_with_error("이메일 중복 확인을 해주세요.")
+
+        if nickname_checked != "true" or checked_nickname_value != nickname:
+            return render_signup_with_error("닉네임 중복 확인을 해주세요.")
+
         create_user(nickname, email, password)
 
         flash("회원가입이 완료되었습니다. 로그인해주세요.")
         return redirect(url_for("login"))
 
-    return render_template("signup.html")
+    return render_template(
+        "signup.html",
+        social_data=social_data,
+        form_data={},
+    )
+
+# =========================
+# 뒤로 나가면 소셜 제거용 라우트
+# =========================
+@app.route("/signup/reset")
+def signup_reset():
+    session.pop("social_signup_data", None)
+    return redirect(url_for("signup", mode="local"))
 
 # =========================
 # 회원가입 시 이메일 중복 확인
@@ -371,7 +474,7 @@ def logout():
     provider = session.get("login_provider")
     session.clear()
 
-    if provider == "kakao":
+    if provider == "KAKAO":
         kakao_rest_api_key = os.getenv("KAKAO_REST_API_KEY")
         kakao_logout_redirect_uri = os.getenv("KAKAO_LOGOUT_REDIRECT_URI")
 
@@ -467,7 +570,7 @@ def login_kakao_callback():
 
     user_json = user_res.json()
 
-    social_id = str(user_json["id"])
+    social_id = str(user_json.get("id"))
     kakao_account = user_json.get("kakao_account", {})
     profile = kakao_account.get("profile", {})
 
@@ -478,7 +581,12 @@ def login_kakao_callback():
     nickname = profile.get("nickname") or f"kakao_{social_id}"
     profile_image_url = profile.get("profile_image_url")
 
-    user = find_user_by_social("kakao", social_id)
+    if not social_id:
+        flash("카카오 사용자 정보를 불러오지 못했습니다.")
+        return redirect(url_for("login"))
+
+    # 1. 이미 소셜 가입된 회원인지 먼저 확인
+    user = find_user_by_social("KAKAO", social_id)
 
     if user:
         session["user_email"] = user["email"]
@@ -486,46 +594,49 @@ def login_kakao_callback():
         session["user_id"] = user["user_id"]
         session["role"] = user.get("role", "USER")
         session["login_provider"] = "kakao"
+
+        # 혹시 이전 소셜 회원가입 세션이 남아 있으면 제거
+        session.pop("social_signup_data", None)
+
         flash("카카오 로그인 성공")
         return redirect(url_for("index"))
 
+    # 2. 같은 이메일의 일반 회원이 있는지 확인
     existing_user = find_user_by_email(email)
 
     if existing_user:
+        # 탈퇴 회원이면 복구
         if existing_user.get("status") == "DELETED":
             restore_user(existing_user["user_id"])
-            user = find_user_by_email(email)
 
-            session["user_email"] = user["email"]
-            session["user_nickname"] = user["nickname"]
-            session["user_id"] = user["user_id"]
-            session["role"] = user.get("role", "USER")
-            session["login_provider"] = "kakao"
+            restored_user = find_user_by_email(email)
+            if restored_user:
+                session["user_email"] = restored_user["email"]
+                session["user_nickname"] = restored_user["nickname"]
+                session["user_id"] = restored_user["user_id"]
+                session["role"] = restored_user.get("role", "USER")
+                session["login_provider"] = "kakao"
 
-            flash("탈퇴한 계정이 복구되었습니다.")
-            return redirect(url_for("index"))
+                session.pop("social_signup_data", None)
 
+                flash("탈퇴한 계정이 복구되었습니다.")
+                return redirect(url_for("index"))
+
+        # 이미 일반 회원으로 가입된 이메일이면 자동 연결하지 않음
         flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
         return redirect(url_for("login"))
 
-    create_social_user(
-        nickname=nickname,
-        email=email,
-        provider="kakao",
-        social_id=social_id,
-        profile_image_url=profile_image_url,
-    )
+    # 3. 신규 소셜 회원이면 회원가입 페이지로 이동
+    session["social_signup_data"] = {
+        "provider": "KAKAO",
+        "social_id": social_id,
+        "email": email,
+        "nickname": nickname,
+        "profile_image_url": profile_image_url,
+    }
 
-    user = find_user_by_social("kakao", social_id)
-
-    session["user_email"] = user["email"]
-    session["user_nickname"] = user["nickname"]
-    session["user_id"] = user["user_id"]
-    session["role"] = user.get("role", "USER")
-    session["login_provider"] = "kakao"
-
-    flash("카카오 로그인 성공")
-    return redirect(url_for("index"))
+    flash("카카오 정보가 자동 입력되었습니다. 추가 정보를 입력해 회원가입을 완료해주세요.")
+    return redirect(url_for("signup"))
 
 
 # =========================
@@ -599,7 +710,12 @@ def login_naver_callback():
     nickname = response.get("nickname") or response.get("name") or f"naver_{social_id}"
     profile_image_url = response.get("profile_image")
 
-    user = find_user_by_social("naver", social_id)
+    if not social_id:
+        flash("네이버 사용자 정보를 불러오지 못했습니다.")
+        return redirect(url_for("login"))
+
+    # 1. 이미 소셜 가입된 회원인지 먼저 확인
+    user = find_user_by_social("NAVER", social_id)
 
     if user:
         session["user_email"] = user["email"]
@@ -607,46 +723,47 @@ def login_naver_callback():
         session["user_id"] = user["user_id"]
         session["role"] = user.get("role", "USER")
         session["login_provider"] = "naver"
+
+        session.pop("social_signup_data", None)
+
         flash("네이버 로그인 성공")
         return redirect(url_for("index"))
 
+    # 2. 같은 이메일의 일반 회원이 있는지 확인
     existing_user = find_user_by_email(email)
 
     if existing_user:
         if existing_user.get("status") == "DELETED":
             restore_user(existing_user["user_id"])
-            user = find_user_by_email(email)
 
-            session["user_email"] = user["email"]
-            session["user_nickname"] = user["nickname"]
-            session["user_id"] = user["user_id"]
-            session["role"] = user.get("role", "USER")
-            session["login_provider"] = "naver"
+            restored_user = find_user_by_email(email)
+            if restored_user:
+                session["user_email"] = restored_user["email"]
+                session["user_nickname"] = restored_user["nickname"]
+                session["user_id"] = restored_user["user_id"]
+                session["role"] = restored_user.get("role", "USER")
+                session["login_provider"] = "naver"
 
-            flash("탈퇴한 계정이 복구되었습니다.")
-            return redirect(url_for("index"))
+                session.pop("social_signup_data", None)
+
+                flash("탈퇴한 계정이 복구되었습니다.")
+                return redirect(url_for("index"))
 
         flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
         return redirect(url_for("login"))
 
-    create_social_user(
-        nickname=nickname,
-        email=email,
-        provider="naver",
-        social_id=social_id,
-        profile_image_url=profile_image_url,
-    )
+    # 3. 신규 소셜 회원이면 회원가입 페이지로 이동
+    session["social_signup_data"] = {
+        "provider": "NAVER",
+        "social_id": social_id,
+        "email": email,
+        "nickname": nickname,
+        "profile_image_url": profile_image_url,
+    }
 
-    user = find_user_by_social("naver", social_id)
+    flash("네이버 정보가 자동 입력되었습니다. 추가 정보를 입력해 회원가입을 완료해주세요.")
+    return redirect(url_for("signup"))
 
-    session["user_email"] = user["email"]
-    session["user_nickname"] = user["nickname"]
-    session["user_id"] = user["user_id"]
-    session["role"] = user.get("role", "USER")
-    session["login_provider"] = "naver"
-
-    flash("네이버 로그인 성공")
-    return redirect(url_for("index"))
 
 
 # =========================
@@ -727,7 +844,12 @@ def login_google_callback():
     nickname = user_json.get("name") or user_json.get("given_name") or f"google_{social_id}"
     profile_image_url = user_json.get("picture")
 
-    user = find_user_by_social("google", social_id)
+    if not social_id:
+        flash("구글 사용자 정보를 불러오지 못했습니다.")
+        return redirect(url_for("login"))
+
+    # 1. 이미 소셜 가입된 회원인지 먼저 확인
+    user = find_user_by_social("GOOGLE", social_id)
 
     if user:
         session["user_email"] = user["email"]
@@ -735,46 +857,46 @@ def login_google_callback():
         session["user_id"] = user["user_id"]
         session["role"] = user.get("role", "USER")
         session["login_provider"] = "google"
+
+        session.pop("social_signup_data", None)
+
         flash("구글 로그인 성공")
         return redirect(url_for("index"))
 
+    # 2. 같은 이메일의 일반 회원이 있는지 확인
     existing_user = find_user_by_email(email)
 
     if existing_user:
         if existing_user.get("status") == "DELETED":
             restore_user(existing_user["user_id"])
-            user = find_user_by_email(email)
 
-            session["user_email"] = user["email"]
-            session["user_nickname"] = user["nickname"]
-            session["user_id"] = user["user_id"]
-            session["role"] = user.get("role", "USER")
-            session["login_provider"] = "google"
+            restored_user = find_user_by_email(email)
+            if restored_user:
+                session["user_email"] = restored_user["email"]
+                session["user_nickname"] = restored_user["nickname"]
+                session["user_id"] = restored_user["user_id"]
+                session["role"] = restored_user.get("role", "USER")
+                session["login_provider"] = "google"
 
-            flash("탈퇴한 계정이 복구되었습니다.")
-            return redirect(url_for("index"))
+                session.pop("social_signup_data", None)
+
+                flash("탈퇴한 계정이 복구되었습니다.")
+                return redirect(url_for("index"))
 
         flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
         return redirect(url_for("login"))
 
-    create_social_user(
-        nickname=nickname,
-        email=email,
-        provider="google",
-        social_id=social_id,
-        profile_image_url=profile_image_url,
-    )
+    # 3. 신규 소셜 회원이면 회원가입 페이지로 이동
+    session["social_signup_data"] = {
+        "provider": "GOOGLE",
+        "social_id": social_id,
+        "email": email,
+        "nickname": nickname,
+        "profile_image_url": profile_image_url,
+    }
 
-    user = find_user_by_social("google", social_id)
-
-    session["user_email"] = user["email"]
-    session["user_nickname"] = user["nickname"]
-    session["user_id"] = user["user_id"]
-    session["role"] = user.get("role", "USER")
-    session["login_provider"] = "google"
-
-    flash("구글 로그인 성공")
-    return redirect(url_for("index"))
+    flash("구글 정보가 자동 입력되었습니다. 추가 정보를 입력해 회원가입을 완료해주세요.")
+    return redirect(url_for("signup"))
 
 
 # =========================
