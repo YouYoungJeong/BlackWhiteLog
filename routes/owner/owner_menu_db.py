@@ -272,32 +272,19 @@ def get_menu_list_by_owner(owner_id, limit=None, offset=None):
     try:
         with conn.cursor() as cursor:
             sql = """
-                SELECT
-                    rm.menu_id,
-                    rm.menu_name,
-                    rm.price,
-                    rm.status,
-                    mc.menu_category_name,
-                    ri.image_url,
-                    ri.thumb_url,
-                    ri.original_name
+                SELECT r.owner_id, r.restaurant_id,
+                rm.menu_id, rm.menu_name, rm.price, rm.status,
+                mc.menu_category_name, 
+                ri.image_url, ri.thumb_url,ri.original_name 
                 FROM restaurant_menus rm
                 INNER JOIN restaurants r
-                    ON rm.restaurant_id = r.restaurant_id
+                ON rm.restaurant_id = r.restaurant_id
                 LEFT JOIN menu_categories mc
-                    ON rm.menu_category_id = mc.menu_category_id
+                ON rm.menu_category_id = mc.menu_category_id
                 LEFT JOIN restaurant_images ri
-                    ON ri.restaurant_id = rm.restaurant_id
-                    AND ri.menu_id = rm.menu_id
-                    AND ri.image_id = (
-                        SELECT image_id
-                        FROM restaurant_images
-                        WHERE restaurant_id = rm.restaurant_id
-                        AND menu_id = rm.menu_id
-                        ORDER BY sort_order ASC, image_id ASC
-                        LIMIT 1
-                    )
-                WHERE r.owner_id = %s
+                ON ri.restaurant_id = rm.restaurant_id
+                AND ri.menu_id = rm.menu_id
+                WHERE r.restaurant_id = %s
                 ORDER BY rm.menu_id DESC
             """
 
