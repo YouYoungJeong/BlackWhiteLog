@@ -14,7 +14,7 @@ import os
 import requests
 
 # owner-routes.py import
-from owner_routes import register_owner_routes
+from routes.owner.owner_routes import register_owner_routes
 
 
 # OAuth state 값 생성용 (보안)
@@ -32,15 +32,12 @@ from db import (
     create_user,
     find_user_by_email,
     find_user_by_social,
-    create_social_user,
     create_social_user_with_form,
     withdraw_user,
     restore_user,
     fetch_all_users,
     admin_deactivate_user,
     admin_restore_user,
-    fetch_admin_reviews,
-    update_admin_review_status,
     fetch_admin_reports,
     update_admin_report_status,
     fetch_admin_sanctions,
@@ -290,18 +287,28 @@ def signup():
                 session.pop("social_signup_data", None)
                 return redirect(url_for("login"))
 
+            if not password or not password_confirm:
+                return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
+
+            if password != password_confirm:
+                return render_signup_with_error("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
+
             if nickname_checked != "true" or checked_nickname_value != nickname:
                 return render_signup_with_error("닉네임 중복 확인을 해주세요.")
 
             create_social_user_with_form(
                 nickname=nickname,
                 email=email,
+                password=password,
                 provider=provider,
                 social_id=social_id,
                 profile_image_url=profile_image_url,
             )
 
             user = find_user_by_social(provider, social_id)
+
+            if not user:
+                return render_signup_with_error("소셜 회원가입 후 사용자 조회에 실패했습니다.")
 
             session["user_email"] = user["email"]
             session["user_nickname"] = user["nickname"]
@@ -467,7 +474,7 @@ def logout():
     provider = session.get("login_provider")
     session.clear()
 
-    if provider == "kakao":
+    if provider == "KAKAO":
         kakao_rest_api_key = os.getenv("KAKAO_REST_API_KEY")
         kakao_logout_redirect_uri = os.getenv("KAKAO_LOGOUT_REDIRECT_URI")
 
@@ -563,7 +570,7 @@ def login_kakao_callback():
 
     user_json = user_res.json()
 
-    social_id = str(user_json["id"])
+    social_id = str(user_json.get("id"))
     kakao_account = user_json.get("kakao_account", {})
     profile = kakao_account.get("profile", {})
 
@@ -574,7 +581,12 @@ def login_kakao_callback():
     nickname = profile.get("nickname") or f"kakao_{social_id}"
     profile_image_url = profile.get("profile_image_url")
 
-    user = find_user_by_social("kakao", social_id)
+    if not social_id:
+        flash("카카오 사용자 정보를 불러오지 못했습니다.")
+        return redirect(url_for("login"))
+
+    # 1. 이미 소셜 가입된 회원인지 먼저 확인
+    user = find_user_by_social("KAKAO", social_id)
 
     if user:
         session["user_email"] = user["email"]
@@ -582,29 +594,39 @@ def login_kakao_callback():
         session["user_id"] = user["user_id"]
         session["role"] = user.get("role", "USER")
         session["login_provider"] = "kakao"
+
+        # 혹시 이전 소셜 회원가입 세션이 남아 있으면 제거
+        session.pop("social_signup_data", None)
+
         flash("카카오 로그인 성공")
         return redirect(url_for("index"))
 
+    # 2. 같은 이메일의 일반 회원이 있는지 확인
     existing_user = find_user_by_email(email)
 
     if existing_user:
+        # 탈퇴 회원이면 복구
         if existing_user.get("status") == "DELETED":
             restore_user(existing_user["user_id"])
-            user = find_user_by_email(email)
 
-            session["user_email"] = user["email"]
-            session["user_nickname"] = user["nickname"]
-            session["user_id"] = user["user_id"]
-            session["role"] = user.get("role", "USER")
-            session["login_provider"] = "kakao"
+            restored_user = find_user_by_email(email)
+            if restored_user:
+                session["user_email"] = restored_user["email"]
+                session["user_nickname"] = restored_user["nickname"]
+                session["user_id"] = restored_user["user_id"]
+                session["role"] = restored_user.get("role", "USER")
+                session["login_provider"] = "kakao"
 
-            flash("탈퇴한 계정이 복구되었습니다.")
-            return redirect(url_for("index"))
+                session.pop("social_signup_data", None)
 
+                flash("탈퇴한 계정이 복구되었습니다.")
+                return redirect(url_for("index"))
+
+        # 이미 일반 회원으로 가입된 이메일이면 자동 연결하지 않음
         flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
         return redirect(url_for("login"))
 
-    # 아직 가입 안 된 소셜 계정이면 회원가입 페이지로 이동
+    # 3. 신규 소셜 회원이면 회원가입 페이지로 이동
     session["social_signup_data"] = {
         "provider": "KAKAO",
         "social_id": social_id,
@@ -688,7 +710,12 @@ def login_naver_callback():
     nickname = response.get("nickname") or response.get("name") or f"naver_{social_id}"
     profile_image_url = response.get("profile_image")
 
-    user = find_user_by_social("naver", social_id)
+    if not social_id:
+        flash("네이버 사용자 정보를 불러오지 못했습니다.")
+        return redirect(url_for("login"))
+
+    # 1. 이미 소셜 가입된 회원인지 먼저 확인
+    user = find_user_by_social("NAVER", social_id)
 
     if user:
         session["user_email"] = user["email"]
@@ -696,28 +723,36 @@ def login_naver_callback():
         session["user_id"] = user["user_id"]
         session["role"] = user.get("role", "USER")
         session["login_provider"] = "naver"
+
+        session.pop("social_signup_data", None)
+
         flash("네이버 로그인 성공")
         return redirect(url_for("index"))
 
+    # 2. 같은 이메일의 일반 회원이 있는지 확인
     existing_user = find_user_by_email(email)
 
     if existing_user:
         if existing_user.get("status") == "DELETED":
             restore_user(existing_user["user_id"])
-            user = find_user_by_email(email)
 
-            session["user_email"] = user["email"]
-            session["user_nickname"] = user["nickname"]
-            session["user_id"] = user["user_id"]
-            session["role"] = user.get("role", "USER")
-            session["login_provider"] = "naver"
+            restored_user = find_user_by_email(email)
+            if restored_user:
+                session["user_email"] = restored_user["email"]
+                session["user_nickname"] = restored_user["nickname"]
+                session["user_id"] = restored_user["user_id"]
+                session["role"] = restored_user.get("role", "USER")
+                session["login_provider"] = "naver"
 
-            flash("탈퇴한 계정이 복구되었습니다.")
-            return redirect(url_for("index"))
+                session.pop("social_signup_data", None)
+
+                flash("탈퇴한 계정이 복구되었습니다.")
+                return redirect(url_for("index"))
 
         flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
         return redirect(url_for("login"))
 
+    # 3. 신규 소셜 회원이면 회원가입 페이지로 이동
     session["social_signup_data"] = {
         "provider": "NAVER",
         "social_id": social_id,
@@ -728,6 +763,7 @@ def login_naver_callback():
 
     flash("네이버 정보가 자동 입력되었습니다. 추가 정보를 입력해 회원가입을 완료해주세요.")
     return redirect(url_for("signup"))
+
 
 
 # =========================
@@ -808,7 +844,12 @@ def login_google_callback():
     nickname = user_json.get("name") or user_json.get("given_name") or f"google_{social_id}"
     profile_image_url = user_json.get("picture")
 
-    user = find_user_by_social("google", social_id)
+    if not social_id:
+        flash("구글 사용자 정보를 불러오지 못했습니다.")
+        return redirect(url_for("login"))
+
+    # 1. 이미 소셜 가입된 회원인지 먼저 확인
+    user = find_user_by_social("GOOGLE", social_id)
 
     if user:
         session["user_email"] = user["email"]
@@ -816,28 +857,36 @@ def login_google_callback():
         session["user_id"] = user["user_id"]
         session["role"] = user.get("role", "USER")
         session["login_provider"] = "google"
+
+        session.pop("social_signup_data", None)
+
         flash("구글 로그인 성공")
         return redirect(url_for("index"))
 
+    # 2. 같은 이메일의 일반 회원이 있는지 확인
     existing_user = find_user_by_email(email)
 
     if existing_user:
         if existing_user.get("status") == "DELETED":
             restore_user(existing_user["user_id"])
-            user = find_user_by_email(email)
 
-            session["user_email"] = user["email"]
-            session["user_nickname"] = user["nickname"]
-            session["user_id"] = user["user_id"]
-            session["role"] = user.get("role", "USER")
-            session["login_provider"] = "google"
+            restored_user = find_user_by_email(email)
+            if restored_user:
+                session["user_email"] = restored_user["email"]
+                session["user_nickname"] = restored_user["nickname"]
+                session["user_id"] = restored_user["user_id"]
+                session["role"] = restored_user.get("role", "USER")
+                session["login_provider"] = "google"
 
-            flash("탈퇴한 계정이 복구되었습니다.")
-            return redirect(url_for("index"))
+                session.pop("social_signup_data", None)
+
+                flash("탈퇴한 계정이 복구되었습니다.")
+                return redirect(url_for("index"))
 
         flash("이미 가입된 이메일입니다. 기존 방식으로 로그인해주세요.")
         return redirect(url_for("login"))
 
+    # 3. 신규 소셜 회원이면 회원가입 페이지로 이동
     session["social_signup_data"] = {
         "provider": "GOOGLE",
         "social_id": social_id,
@@ -1025,64 +1074,48 @@ def admin_user_restore(user_id):
 
 
 # =========================
-# 관리자 리뷰 관리 목록
+# 관리자 신고 / 제재 통합 관리
 # =========================
-@app.route("/admin/reviews")
+@app.route("/admin/moderation", methods=["GET", "POST"])
 @admin_required
-def admin_reviews():
-    keyword = request.args.get("keyword", "").strip()
-    status = request.args.get("status", "").strip()
+def admin_moderation():
+    if request.method == "POST":
+        user_nickname = request.form.get("user_nickname", "").strip()
+        sanction_type = request.form.get("sanction_type", "").strip()
+        reason = request.form.get("reason", "").strip()
+        expire_at = request.form.get("expire_at", "").strip()
 
-    reviews = fetch_admin_reviews(keyword=keyword, status=status)
+        if not user_nickname or not sanction_type or not reason:
+            flash("대상 닉네임, 제재 종류, 사유를 입력해주세요.")
+            return redirect(url_for("admin_moderation"))
+
+        create_admin_sanction(
+            user_nickname=user_nickname,
+            sanction_type=sanction_type,
+            reason=reason,
+            expire_at=expire_at if expire_at else "-"
+        )
+        flash("제재가 등록되었습니다.")
+        return redirect(url_for("admin_moderation"))
+
+    report_keyword = request.args.get("report_keyword", "").strip()
+    report_status = request.args.get("report_status", "").strip()
+
+    sanction_keyword = request.args.get("sanction_keyword", "").strip()
+    sanction_status = request.args.get("sanction_status", "").strip()
+
+    reports = fetch_admin_reports(keyword=report_keyword, status=report_status)
+    sanctions = fetch_admin_sanctions(keyword=sanction_keyword, status=sanction_status)
 
     return render_template(
-        "admin/admin_reviews.html",
-        reviews=reviews,
-        keyword=keyword,
-        status=status,
+        "admin/admin_moderation.html",
+        reports=reports,
+        sanctions=sanctions,
+        report_keyword=report_keyword,
+        report_status=report_status,
+        sanction_keyword=sanction_keyword,
+        sanction_status=sanction_status,
     )
-
-
-# =========================
-# 리뷰 숨김 처리
-# =========================
-@app.route("/admin/reviews/<int:review_id>/hide", methods=["POST"])
-@admin_required
-def admin_hide_review(review_id):
-    success = update_admin_review_status(review_id, "HIDDEN")
-    if success:
-        flash("리뷰를 숨김 처리했습니다.")
-    else:
-        flash("리뷰를 찾을 수 없습니다.")
-    return redirect(url_for("admin_reviews"))
-
-
-# =========================
-# 리뷰 삭제 처리
-# =========================
-@app.route("/admin/reviews/<int:review_id>/delete", methods=["POST"])
-@admin_required
-def admin_delete_review(review_id):
-    success = update_admin_review_status(review_id, "DELETED")
-    if success:
-        flash("리뷰를 삭제 처리했습니다.")
-    else:
-        flash("리뷰를 찾을 수 없습니다.")
-    return redirect(url_for("admin_reviews"))
-
-
-# =========================
-# 리뷰 복구 처리
-# =========================
-@app.route("/admin/reviews/<int:review_id>/restore", methods=["POST"])
-@admin_required
-def admin_restore_review(review_id):
-    success = update_admin_review_status(review_id, "ACTIVE")
-    if success:
-        flash("리뷰를 복구했습니다.")
-    else:
-        flash("리뷰를 찾을 수 없습니다.")
-    return redirect(url_for("admin_reviews"))
 
 
 # =========================
@@ -1091,17 +1124,7 @@ def admin_restore_review(review_id):
 @app.route("/admin/reports")
 @admin_required
 def admin_reports():
-    keyword = request.args.get("keyword", "").strip()
-    status = request.args.get("status", "").strip()
-
-    reports = fetch_admin_reports(keyword=keyword, status=status)
-
-    return render_template(
-        "admin/admin_reports.html",
-        reports=reports,
-        keyword=keyword,
-        status=status,
-    )
+    return redirect(url_for("admin_moderation"))
 
 
 # =========================
@@ -1115,7 +1138,7 @@ def admin_resolve_report(report_id):
         flash("신고를 처리 완료 상태로 변경했습니다.")
     else:
         flash("신고 내역을 찾을 수 없습니다.")
-    return redirect(url_for("admin_reports"))
+    return redirect(url_for("admin_moderation"))
 
 
 # =========================
@@ -1129,7 +1152,7 @@ def admin_reject_report(report_id):
         flash("신고를 반려 처리했습니다.")
     else:
         flash("신고 내역을 찾을 수 없습니다.")
-    return redirect(url_for("admin_reports"))
+    return redirect(url_for("admin_moderation"))
 
 
 # =========================
@@ -1138,36 +1161,7 @@ def admin_reject_report(report_id):
 @app.route("/admin/sanctions", methods=["GET", "POST"])
 @admin_required
 def admin_sanctions():
-    if request.method == "POST":
-        user_nickname = request.form.get("user_nickname", "").strip()
-        sanction_type = request.form.get("sanction_type", "").strip()
-        reason = request.form.get("reason", "").strip()
-        expire_at = request.form.get("expire_at", "").strip()
-
-        if not user_nickname or not sanction_type or not reason:
-            flash("대상 닉네임, 제재 종류, 사유를 입력해주세요.")
-            return redirect(url_for("admin_sanctions"))
-
-        create_admin_sanction(
-            user_nickname=user_nickname,
-            sanction_type=sanction_type,
-            reason=reason,
-            expire_at=expire_at if expire_at else "-"
-        )
-        flash("제재가 등록되었습니다.")
-        return redirect(url_for("admin_sanctions"))
-
-    keyword = request.args.get("keyword", "").strip()
-    status = request.args.get("status", "").strip()
-
-    sanctions = fetch_admin_sanctions(keyword=keyword, status=status)
-
-    return render_template(
-        "admin/admin_sanctions.html",
-        sanctions=sanctions,
-        keyword=keyword,
-        status=status,
-    )
+    return redirect(url_for("admin_moderation"))
 
 
 # =========================
@@ -1181,7 +1175,8 @@ def admin_release_sanction(sanction_id):
         flash("제재를 해제했습니다.")
     else:
         flash("제재 내역을 찾을 수 없습니다.")
-    return redirect(url_for("admin_sanctions"))
+    return redirect(url_for("admin_moderation"))
+
 
 
 

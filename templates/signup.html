@@ -451,7 +451,6 @@
                     </div>
                 </div>
 
-                {% if not social_data %}
                 <div class="form-row">
                     <label class="label" for="password">비밀번호<span class="req">*</span></label>
                     <div class="input-wrap">
@@ -466,14 +465,6 @@
                         <div id="passwordMessage" class="check-message"></div>
                     </div>
                 </div>
-                {% else %}
-                <div class="form-row">
-                    <label class="label">비밀번호</label>
-                    <div class="input-wrap">
-                        <input type="text" class="input" value="간편 로그인 회원은 비밀번호를 입력하지 않습니다." readonly>
-                    </div>
-                </div>
-                {% endif %}
 
                 <div class="form-row">
                     <label class="label">성별<span class="req">*</span></label>
@@ -756,29 +747,26 @@
                 return;
             }
 
+            if (!password) {
+                e.preventDefault();
+                alert("비밀번호를 입력해주세요.");
+                passwordInput.focus();
+                return;
+            }
 
-            if (!isSocialSignup) {
-                if (!password) {
-                    e.preventDefault();
-                    alert("비밀번호를 입력해주세요.");
-                    passwordInput.focus();
-                    return;
-                }
+            if (!passwordConfirm) {
+                e.preventDefault();
+                alert("비밀번호 확인을 입력해주세요.");
+                passwordConfirmInput.focus();
+                return;
+            }
 
-                if (!passwordConfirm) {
-                    e.preventDefault();
-                    alert("비밀번호 확인을 입력해주세요.");
-                    passwordConfirmInput.focus();
-                    return;
-                }
-
-                if (password !== passwordConfirm) {
-                    e.preventDefault();
-                    passwordMessage.textContent = "비밀번호가 일치하지 않습니다.";
-                    passwordMessage.className = "check-message error";
-                    passwordConfirmInput.focus();
-                    return;
-                }
+            if (password !== passwordConfirm) {
+                e.preventDefault();
+                passwordMessage.textContent = "비밀번호가 일치하지 않습니다.";
+                passwordMessage.className = "check-message error";
+                passwordConfirmInput.focus();
+                return;
             }
 
             // 9. 성별

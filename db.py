@@ -146,7 +146,6 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visi
     params = []
 
     # 운영 가능한 음식점만 보이게 하는 조건
-    # 실제 DB 상태값이 다르면 OPEN / ACTIVE 부분은 맞게 수정하면 됨
     sql += " AND (r.status IS NULL OR r.status IN ('OPEN', 'ACTIVE')) "
 
     # 지역 필터
@@ -183,7 +182,6 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visi
             rows = cursor.fetchall()
 
             for row in rows:
-                # 이미지가 없으면 기본 이미지 사용
                 row["image_url"] = row["image_url"] or "https://placehold.co/160x120?text=No+Image"
                 row["avg_rating"] = float(row["avg_rating"] or 0)
                 row["visit_count"] = int(row["visit_count"] or 0)
@@ -202,7 +200,7 @@ def verify_user_login(email, password):
         SELECT *
         FROM users
         WHERE email = %s
-        AND (status IS NULL OR status <> 'DELETED')
+          AND (status IS NULL OR status <> 'DELETED')
         LIMIT 1
     """
 
@@ -212,7 +210,6 @@ def verify_user_login(email, password):
             cursor.execute(sql, (email,))
             user = cursor.fetchone()
 
-            # 비밀번호 해시 검증
             if user and check_password_hash(user["password_hash"], password):
                 return user
             return None
@@ -229,7 +226,7 @@ def find_user_by_email(email):
         FROM users
         WHERE email = %s
         LIMIT 1
-        """
+    """
 
     conn = get_connection()
     try:
@@ -241,28 +238,39 @@ def find_user_by_email(email):
 
 
 # =========================
-# 일반 회원가입
-# 현재 users 테이블 기준:
-# email / password_hash / nickname 만 저장
+# 닉네임으로 회원 조회
 # =========================
-def create_user(nickname, email, password):
-    # 입력받은 비밀번호를 안전하게 해시 처리
-    password_hash = generate_password_hash(password)
-    """
-    회원가입 시 비밀번호를 해시로 변환해서 저장
-    실제 DB 컬럼명은 password가 아니라 password_hash
-    """
-
+def find_user_by_nickname(nickname):
     sql = """
-        INSERT INTO users (email, password_hash, nickname)
-        VALUES (%s, %s, %s)
+        SELECT user_id, email, nickname, status
+        FROM users
+        WHERE nickname = %s
+        LIMIT 1
     """
 
     conn = get_connection()
-    
     try:
         with conn.cursor() as cursor:
-            # 컬럼 순서: email, password_hash, nickname
+            cursor.execute(sql, (nickname,))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+# =========================
+# 일반 회원가입
+# =========================
+def create_user(nickname, email, password):
+    password_hash = generate_password_hash(password)
+
+    sql = """
+        INSERT INTO users (email, password_hash, nickname, role)
+        VALUES (%s, %s, %s, 'USER')
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
             cursor.execute(sql, (email, password_hash, nickname))
         conn.commit()
     finally:
@@ -281,7 +289,7 @@ def find_user_by_social(provider, social_id):
             u.nickname,
             u.profile_image_url,
             u.status,
-            'USER' AS role,
+            u.role,
             usa.provider,
             usa.provider_user_id
         FROM user_social_accounts usa
@@ -305,56 +313,50 @@ def find_user_by_social(provider, social_id):
 
 
 
-# =========================
-# 소셜 회원 생성
-# =========================
-def create_social_user(nickname, email, provider, social_id, profile_image_url=None):
-    provider = provider.upper()
+# # =========================
+# # 소셜 회원 생성
+# # =========================
+# def create_social_user(nickname, email, provider, social_id, profile_image_url=None):
+#     provider = provider.upper()
 
-    user_sql = """
-        INSERT INTO users (email, password_hash, nickname, profile_image_url)
-        VALUES (%s, NULL, %s, %s)
-    """
+#     user_sql = """
+#         INSERT INTO users (email, password_hash, nickname, profile_image_url)
+#         VALUES (%s, NULL, %s, %s)
+#     """
 
-    social_sql = """
-        INSERT INTO user_social_accounts (user_id, provider, provider_user_id)
-        VALUES (%s, %s, %s)
-    """
+#     social_sql = """
+#         INSERT INTO user_social_accounts (user_id, provider, provider_user_id)
+#         VALUES (%s, %s, %s)
+#     """
 
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute(user_sql, (email, nickname, profile_image_url))
-            user_id = cursor.lastrowid
+#     conn = get_connection()
+#     try:
+#         with conn.cursor() as cursor:
+#             cursor.execute(user_sql, (email, nickname, profile_image_url))
+#             user_id = cursor.lastrowid
 
-            cursor.execute(social_sql, (user_id, provider, social_id))
+#             cursor.execute(social_sql, (user_id, provider, social_id))
 
-        conn.commit()
-        return user_id
-    except:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+#         conn.commit()
+#         return user_id
+#     except:
+#         conn.rollback()
+#         raise
+#     finally:
+#         conn.close()
 
 
 # =========================
 # 소셜 회원가입용 새 함수 추가
 # 바로 회원 생성하지 않고, 회원가입 폼을 한 번 더 거쳐서 가입하는 거
 # =========================
-
-def create_social_user_with_form(
-    nickname,
-    email,
-    provider,
-    social_id,
-    profile_image_url=None,
-):
+def create_social_user_with_form(nickname, email, password, provider, social_id, profile_image_url=None):
     provider = provider.upper()
+    password_hash = generate_password_hash(password)
 
     user_sql = """
-        INSERT INTO users (email, password_hash, nickname, profile_image_url)
-        VALUES (%s, NULL, %s, %s)
+        INSERT INTO users (email, password_hash, nickname, profile_image_url, role)
+        VALUES (%s, %s, %s, %s, 'USER')
     """
 
     social_sql = """
@@ -365,18 +367,21 @@ def create_social_user_with_form(
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(user_sql, (email, nickname, profile_image_url))
+            cursor.execute(user_sql, (email, password_hash, nickname, profile_image_url))
             user_id = cursor.lastrowid
 
             cursor.execute(social_sql, (user_id, provider, social_id))
 
         conn.commit()
         return user_id
-    except:
+    except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
+
+
+
 
 
 # =========================
@@ -415,6 +420,8 @@ def restore_user(user_id):
         conn.commit()
     finally:
         conn.close()
+
+
 # =========================
 # 닉네임 변경
 # =========================
@@ -423,7 +430,7 @@ def update_user_nickname(user_id, new_nickname):
         UPDATE users
         SET nickname = %s
         WHERE user_id = %s
-        AND (status IS NULL OR status <> 'DELETED')
+          AND (status IS NULL OR status <> 'DELETED')
     """
 
     conn = get_connection()
@@ -433,6 +440,7 @@ def update_user_nickname(user_id, new_nickname):
             return cursor.rowcount > 0
     finally:
         conn.close()
+
 
 # =========================
 # 관리자용 전체 회원 목록 조회
@@ -490,108 +498,6 @@ def admin_restore_user(user_id):
     finally:
         conn.close()
 
-# =========================
-# 관리자 리뷰 관리용 더미 데이터
-# 실제 리뷰 테이블 연결 전 임시 사용
-# =========================
-_dummy_reviews = [
-    {
-        "review_id": 101,
-        "user_nickname": "혜성",
-        "restaurant_name": "흑백식당",
-        "rating": 4.5,
-        "content": "분위기도 좋고 음식도 깔끔해서 재방문 의사 있어요.",
-        "status": "ACTIVE",
-        "report_count": 0,
-        "created_at": "2026-03-13 12:30:00",
-    },
-    {
-        "review_id": 102,
-        "user_nickname": "테스트유저",
-        "restaurant_name": "서울김밥",
-        "rating": 2.0,
-        "content": "광고 같은 느낌이 들었고 사진이 실제와 달랐어요.",
-        "status": "HIDDEN",
-        "report_count": 2,
-        "created_at": "2026-03-13 13:10:00",
-    },
-    {
-        "review_id": 103,
-        "user_nickname": "민수",
-        "restaurant_name": "혜성초밥",
-        "rating": 5.0,
-        "content": "정말 맛있었습니다. 직원분들도 친절했어요.",
-        "status": "ACTIVE",
-        "report_count": 1,
-        "created_at": "2026-03-13 14:05:00",
-    },
-    {
-        "review_id": 104,
-        "user_nickname": "가나다",
-        "restaurant_name": "한강분식",
-        "rating": 1.5,
-        "content": "반복적인 도배성 내용입니다.",
-        "status": "DELETED",
-        "report_count": 4,
-        "created_at": "2026-03-13 15:40:00",
-    },
-]
-
-
-# =========================
-# 관리자 리뷰 목록 조회
-# keyword: 리뷰ID / 작성자 / 음식점명 / 내용 검색
-# status: ACTIVE / HIDDEN / DELETED
-# =========================
-def fetch_admin_reviews(keyword="", status=""):
-    keyword = (keyword or "").strip().lower()
-    status = (status or "").strip().upper()
-
-    filtered = []
-
-    for review in _dummy_reviews:
-        matches_keyword = True
-        matches_status = True
-
-        if keyword:
-            searchable_text = " ".join([
-                str(review["review_id"]),
-                review["user_nickname"],
-                review["restaurant_name"],
-                review["content"],
-            ]).lower()
-            matches_keyword = keyword in searchable_text
-
-        if status:
-            matches_status = review["status"] == status
-
-        if matches_keyword and matches_status:
-            filtered.append(review)
-
-    return filtered
-
-
-# =========================
-# 리뷰 단건 조회
-# =========================
-def get_admin_review_by_id(review_id):
-    for review in _dummy_reviews:
-        if review["review_id"] == review_id:
-            return review
-    return None
-
-
-# =========================
-# 리뷰 상태 변경
-# ACTIVE / HIDDEN / DELETED
-# =========================
-def update_admin_review_status(review_id, new_status):
-    review = get_admin_review_by_id(review_id)
-    if not review:
-        return False
-
-    review["status"] = new_status
-    return True
 
 # =========================
 # 관리자 신고 관리용 더미 데이터
@@ -785,6 +691,8 @@ def release_admin_sanction(sanction_id):
             sanction["status"] = "RELEASED"
             return True
     return False
+
+
 # =========================
 # 마이페이지 더미 데이터
 # 실제 테이블 연결 전 임시 사용
@@ -886,28 +794,6 @@ def fetch_my_visits(user_id):
 def fetch_my_achievements(user_id):
     return _dummy_my_achievements
 
-# =========================
-# 닉네임으로 회원 조회
-# =========================
-def find_user_by_nickname(nickname):
-    sql = """
-        SELECT user_id, nickname
-        FROM users
-        WHERE nickname = %s
-        LIMIT 1
-    """
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute(sql, (nickname,))
-            return cursor.fetchone()
-    finally:
-        conn.close()
-
-# 비밀번호 해시 생성용
-from werkzeug.security import generate_password_hash
-
 
 # =========================
 # 닉네임으로 이메일 찾기
@@ -917,7 +803,7 @@ def find_email_by_nickname(nickname):
         SELECT user_id, nickname, email
         FROM users
         WHERE nickname = %s
-        AND (status IS NULL OR status <> 'DELETED')
+          AND (status IS NULL OR status <> 'DELETED')
         LIMIT 1
     """
 
@@ -941,8 +827,8 @@ def reset_user_password(email, nickname, new_password):
         UPDATE users
         SET password_hash = %s
         WHERE email = %s
-        AND nickname = %s
-        AND (status IS NULL OR status <> 'DELETED')
+          AND nickname = %s
+          AND (status IS NULL OR status <> 'DELETED')
     """
 
     conn = get_connection()
@@ -952,3 +838,234 @@ def reset_user_password(email, nickname, new_password):
             return cursor.rowcount > 0
     finally:
         conn.close()
+
+
+# =========================
+# 관리자 리뷰 관리 - 전체 리뷰 목록 조회
+# 설명:
+# - 필요 시 app.py나 다른 화면에서 써도 되도록 유지
+# - keyword, status 필터 지원
+# =========================
+def fetch_admin_reviews(keyword="", status=""):
+    sql = """
+        SELECT
+            rv.review_id,
+            rv.visit_id,
+            r.restaurant_id,
+            r.name AS restaurant_name,
+            u.user_id,
+            u.nickname AS user_nickname,
+            rv.rating,
+            rv.content,
+            rv.created_at,
+            rv.updated_at,
+            rv.status
+        FROM reviews rv
+        INNER JOIN visits v
+            ON rv.visit_id = v.visit_id
+        INNER JOIN users u
+            ON v.user_id = u.user_id
+        INNER JOIN restaurants r
+            ON v.restaurant_id = r.restaurant_id
+        WHERE 1=1
+    """
+
+    params = []
+
+    if keyword:
+        sql += """
+            AND (
+                CAST(rv.review_id AS CHAR) LIKE %s
+                OR u.nickname LIKE %s
+                OR r.name LIKE %s
+                OR rv.content LIKE %s
+            )
+        """
+        like_keyword = f"%{keyword}%"
+        params.extend([like_keyword, like_keyword, like_keyword, like_keyword])
+
+    if status:
+        sql += " AND rv.status = %s "
+        params.append(status)
+
+    sql += " ORDER BY rv.created_at DESC "
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, params)
+            return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+# =========================
+# 관리자 리뷰 관리 - 리뷰가 등록된 가게 목록 조회
+# =========================
+def fetch_admin_review_restaurants(keyword=""):
+    sql = """
+        SELECT
+            r.restaurant_id,
+            r.name AS restaurant_name,
+            COUNT(rv.review_id) AS review_count
+        FROM reviews rv
+        INNER JOIN visits v
+            ON rv.visit_id = v.visit_id
+        INNER JOIN restaurants r
+            ON v.restaurant_id = r.restaurant_id
+        WHERE (%s = '' OR r.name LIKE CONCAT('%%', %s, '%%'))
+        GROUP BY r.restaurant_id, r.name
+        ORDER BY review_count DESC, r.name ASC
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (keyword, keyword))
+            return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+# =========================
+# 관리자 리뷰 관리 - 특정 가게의 리뷰 목록 조회
+# =========================
+def fetch_admin_reviews_by_restaurant(restaurant_id, status=""):
+    sql = """
+        SELECT
+            rv.review_id,
+            rv.visit_id,
+            r.restaurant_id,
+            r.name AS restaurant_name,
+            u.user_id,
+            u.nickname AS user_nickname,
+            rv.rating,
+            rv.content,
+            rv.created_at,
+            rv.updated_at,
+            rv.status
+        FROM reviews rv
+        INNER JOIN visits v
+            ON rv.visit_id = v.visit_id
+        INNER JOIN users u
+            ON v.user_id = u.user_id
+        INNER JOIN restaurants r
+            ON v.restaurant_id = r.restaurant_id
+        WHERE r.restaurant_id = %s
+    """
+
+    params = [restaurant_id]
+
+    if status:
+        sql += " AND rv.status = %s "
+        params.append(status)
+
+    sql += " ORDER BY rv.created_at DESC "
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, params)
+            return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+# =========================
+# 관리자 리뷰 관리 - 리뷰 단건 조회
+# =========================
+def get_admin_review_by_id(review_id):
+    sql = """
+        SELECT
+            rv.review_id,
+            rv.visit_id,
+            r.restaurant_id,
+            r.name AS restaurant_name,
+            u.user_id,
+            u.nickname AS user_nickname,
+            rv.rating,
+            rv.content,
+            rv.created_at,
+            rv.updated_at,
+            rv.status
+        FROM reviews rv
+        INNER JOIN visits v
+            ON rv.visit_id = v.visit_id
+        INNER JOIN users u
+            ON v.user_id = u.user_id
+        INNER JOIN restaurants r
+            ON v.restaurant_id = r.restaurant_id
+        WHERE rv.review_id = %s
+        LIMIT 1
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (review_id,))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+# =========================
+# 관리자 리뷰 관리 - 리뷰 수정
+# =========================
+def update_admin_review(review_id, rating, content):
+    sql = """
+        UPDATE reviews
+        SET rating = %s,
+            content = %s,
+            updated_at = NOW()
+        WHERE review_id = %s
+          AND status <> 'DELETED'
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (rating, content, review_id))
+            return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
+# =========================
+# 관리자 리뷰 관리 - 리뷰 상태 변경 공통 함수
+# =========================
+def update_admin_review_status(review_id, new_status):
+    sql = """
+        UPDATE reviews
+        SET status = %s,
+            updated_at = NOW()
+        WHERE review_id = %s
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (new_status, review_id))
+            return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
+# =========================
+# 관리자 리뷰 관리 - 리뷰 숨김
+# =========================
+def hide_admin_review(review_id):
+    return update_admin_review_status(review_id, "HIDDEN")
+
+
+# =========================
+# 관리자 리뷰 관리 - 리뷰 삭제(소프트 삭제)
+# =========================
+def soft_delete_admin_review(review_id):
+    return update_admin_review_status(review_id, "DELETED")
+
+
+# =========================
+# 관리자 리뷰 관리 - 리뷰 복구
+# =========================
+def restore_admin_review(review_id):
+    return update_admin_review_status(review_id, "ACTIVE")
