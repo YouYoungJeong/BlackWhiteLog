@@ -408,11 +408,11 @@
                     <label class="label">생년월일<span class="req">*</span></label>
                     <div class="input-wrap">
                         <div class="birth-row">
-                            <input type="text" name="birth_year" class="birth-input" placeholder="YYYY" maxlength="4" required>
+                            <input type="text" name="birth_year" class="birth-input" placeholder="YYYY" maxlength="4" inputmode="numeric" required>
                             <div class="slash">/</div>
-                            <input type="text" name="birth_month" class="birth-input" placeholder="MM" maxlength="2" required>
+                            <input type="text" name="birth_month" class="birth-input" placeholder="MM" maxlength="2" inputmode="numeric" required>
                             <div class="slash">/</div>
-                            <input type="text" name="birth_day" class="birth-input" placeholder="DD" maxlength="2" required>
+                            <input type="text" name="birth_day" class="birth-input" placeholder="DD" maxlength="2" inputmode="numeric" required>
                         </div>
                     </div>
                 </div>
@@ -502,6 +502,11 @@
         const birthYearInput = document.querySelector('input[name="birth_year"]');
         const birthMonthInput = document.querySelector('input[name="birth_month"]');
         const birthDayInput = document.querySelector('input[name="birth_day"]');
+        [birthYearInput, birthMonthInput, birthDayInput].forEach(input => {
+            input.addEventListener("input", function () {
+                this.value = this.value.replace(/\D/g, "");
+            });
+        });
         const genderInputs = document.querySelectorAll('input[name="gender"]');
 
         function resetEmailCheck() {
@@ -557,25 +562,11 @@
             const detailAddress = detailAddressInput.value.trim();
 
             // 가입하기에서는 브라우저 말풍선 말고 alert로만 처리
-            if (!emailInput.checkValidity()) {
-                e.preventDefault();
-                alert("이메일 형식을 먼저 올바르게 입력해주세요.");
-                emailInput.focus();
-                return;
-            }
-
             if (password !== passwordConfirm) {
                 e.preventDefault();
                 passwordMessage.textContent = "비밀번호가 일치하지 않습니다.";
                 passwordMessage.className = "check-message error";
                 passwordConfirmInput.focus();
-                return;
-            }
-
-            if (!postcode || !roadAddress) {
-                e.preventDefault();
-                alert("주소 검색을 통해 주소를 입력해주세요.");
-                document.querySelector(".full-btn").focus();
                 return;
             }
         });
@@ -665,27 +656,11 @@
                 return;
             }
 
-            // 2. 이메일 형식
-            if (!emailInput.checkValidity()) {
-                e.preventDefault();
-                alert("이메일 형식을 올바르게 입력해주세요.");
-                emailInput.focus();
-                return;
-            }
-
             // 3. 이메일 중복확인
             if (emailChecked.value !== "true" || checkedEmailValue.value !== currentEmail) {
                 e.preventDefault();
                 alert("이메일 중복 확인을 해주세요.");
                 emailInput.focus();
-                return;
-            }
-
-            // 4. 닉네임 입력
-            if (!currentNickname) {
-                e.preventDefault();
-                alert("닉네임을 입력해주세요.");
-                nicknameInput.focus();
                 return;
             }
 
