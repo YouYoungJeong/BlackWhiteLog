@@ -189,7 +189,8 @@ select:focus {
 .ghost-btn,
 .outline-btn,
 .menu-edit-btn,
-.menu-delete-btn {
+.menu-delete-btn,
+.pagination-btn {
     height: 46px;
     border-radius: 10px;
     border: 1px solid transparent;
@@ -385,6 +386,65 @@ a.ghost-btn {
 }
 
 /* =========================
+   빈 상태
+   ========================= */
+.empty-menu-message {
+    margin: 0;
+    padding: 28px 16px;
+    border: 1px dashed var(--color-line);
+    border-radius: var(--radius-md);
+    background: #fbfcfa;
+    color: #666666;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* =========================
+   페이지네이션
+   ========================= */
+.pagination-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+}
+
+.pagination-list {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    min-width: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: var(--color-white);
+    border-color: var(--color-line);
+    color: var(--color-black);
+}
+
+.pagination-btn:hover {
+    background: var(--color-sage-light);
+    border-color: var(--color-sage);
+}
+
+.pagination-btn.is-active {
+    background: var(--color-sage);
+    border-color: var(--color-sage);
+    color: var(--color-white);
+}
+
+.pagination-nav {
+    min-width: 72px;
+}
+
+/* =========================
    반응형
    ========================= */
 @media (max-width: 860px) {
@@ -452,7 +512,15 @@ a.ghost-btn {
 
     .registered-menu-actions form,
     .menu-edit-btn,
-    .menu-delete-btn {
+    .menu-delete-btn,
+    .pagination-btn,
+    .pagination-nav {
+        width: 100%;
+    }
+
+    .pagination-wrap,
+    .pagination-list {
+        flex-direction: column;
         width: 100%;
     }
 }

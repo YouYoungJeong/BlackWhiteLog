@@ -63,9 +63,31 @@ def get_menu_categories():
             return cursor.fetchall()
     finally:
         conn.close()
+#------------------------------------------------------------------------------------
+# 등록된 메뉴 출력 - meue_management
+#------------------------------------------------------------------------------------
+
+# 페이징을 위한 페이지 출력 조건제한
+def get_menu_count_by_owner(owner_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT COUNT(*) AS total_count
+                FROM restaurant_menus rm
+                INNER JOIN restaurants r
+                    ON rm.restaurant_id = r.restaurant_id
+                WHERE r.owner_id = %s
+            """
+            cursor.execute(sql, (owner_id,))
+            result = cursor.fetchone()
+            return result["total_count"] if result else 0
+    finally:
+        conn.close()
 
 
-def get_menu_list_by_owner(owner_id):
+
+def get_menu_list_by_owner(owner_id, limit=5, offset=0):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
@@ -84,12 +106,12 @@ def get_menu_list_by_owner(owner_id):
                     ON rm.menu_category_id = mc.menu_category_id
                 WHERE r.owner_id = %s
                 ORDER BY rm.menu_id DESC
+                LIMIT %s OFFSET %s
             """
-            cursor.execute(sql, (owner_id,))
+            cursor.execute(sql, (owner_id, limit, offset))
             return cursor.fetchall()
     finally:
         conn.close()
-
 
 def insert_menu(owner_id, menu_category_id, menu_name, price, status="ON"):
     conn = get_connection()
@@ -142,7 +164,7 @@ def insert_menu(owner_id, menu_category_id, menu_name, price, status="ON"):
     finally:
         conn.close()
 
-# [추가] 수정 버튼 눌렀을 때 기존 메뉴 정보 1건 조회
+# 수정 버튼 눌렀을 때 기존 메뉴 정보 1건 조회
 def get_menu_detail_by_id(owner_id, menu_id):
     conn = get_connection()
     try:
@@ -170,7 +192,7 @@ def get_menu_detail_by_id(owner_id, menu_id):
         conn.close()
 
 
-# [추가] 실제 수정 처리
+# 실제 수정 처리
 def update_menu(owner_id, menu_id, menu_category_id, menu_name, price, status="ON"):
     conn = get_connection()
     try:
@@ -210,7 +232,7 @@ def update_menu(owner_id, menu_id, menu_category_id, menu_name, price, status="O
         conn.close()
 
 
-# [추가] 실제 삭제 처리
+# 실제 삭제 처리
 def delete_menu(owner_id, menu_id):
     conn = get_connection()
     try:
