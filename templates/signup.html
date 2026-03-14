@@ -319,6 +319,60 @@
                 font-size: 16px;
             }
         }
+
+        .site-footer {
+            margin-top: 60px;
+            padding: 36px 20px 28px;
+            background: #e8efe0;
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #6c7369;
+        }
+
+        .footer-links a {
+            color: #6c7369;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-links span {
+            color: #8b9186;
+        }
+
+        .footer-copy {
+            margin-top: 18px;
+            font-size: 16px;
+            color: #7d847a;
+            font-weight: 500;
+        }
+
+        .site-footer {
+            margin-top: 40px;
+            padding: 28px 16px 24px;
+        }
+
+        .footer-links {
+            gap: 10px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .footer-copy {
+            font-size: 14px;
+            margin-top: 14px;
+        }
     </style>
 </head>
 <body>
@@ -327,10 +381,18 @@
             <img src="/static/img/main_logo.png" alt="흑백로그 로고" class="signup-logo">
         </div>
         <br>
-        <h1 class="title">회원가입</h1>
+            <h1 class="title">회원가입</h1>
+
+            {% if social_data %}
+                <p style="text-align:center; color:#5f7a61; font-size:14px; font-weight:700; margin:0 0 18px;">
+                    간편 로그인 정보가 자동 입력되었습니다. 나머지 정보를 입력하고 가입을 완료해주세요.
+                </p>
+            {% endif %}
 
         <div class="top-line">* 필수입력사항</div>
         <div class="divider"></div>
+
+        {% set form_data = form_data or {} %}
 
         {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -340,19 +402,31 @@
             {% endif %}
         {% endwith %}
 
-        <form action="/signup" method="post" id="signupForm">
-            <input type="hidden" name="email_checked" id="email_checked" value="false">
-            <input type="hidden" name="checked_email_value" id="checked_email_value" value="">
-            <input type="hidden" name="nickname_checked" id="nickname_checked" value="false">
-            <input type="hidden" name="checked_nickname_value" id="checked_nickname_value" value="">
+
+        <form action="/signup" method="post" id="signupForm" novalidate>
+            <input type="hidden" name="email_checked" id="email_checked" value="{{ 'true' if social_data else 'false' }}">
+            <input type="hidden" name="checked_email_value" id="checked_email_value" value="{{ social_data.email if social_data else form_data.get('email', '') }}">
+            <input type="hidden" name="nickname_checked" id="nickname_checked" value="{{ 'true' if form_data.get('nickname') and social_data and form_data.get('nickname') == social_data.get('nickname') else 'false' }}">
+            <input type="hidden" name="checked_nickname_value" id="checked_nickname_value" value="{{ form_data.get('nickname', social_data.nickname if social_data else '') }}">
 
             <div class="form-table">
                 <div class="form-row">
                     <label class="label" for="email">이메일<span class="req">*</span></label>
                     <div class="input-wrap">
                         <div class="input-row">
-                            <input type="email" id="email" name="email" class="input" placeholder="예: blackwhitelog@gmail.com" required>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                class="input"
+                                placeholder="예: blackwhitelog@gmail.com"
+                                value="{{ social_data.email if social_data else form_data.get('email', '') }}"
+                                {% if social_data %}readonly{% endif %}
+                                required
+                            >
+                            {% if not social_data %}
                             <button type="button" class="action-btn" id="checkEmailBtn">중복 확인</button>
+                            {% endif %}
                         </div>
                         <div id="emailMessage" class="check-message"></div>
                     </div>
@@ -362,7 +436,15 @@
                     <label class="label" for="nickname">닉네임<span class="req">*</span></label>
                     <div class="input-wrap">
                         <div class="input-row">
-                            <input type="text" id="nickname" name="nickname" class="input" placeholder="닉네임을 입력해주세요" required>
+                            <input
+                                type="text"
+                                id="nickname"
+                                name="nickname"
+                                class="input"
+                                placeholder="닉네임을 입력해주세요"
+                                value="{{ form_data.get('nickname', social_data.nickname if social_data else '') }}"
+                                required
+                            >
                             <button type="button" class="action-btn" id="checkNicknameBtn">중복 확인</button>
                         </div>
                         <div id="nicknameMessage" class="check-message"></div>
@@ -389,15 +471,15 @@
                     <div class="input-wrap">
                         <div class="gender-group">
                             <label class="radio-item">
-                                <input type="radio" name="gender" value="male" required>
+                                <input type="radio" name="gender" value="male" {% if form_data.get('gender') == 'male' %}checked{% endif %} required>
                                 남자
                             </label>
                             <label class="radio-item">
-                                <input type="radio" name="gender" value="female" required>
+                                <input type="radio" name="gender" value="female" {% if form_data.get('gender') == 'female' %}checked{% endif %} required>
                                 여자
                             </label>
                             <label class="radio-item">
-                                <input type="radio" name="gender" value="none" required>
+                                <input type="radio" name="gender" value="none" {% if form_data.get('gender') == 'none' %}checked{% endif %} required>
                                 선택안함
                             </label>
                         </div>
@@ -408,11 +490,11 @@
                     <label class="label">생년월일<span class="req">*</span></label>
                     <div class="input-wrap">
                         <div class="birth-row">
-                            <input type="text" name="birth_year" class="birth-input" placeholder="YYYY" maxlength="4" required>
+                            <input type="text" name="birth_year" class="birth-input" placeholder="YYYY" maxlength="4" inputmode="numeric" value="{{ form_data.get('birth_year', '') }}" required>
                             <div class="slash">/</div>
-                            <input type="text" name="birth_month" class="birth-input" placeholder="MM" maxlength="2" required>
+                            <input type="text" name="birth_month" class="birth-input" placeholder="MM" maxlength="2" inputmode="numeric" value="{{ form_data.get('birth_month', '') }}" required>
                             <div class="slash">/</div>
-                            <input type="text" name="birth_day" class="birth-input" placeholder="DD" maxlength="2" required>
+                            <input type="text" name="birth_day" class="birth-input" placeholder="DD" maxlength="2" inputmode="numeric" value="{{ form_data.get('birth_day', '') }}" required>
                         </div>
                     </div>
                 </div>
@@ -423,11 +505,11 @@
                     <div class="input-wrap address-block">
                         <button type="button" class="full-btn" onclick="execDaumPostcode()"><span>🔍 주소 검색</span></button>
 
-                        <input type="text" id="postcode" name="postcode" class="input" placeholder="우편번호" readonly required>
-                        <input type="text" id="roadAddress" name="roadAddress" class="input" placeholder="도로명 주소" readonly required>
-                        <input type="text" id="jibunAddress" name="jibunAddress" class="input" placeholder="지번 주소" readonly>
-                        <input type="text" id="detailAddress" name="detailAddress" class="input" placeholder="상세주소를 입력해주세요">
-                        <input type="text" id="extraAddress" name="extraAddress" class="input" placeholder="참고항목" readonly>
+                        <input type="text" id="postcode" name="postcode" class="input" placeholder="우편번호" value="{{ form_data.get('postcode', '') }}" readonly required>
+                        <input type="text" id="roadAddress" name="roadAddress" class="input" placeholder="도로명 주소" value="{{ form_data.get('roadAddress', '') }}" readonly required>
+                        <input type="text" id="jibunAddress" name="jibunAddress" class="input" placeholder="지번 주소" value="{{ form_data.get('jibunAddress', '') }}" readonly>
+                        <input type="text" id="detailAddress" name="detailAddress" class="input" placeholder="상세주소를 입력해주세요" value="{{ form_data.get('detailAddress', '') }}">
+                        <input type="text" id="extraAddress" name="extraAddress" class="input" placeholder="참고항목" value="{{ form_data.get('extraAddress', '') }}" readonly>
                     </div>
                 </div>
                 <br><br>
@@ -437,7 +519,7 @@
                     <div class="input-wrap">
                         <div class="agree-box">
                             <label class="check-item">
-                                <input type="checkbox" name="ad_agree" value="Y">
+                                <input type="checkbox" name="ad_agree" value="Y" {% if form_data.get('ad_agree') == 'Y' %}checked{% endif %}>
                                 (선택) 할인 혜택 및 이벤트 정보 수신에 동의합니다.
                             </label>
                         </div>
@@ -489,11 +571,27 @@
         const nicknameMessage = document.getElementById("nicknameMessage");
         const passwordMessage = document.getElementById("passwordMessage");
 
+        const isSocialSignup = {{ 'true' if social_data else 'false' }};
+
         const emailChecked = document.getElementById("email_checked");
         const checkedEmailValue = document.getElementById("checked_email_value");
 
         const nicknameChecked = document.getElementById("nickname_checked");
         const checkedNicknameValue = document.getElementById("checked_nickname_value");
+
+        const postcodeInput = document.getElementById("postcode");
+        const roadAddressInput = document.getElementById("roadAddress");
+        const detailAddressInput = document.getElementById("detailAddress");
+
+        const birthYearInput = document.querySelector('input[name="birth_year"]');
+        const birthMonthInput = document.querySelector('input[name="birth_month"]');
+        const birthDayInput = document.querySelector('input[name="birth_day"]');
+        [birthYearInput, birthMonthInput, birthDayInput].forEach(input => {
+            input.addEventListener("input", function () {
+                this.value = this.value.replace(/\D/g, "");
+            });
+        });
+        const genderInputs = document.querySelectorAll('input[name="gender"]');
 
         function resetEmailCheck() {
             emailChecked.value = "false";
@@ -534,71 +632,48 @@
             }
         }
 
-        emailInput.addEventListener("input", resetEmailCheck);
+        if (emailInput && !emailInput.readOnly) {
+            emailInput.addEventListener("input", resetEmailCheck);
+        }
         nicknameInput.addEventListener("input", resetNicknameCheck);
-        passwordInput.addEventListener("input", checkPasswordMatch);
-        passwordConfirmInput.addEventListener("input", checkPasswordMatch);
-
-        document.getElementById("signupForm").addEventListener("submit", function (e) {
-            const currentEmail = emailInput.value.trim();
-            const currentNickname = nicknameInput.value.trim();
-            const password = passwordInput.value;
-            const passwordConfirm = passwordConfirmInput.value;
-
-            if (emailChecked.value !== "true" || checkedEmailValue.value !== currentEmail) {
-                e.preventDefault();
-                alert("이메일 중복 확인을 해주세요.");
-                emailInput.focus();
-                return;
-            }
-
-            if (nicknameChecked.value !== "true" || checkedNicknameValue.value !== currentNickname) {
-                e.preventDefault();
-                alert("닉네임 중복 확인을 해주세요.");
-                nicknameInput.focus();
-                return;
-            }
-
-            if (password !== passwordConfirm) {
-                e.preventDefault();
-                passwordMessage.textContent = "비밀번호가 일치하지 않습니다.";
-                passwordMessage.className = "check-message error";
-                passwordConfirmInput.focus();
-                return;
-            }
-        });
+        if (passwordInput && passwordConfirmInput) {
+            passwordInput.addEventListener("input", checkPasswordMatch);
+            passwordConfirmInput.addEventListener("input", checkPasswordMatch);
+        }
 
 
+        const checkEmailBtn = document.getElementById("checkEmailBtn");
+        if (checkEmailBtn) {
+            checkEmailBtn.addEventListener("click", async function () {
+                const value = emailInput.value.trim();
 
-
-        document.getElementById("checkEmailBtn").addEventListener("click", async function () {
-            const value = emailInput.value.trim();
-
-            if (!value) {
-                alert("이메일을 입력해주세요.");
-                emailInput.focus();
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/check-duplicate?type=email&value=${encodeURIComponent(value)}`);
-                const data = await response.json();
-
-                emailMessage.textContent = data.message;
-                emailMessage.className = data.available ? "check-message success" : "check-message error";
-
-                if (data.available) {
-                    emailChecked.value = "true";
-                    checkedEmailValue.value = value;
-                } else {
-                    emailChecked.value = "false";
-                    checkedEmailValue.value = "";
+                if (!emailInput.checkValidity()) {
+                    emailInput.reportValidity();
                     emailInput.focus();
+                    return;
                 }
-            } catch (error) {
-                alert("이메일 중복 확인 중 오류가 발생했습니다.");
-            }
-        });
+
+                try {
+                    const response = await fetch(`/api/check-duplicate?type=email&value=${encodeURIComponent(value)}`);
+                    const data = await response.json();
+
+                    emailMessage.textContent = data.message;
+                    emailMessage.className = data.available ? "check-message success" : "check-message error";
+
+                    if (data.available) {
+                        emailChecked.value = "true";
+                        checkedEmailValue.value = value;
+                    } else {
+                        emailChecked.value = "false";
+                        checkedEmailValue.value = "";
+                        emailInput.focus();
+                    }
+                } catch (error) {
+                    alert("이메일 중복 확인 중 오류가 발생했습니다.");
+                }
+            });
+        }
+
 
         document.getElementById("checkNicknameBtn").addEventListener("click", async function () {
             const value = nicknameInput.value.trim();
@@ -629,24 +704,126 @@
             }
         });
 
+
         document.getElementById("signupForm").addEventListener("submit", function (e) {
             const currentEmail = emailInput.value.trim();
             const currentNickname = nicknameInput.value.trim();
+            const password = passwordInput ? passwordInput.value : "";
+            const passwordConfirm = passwordConfirmInput ? passwordConfirmInput.value : "";
 
-            if (emailChecked.value !== "true" || checkedEmailValue.value !== currentEmail) {
+            const birthYear = birthYearInput.value.trim();
+            const birthMonth = birthMonthInput.value.trim();
+            const birthDay = birthDayInput.value.trim();
+
+            const postcode = postcodeInput.value.trim();
+            const roadAddress = roadAddressInput.value.trim();
+            const detailAddress = detailAddressInput.value.trim();
+
+            const genderChecked = Array.from(genderInputs).some(input => input.checked);
+
+            // 1. 이메일 입력
+            if (!currentEmail) {
                 e.preventDefault();
-                alert("이메일 중복 확인을 해주세요.");
+                alert("이메일을 입력해주세요.");
                 emailInput.focus();
                 return;
             }
 
+            // 3. 이메일 중복확인
+            if (!isSocialSignup) {
+                if (emailChecked.value !== "true" || checkedEmailValue.value !== currentEmail) {
+                    e.preventDefault();
+                    alert("이메일 중복 확인을 해주세요.");
+                    emailInput.focus();
+                    return;
+                }
+            }
+
+            // 5. 닉네임 중복확인
             if (nicknameChecked.value !== "true" || checkedNicknameValue.value !== currentNickname) {
                 e.preventDefault();
                 alert("닉네임 중복 확인을 해주세요.");
                 nicknameInput.focus();
                 return;
             }
+
+            if (!password) {
+                e.preventDefault();
+                alert("비밀번호를 입력해주세요.");
+                passwordInput.focus();
+                return;
+            }
+
+            if (!passwordConfirm) {
+                e.preventDefault();
+                alert("비밀번호 확인을 입력해주세요.");
+                passwordConfirmInput.focus();
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                e.preventDefault();
+                passwordMessage.textContent = "비밀번호가 일치하지 않습니다.";
+                passwordMessage.className = "check-message error";
+                passwordConfirmInput.focus();
+                return;
+            }
+
+            // 9. 성별
+            if (!genderChecked) {
+                e.preventDefault();
+                alert("성별을 선택해주세요.");
+                genderInputs[0].focus();
+                return;
+            }
+
+            // 10. 생년월일
+            if (!birthYear) {
+                e.preventDefault();
+                alert("출생연도를 입력해주세요.");
+                birthYearInput.focus();
+                return;
+            }
+
+            if (!birthMonth) {
+                e.preventDefault();
+                alert("출생월을 입력해주세요.");
+                birthMonthInput.focus();
+                return;
+            }
+
+            if (!birthDay) {
+                e.preventDefault();
+                alert("출생일을 입력해주세요.");
+                birthDayInput.focus();
+                return;
+            }
+
+            // 11. 주소검색
+            if (!postcode || !roadAddress) {
+                e.preventDefault();
+                alert("주소 검색을 통해 주소를 입력해주세요.");
+                document.querySelector(".full-btn").focus();
+                return;
+            }
         });
     </script>
+
+    <footer class="site-footer">
+    <div class="footer-links">
+        <a href="#">이용약관</a>
+        <span>|</span>
+        <a href="#">개인정보처리방침</a>
+        <span>|</span>
+        <a href="#">책임의 한계와 법적고지</a>
+        <span>|</span>
+        <a href="#">회원정보</a>
+        <span>|</span>
+        <a href="#">고객센터</a>
+    </div>
+    <div class="footer-copy">
+        Copyright ⓒ 흑백로그 Corp. All Rights Reserved.
+    </div>
+</footer>
 </body>
 </html>

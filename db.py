@@ -264,8 +264,8 @@ def create_user(nickname, email, password):
     password_hash = generate_password_hash(password)
 
     sql = """
-        INSERT INTO users (email, password_hash, nickname)
-        VALUES (%s, %s, %s)
+        INSERT INTO users (email, password_hash, nickname, role)
+        VALUES (%s, %s, %s, 'USER')
     """
 
     conn = get_connection()
@@ -283,13 +283,25 @@ def create_user(nickname, email, password):
 # =========================
 def find_user_by_social(provider, social_id):
     sql = """
-        SELECT *
-        FROM users
-        WHERE provider = %s
-          AND social_id = %s
-          AND (status IS NULL OR status <> 'DELETED')
+        SELECT
+            u.user_id,
+            u.email,
+            u.nickname,
+            u.profile_image_url,
+            u.status,
+            u.role,
+            usa.provider,
+            usa.provider_user_id
+        FROM user_social_accounts usa
+        INNER JOIN users u
+            ON usa.user_id = u.user_id
+        WHERE usa.provider = %s
+          AND usa.provider_user_id = %s
+          AND (u.status IS NULL OR u.status <> 'DELETED')
         LIMIT 1
     """
+
+    provider = provider.upper()
 
     conn = get_connection()
     try:
@@ -300,22 +312,76 @@ def find_user_by_social(provider, social_id):
         conn.close()
 
 
+
+# # =========================
+# # 소셜 회원 생성
+# # =========================
+# def create_social_user(nickname, email, provider, social_id, profile_image_url=None):
+#     provider = provider.upper()
+
+#     user_sql = """
+#         INSERT INTO users (email, password_hash, nickname, profile_image_url)
+#         VALUES (%s, NULL, %s, %s)
+#     """
+
+#     social_sql = """
+#         INSERT INTO user_social_accounts (user_id, provider, provider_user_id)
+#         VALUES (%s, %s, %s)
+#     """
+
+#     conn = get_connection()
+#     try:
+#         with conn.cursor() as cursor:
+#             cursor.execute(user_sql, (email, nickname, profile_image_url))
+#             user_id = cursor.lastrowid
+
+#             cursor.execute(social_sql, (user_id, provider, social_id))
+
+#         conn.commit()
+#         return user_id
+#     except:
+#         conn.rollback()
+#         raise
+#     finally:
+#         conn.close()
+
+
 # =========================
-# 소셜 회원 생성
+# 소셜 회원가입용 새 함수 추가
+# 바로 회원 생성하지 않고, 회원가입 폼을 한 번 더 거쳐서 가입하는 거
 # =========================
-def create_social_user(nickname, email, provider, social_id, profile_image_url=None):
-    sql = """
-        INSERT INTO users (nickname, email, password_hash, provider, social_id, profile_image_url)
-        VALUES (%s, %s, NULL, %s, %s, %s)
+def create_social_user_with_form(nickname, email, password, provider, social_id, profile_image_url=None):
+    provider = provider.upper()
+    password_hash = generate_password_hash(password)
+
+    user_sql = """
+        INSERT INTO users (email, password_hash, nickname, profile_image_url, role)
+        VALUES (%s, %s, %s, %s, 'USER')
+    """
+
+    social_sql = """
+        INSERT INTO user_social_accounts (user_id, provider, provider_user_id)
+        VALUES (%s, %s, %s)
     """
 
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (nickname, email, provider, social_id, profile_image_url))
+            cursor.execute(user_sql, (email, password_hash, nickname, profile_image_url))
+            user_id = cursor.lastrowid
+
+            cursor.execute(social_sql, (user_id, provider, social_id))
+
         conn.commit()
+        return user_id
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
+
+
+
 
 
 # =========================
