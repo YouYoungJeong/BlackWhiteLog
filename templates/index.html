@@ -258,60 +258,83 @@
     <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
 
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
-        <div class="side-drawer__header">
-            <button
-                type="button"
-                class="side-drawer__close"
-                id="sideDrawerCloseBtn"
-                aria-label="메뉴 닫기"
-            >
-                ×
+    <div class="side-drawer__header">
+        <button
+            type="button"
+            class="side-drawer__close"
+            id="sideDrawerCloseBtn"
+            aria-label="메뉴 닫기"
+        >
+            ×
+        </button>
+
+        {% if user_email %}
+            <a href="{{ url_for('mypage') }}" class="side-drawer__profile">
+                <div class="side-drawer__avatar">
+                    <span>👤</span>
+                </div>
+                <strong class="side-drawer__name">
+                    {{ user_nickname }}
+                </strong>
+            </a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="side-drawer__profile">
+                <div class="side-drawer__avatar">
+                    <span>👤</span>
+                </div>
+                <strong class="side-drawer__name">
+                    로그인 해주세요
+                </strong>
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="side-drawer__body">
+        <nav class="side-drawer__nav">
+            <button type="button" class="side-drawer__item">
+                <span class="side-drawer__icon">⌂</span>
+                <span>피드</span>
             </button>
 
-        <a href="{{ url_for('mypage') }}" class="side-drawer__profile">
-        <div class="side-drawer__avatar">
-        <span>👤</span>
-        </div>
-        <strong class="side-drawer__name">
-        {{ user_nickname }}
-        </strong>
-        </a>
-    </div>
-        <div class="side-drawer__body">
-            <nav class="side-drawer__nav">
-                <button type="button" class="side-drawer__item">
-                    <span class="side-drawer__icon">⌂</span>
-                    <span>피드</span>
-                </button>
-                <button type="button" class="side-drawer__item">
-                    <span class="side-drawer__icon">▣</span>
-                    <span>게시판</span>
-                </button>
-                <button type="button" class="side-drawer__item">
-                    <span class="side-drawer__icon">🔔</span>
-                    <span>공지사항</span>
-                </button>
-                <button type="button" class="side-drawer__item">
+            <button type="button" class="side-drawer__item">
+                <span class="side-drawer__icon">▣</span>
+                <span>게시판</span>
+            </button>
+
+            <button type="button" class="side-drawer__item">
+                <span class="side-drawer__icon">🔔</span>
+                <span>공지사항</span>
+            </button>
+
+            {% if user_email %}
+                <a href="{{ url_for('logout') }}" class="side-drawer__item side-drawer__item--link">
                     <span class="side-drawer__icon">↪</span>
                     <span>로그아웃</span>
-                </button>
-                <button type="button" class="side-drawer__item" id="sellerRegisterBtn"> <!-- 이종민 수정 3월 12일 -->
-                    <span class="side-drawer__icon">🏪</span>
-                    <span>판매자 등록하기</span>
-                </button>
-            </nav>
+                </a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="side-drawer__item side-drawer__item--link">
+                    <span class="side-drawer__icon">→</span>
+                    <span>로그인</span>
+                </a>
+            {% endif %}
 
-            <div class="side-drawer__divider"></div>
+            <button type="button" class="side-drawer__item" id="sellerRegisterBtn">
+                <span class="side-drawer__icon">🏪</span>
+                <span>판매자 등록하기</span>
+            </button>
+        </nav>
 
-            <div class="side-drawer__section-title">기타</div>
+        <div class="side-drawer__divider"></div>
 
-            <div class="side-drawer__sublist">
-                <button type="button" class="side-drawer__subitem">설정</button>
-                <button type="button" class="side-drawer__subitem">고객센터</button>
-                <button type="button" class="side-drawer__subitem">이용약관</button>
-            </div>
+        <div class="side-drawer__section-title">기타</div>
+
+        <div class="side-drawer__sublist">
+            <button type="button" class="side-drawer__subitem">설정</button>
+            <button type="button" class="side-drawer__subitem">고객센터</button>
+            <button type="button" class="side-drawer__subitem">이용약관</button>
         </div>
-    </aside>
+    </div>
+</aside>
 
     
 

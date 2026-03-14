@@ -38,8 +38,6 @@ from db import (
     fetch_all_users,
     admin_deactivate_user,
     admin_restore_user,
-    fetch_admin_reviews,
-    update_admin_review_status,
     fetch_admin_reports,
     update_admin_report_status,
     fetch_admin_sanctions,
@@ -954,64 +952,48 @@ def admin_user_restore(user_id):
 
 
 # =========================
-# 관리자 리뷰 관리 목록
+# 관리자 신고 / 제재 통합 관리
 # =========================
-@app.route("/admin/reviews")
+@app.route("/admin/moderation", methods=["GET", "POST"])
 @admin_required
-def admin_reviews():
-    keyword = request.args.get("keyword", "").strip()
-    status = request.args.get("status", "").strip()
+def admin_moderation():
+    if request.method == "POST":
+        user_nickname = request.form.get("user_nickname", "").strip()
+        sanction_type = request.form.get("sanction_type", "").strip()
+        reason = request.form.get("reason", "").strip()
+        expire_at = request.form.get("expire_at", "").strip()
 
-    reviews = fetch_admin_reviews(keyword=keyword, status=status)
+        if not user_nickname or not sanction_type or not reason:
+            flash("대상 닉네임, 제재 종류, 사유를 입력해주세요.")
+            return redirect(url_for("admin_moderation"))
+
+        create_admin_sanction(
+            user_nickname=user_nickname,
+            sanction_type=sanction_type,
+            reason=reason,
+            expire_at=expire_at if expire_at else "-"
+        )
+        flash("제재가 등록되었습니다.")
+        return redirect(url_for("admin_moderation"))
+
+    report_keyword = request.args.get("report_keyword", "").strip()
+    report_status = request.args.get("report_status", "").strip()
+
+    sanction_keyword = request.args.get("sanction_keyword", "").strip()
+    sanction_status = request.args.get("sanction_status", "").strip()
+
+    reports = fetch_admin_reports(keyword=report_keyword, status=report_status)
+    sanctions = fetch_admin_sanctions(keyword=sanction_keyword, status=sanction_status)
 
     return render_template(
-        "admin/admin_reviews.html",
-        reviews=reviews,
-        keyword=keyword,
-        status=status,
+        "admin/admin_moderation.html",
+        reports=reports,
+        sanctions=sanctions,
+        report_keyword=report_keyword,
+        report_status=report_status,
+        sanction_keyword=sanction_keyword,
+        sanction_status=sanction_status,
     )
-
-
-# =========================
-# 리뷰 숨김 처리
-# =========================
-@app.route("/admin/reviews/<int:review_id>/hide", methods=["POST"])
-@admin_required
-def admin_hide_review(review_id):
-    success = update_admin_review_status(review_id, "HIDDEN")
-    if success:
-        flash("리뷰를 숨김 처리했습니다.")
-    else:
-        flash("리뷰를 찾을 수 없습니다.")
-    return redirect(url_for("admin_reviews"))
-
-
-# =========================
-# 리뷰 삭제 처리
-# =========================
-@app.route("/admin/reviews/<int:review_id>/delete", methods=["POST"])
-@admin_required
-def admin_delete_review(review_id):
-    success = update_admin_review_status(review_id, "DELETED")
-    if success:
-        flash("리뷰를 삭제 처리했습니다.")
-    else:
-        flash("리뷰를 찾을 수 없습니다.")
-    return redirect(url_for("admin_reviews"))
-
-
-# =========================
-# 리뷰 복구 처리
-# =========================
-@app.route("/admin/reviews/<int:review_id>/restore", methods=["POST"])
-@admin_required
-def admin_restore_review(review_id):
-    success = update_admin_review_status(review_id, "ACTIVE")
-    if success:
-        flash("리뷰를 복구했습니다.")
-    else:
-        flash("리뷰를 찾을 수 없습니다.")
-    return redirect(url_for("admin_reviews"))
 
 
 # =========================
@@ -1020,17 +1002,7 @@ def admin_restore_review(review_id):
 @app.route("/admin/reports")
 @admin_required
 def admin_reports():
-    keyword = request.args.get("keyword", "").strip()
-    status = request.args.get("status", "").strip()
-
-    reports = fetch_admin_reports(keyword=keyword, status=status)
-
-    return render_template(
-        "admin/admin_reports.html",
-        reports=reports,
-        keyword=keyword,
-        status=status,
-    )
+    return redirect(url_for("admin_moderation"))
 
 
 # =========================
@@ -1044,7 +1016,7 @@ def admin_resolve_report(report_id):
         flash("신고를 처리 완료 상태로 변경했습니다.")
     else:
         flash("신고 내역을 찾을 수 없습니다.")
-    return redirect(url_for("admin_reports"))
+    return redirect(url_for("admin_moderation"))
 
 
 # =========================
@@ -1058,7 +1030,7 @@ def admin_reject_report(report_id):
         flash("신고를 반려 처리했습니다.")
     else:
         flash("신고 내역을 찾을 수 없습니다.")
-    return redirect(url_for("admin_reports"))
+    return redirect(url_for("admin_moderation"))
 
 
 # =========================
@@ -1067,36 +1039,7 @@ def admin_reject_report(report_id):
 @app.route("/admin/sanctions", methods=["GET", "POST"])
 @admin_required
 def admin_sanctions():
-    if request.method == "POST":
-        user_nickname = request.form.get("user_nickname", "").strip()
-        sanction_type = request.form.get("sanction_type", "").strip()
-        reason = request.form.get("reason", "").strip()
-        expire_at = request.form.get("expire_at", "").strip()
-
-        if not user_nickname or not sanction_type or not reason:
-            flash("대상 닉네임, 제재 종류, 사유를 입력해주세요.")
-            return redirect(url_for("admin_sanctions"))
-
-        create_admin_sanction(
-            user_nickname=user_nickname,
-            sanction_type=sanction_type,
-            reason=reason,
-            expire_at=expire_at if expire_at else "-"
-        )
-        flash("제재가 등록되었습니다.")
-        return redirect(url_for("admin_sanctions"))
-
-    keyword = request.args.get("keyword", "").strip()
-    status = request.args.get("status", "").strip()
-
-    sanctions = fetch_admin_sanctions(keyword=keyword, status=status)
-
-    return render_template(
-        "admin/admin_sanctions.html",
-        sanctions=sanctions,
-        keyword=keyword,
-        status=status,
-    )
+    return redirect(url_for("admin_moderation"))
 
 
 # =========================
@@ -1110,7 +1053,8 @@ def admin_release_sanction(sanction_id):
         flash("제재를 해제했습니다.")
     else:
         flash("제재 내역을 찾을 수 없습니다.")
-    return redirect(url_for("admin_sanctions"))
+    return redirect(url_for("admin_moderation"))
+
 
 
 
