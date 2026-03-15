@@ -1,5 +1,7 @@
 # user_ranking_db.py
 from db import get_connection
+import datetime
+import pymysql
 
 TIER_THRESHOLDS = {
     'BRONZE': 0,
@@ -151,5 +153,104 @@ def check_and_update_tier(user_id):
         conn.rollback()
         print(f"❌ DB Error (check_and_update_tier): {e}")
         return False
+    finally:
+        conn.close()
+
+def process_mission(user_id, mission_type, points, is_weekly=False):
+    """
+    미션 달성 여부를 확인하고, 오늘(또는 이번 주) 처음 달성했다면 점수를 지급합니다.
+    """
+    
+    now = datetime.datetime.now()
+    
+    if is_weekly:
+        # ISO 달력 기준으로 '2026-W12' 형태로 주간 키 생성 (월요일 기준 갱신)
+        year, week, _ = now.isocalendar()
+        mission_key = f"{year}-W{week:02d}"
+    else:
+        # 일일 미션은 '2026-03-16' 형태로 생성
+        mission_key = now.strftime("%Y-%m-%d")
+        
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. 미션 테이블에 Insert 시도 (UNIQUE 제약조건 덕분에 이미 받았으면 여기서 예외 발생!)
+            insert_sql = """
+                INSERT INTO user_missions (user_id, mission_type, mission_key, created_at)
+                VALUES (%s, %s, %s, NOW())
+            """
+            cursor.execute(insert_sql, (user_id, mission_type, mission_key))
+            
+            # 2. Insert가 무사히 통과되었다면 = 오늘 처음 달성한 것! -> 점수 지급
+            update_sql = "UPDATE users SET point = point + %s WHERE user_id = %s"
+            cursor.execute(update_sql, (points, user_id))
+            
+            conn.commit()
+            return True # 보상 지급 완료!
+            
+    except pymysql.err.IntegrityError:
+        # 중복 에러(1062) 발생 = 이미 오늘 보상을 받았음
+        conn.rollback()
+        return False
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Mission Error: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_user_missions_status(user_id):
+    
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. 일일 출석 자동 체크 (랭킹 탭을 열 때 10점 지급 시도 - 이미 받았으면 방어벽이 알아서 막음)
+            process_mission(user_id, 'DAILY_ATTENDANCE', 10, is_weekly=False)
+            
+            # 2. 통계 조회 (오늘 & 이번 주)
+            daily_attendance = 1 # 방금 탭을 열었으니 무조건 1
+            
+            # 주간 출석 횟수 (이번 주 월~일 기준)
+            cursor.execute("SELECT COUNT(*) as cnt FROM user_missions WHERE user_id=%s AND mission_type='DAILY_ATTENDANCE' AND YEARWEEK(created_at, 1) = YEARWEEK(NOW(), 1)", (user_id,))
+            weekly_attendance = cursor.fetchone()['cnt']
+            
+            # 일일/주간 리뷰 횟수
+            cursor.execute("SELECT COUNT(DISTINCT r.review_id) as cnt FROM reviews r JOIN visits v ON r.visit_id = v.visit_id WHERE v.user_id=%s AND DATE(r.created_at) = CURDATE()", (user_id,))
+            daily_reviews = cursor.fetchone()['cnt']
+            
+            cursor.execute("SELECT COUNT(DISTINCT r.review_id) as cnt FROM reviews r JOIN visits v ON r.visit_id = v.visit_id WHERE v.user_id=%s AND YEARWEEK(r.created_at, 1) = YEARWEEK(NOW(), 1)", (user_id,))
+            weekly_reviews = cursor.fetchone()['cnt']
+            
+            # 일일/주간 즐겨찾기 횟수
+            cursor.execute("SELECT COUNT(*) as cnt FROM user_favorites WHERE user_id=%s AND DATE(created_at) = CURDATE()", (user_id,))
+            daily_favs = cursor.fetchone()['cnt']
+            
+            cursor.execute("SELECT COUNT(*) as cnt FROM user_favorites WHERE user_id=%s AND YEARWEEK(created_at, 1) = YEARWEEK(NOW(), 1)", (user_id,))
+            weekly_favs = cursor.fetchone()['cnt']
+
+            # 3. 주간 보상 조건 달성 시 자동 지급 (이미 받았으면 안 들어감)
+            if weekly_attendance >= 5:
+                process_mission(user_id, 'WEEKLY_ATTENDANCE', 100, is_weekly=True)
+            if weekly_reviews >= 5:
+                process_mission(user_id, 'WEEKLY_REVIEW', 20, is_weekly=True)
+            if weekly_favs >= 5:
+                process_mission(user_id, 'WEEKLY_FAVORITE', 10, is_weekly=True)
+
+            # 4. 프론트엔드로 보낼 예쁜 JSON 데이터 만들기
+            return {
+                "daily": {
+                    "attendance": {"count": daily_attendance, "target": 1, "reward": 10},
+                    "review": {"count": min(daily_reviews, 1), "target": 1, "reward": 50},
+                    "favorite": {"count": min(daily_favs, 1), "target": 1, "reward": 20}
+                },
+                "weekly": {
+                    "attendance": {"count": min(weekly_attendance, 5), "target": 5, "reward": 100},
+                    "review": {"count": min(weekly_reviews, 5), "target": 5, "reward": 20},
+                    "favorite": {"count": min(weekly_favs, 5), "target": 5, "reward": 10}
+                }
+            }
+    except Exception as e:
+        print(f"❌ Mission Status Error: {e}")
+        return None
     finally:
         conn.close()

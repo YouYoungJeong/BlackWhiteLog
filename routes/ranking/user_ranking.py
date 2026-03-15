@@ -25,6 +25,11 @@ def api_ranking_me():
         if data:
             # 유저 뱃지(업적) 데이터 추가 연동
             data['achievements_data'] = get_user_achievements_data(user_id)
+
+            # 스캐너 함수를 불러와서 미션 데이터를 추가
+            from routes.ranking.user_ranking_db import get_user_missions_status
+            data['missions_data'] = get_user_missions_status(user_id)
+            
             return jsonify(data)
         return jsonify({"message": "User not found"}), 404
     except Exception as e:

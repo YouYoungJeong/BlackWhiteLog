@@ -123,11 +123,15 @@ def save_restaurant_review(restaurant_id, user_id, rating, content, image_urls=N
                     # 명세서에 따라 원본 이미지 경로(image_url)와 출력 순서(sort_order) 저장
                     cursor.execute(image_sql, (review_id, url, idx + 1))
 
-            review_point = 50
-            point_sql = "UPDATE users SET point = point + %s WHERE user_id = %s"
-            cursor.execute(point_sql, (review_point,user_id))
-
             conn.commit()
+
+        # [변경] 미션 처리 (일일 리뷰 달성 50점) - 여기서 중복을 걸러냅니다!
+        from routes.ranking.user_ranking_db import process_mission, check_and_update_tier 
+        
+        # 하루 첫 리뷰 50점 지급 시도
+        process_mission(user_id, 'DAILY_REVIEW', 50, is_weekly=False)
+
+        # 티어 검사 실행
         check_and_update_tier(user_id)
         return True
     
