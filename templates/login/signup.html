@@ -373,6 +373,11 @@
             font-size: 14px;
             margin-top: 14px;
         }
+
+        /* 카카오 로그인 시 나오는 문구 숨겨버리기 */
+        .kakao-guide {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -404,8 +409,18 @@
 
 
         <form action="/signup" method="post" id="signupForm" novalidate>
-            <input type="hidden" name="email_checked" id="email_checked" value="{{ 'true' if social_data else 'false' }}">
-            <input type="hidden" name="checked_email_value" id="checked_email_value" value="{{ social_data.email if social_data else form_data.get('email', '') }}">
+            <input
+                type="hidden"
+                name="email_checked"
+                id="email_checked"
+                value="{{ 'true' if social_data and social_data.provider != 'KAKAO' else 'false' }}"
+            >
+            <input
+                type="hidden"
+                name="checked_email_value"
+                id="checked_email_value"
+                value="{% if social_data and social_data.provider != 'KAKAO' %}{{ social_data.email }}{% else %}{{ form_data.get('email', '') }}{% endif %}"
+            >
             <input type="hidden" name="nickname_checked" id="nickname_checked" value="{{ 'true' if form_data.get('nickname') and social_data and form_data.get('nickname') == social_data.get('nickname') else 'false' }}">
             <input type="hidden" name="checked_nickname_value" id="checked_nickname_value" value="{{ form_data.get('nickname', social_data.nickname if social_data else '') }}">
 
@@ -420,14 +435,22 @@
                                 name="email"
                                 class="input"
                                 placeholder="예: blackwhitelog@gmail.com"
-                                value="{{ social_data.email if social_data else form_data.get('email', '') }}"
-                                {% if social_data %}readonly{% endif %}
+                                value="{% if social_data and social_data.provider != 'KAKAO' %}{{ social_data.email }}{% else %}{{ form_data.get('email', '') }}{% endif %}"
+                                {% if social_data and social_data.provider != 'KAKAO' %}readonly{% endif %}
                                 required
                             >
-                            {% if not social_data %}
+
+                            {% if not social_data or (social_data and social_data.provider == 'KAKAO') %}
                             <button type="button" class="action-btn" id="checkEmailBtn">중복 확인</button>
                             {% endif %}
                         </div>
+
+                        {% if social_data and social_data.provider == 'KAKAO' %}
+                        <div class="check-message info kakao-guide">
+                            카카오 회원가입은 이메일을 직접 입력하고 중복 확인을 해주세요.
+                        </div>
+                        {% endif %}
+
                         <div id="emailMessage" class="check-message"></div>
                     </div>
                 </div>
@@ -490,11 +513,38 @@
                     <label class="label">생년월일<span class="req">*</span></label>
                     <div class="input-wrap">
                         <div class="birth-row">
-                            <input type="text" name="birth_year" class="birth-input" placeholder="YYYY" maxlength="4" inputmode="numeric" value="{{ form_data.get('birth_year', '') }}" required>
+                            <input
+                                type="text"
+                                name="birth_year"
+                                class="birth-input"
+                                placeholder="YYYY"
+                                maxlength="4"
+                                inputmode="numeric"
+                                value="{{ form_data.get('birth_year', '') }}"
+                                required
+                            >
                             <div class="slash">/</div>
-                            <input type="text" name="birth_month" class="birth-input" placeholder="MM" maxlength="2" inputmode="numeric" value="{{ form_data.get('birth_month', '') }}" required>
+                            <input
+                                type="text"
+                                name="birth_month"
+                                class="birth-input"
+                                placeholder="MM"
+                                maxlength="2"
+                                inputmode="numeric"
+                                value="{{ form_data.get('birth_month', '') }}"
+                                required
+                            >
                             <div class="slash">/</div>
-                            <input type="text" name="birth_day" class="birth-input" placeholder="DD" maxlength="2" inputmode="numeric" value="{{ form_data.get('birth_day', '') }}" required>
+                            <input
+                                type="text"
+                                name="birth_day"
+                                class="birth-input"
+                                placeholder="DD"
+                                maxlength="2"
+                                inputmode="numeric"
+                                value="{{ form_data.get('birth_day', '') }}"
+                                required
+                            >
                         </div>
                     </div>
                 </div>
@@ -572,6 +622,7 @@
         const passwordMessage = document.getElementById("passwordMessage");
 
         const isSocialSignup = {{ 'true' if social_data else 'false' }};
+        const isKakaoSignup = {{ 'true' if social_data and social_data.provider == 'KAKAO' else 'false' }};
 
         const emailChecked = document.getElementById("email_checked");
         const checkedEmailValue = document.getElementById("checked_email_value");
@@ -586,10 +637,53 @@
         const birthYearInput = document.querySelector('input[name="birth_year"]');
         const birthMonthInput = document.querySelector('input[name="birth_month"]');
         const birthDayInput = document.querySelector('input[name="birth_day"]');
-        [birthYearInput, birthMonthInput, birthDayInput].forEach(input => {
-            input.addEventListener("input", function () {
-                this.value = this.value.replace(/\D/g, "");
-            });
+        const currentYear = new Date().getFullYear();
+
+        function onlyNumber(value) {
+            return value.replace(/\D/g, "");
+        }
+
+        birthYearInput.addEventListener("input", function () {
+            let value = onlyNumber(this.value);
+
+            if (value.length === 4) {
+                const yearNum = parseInt(value, 10);
+                if (yearNum >= currentYear) {
+                    value = String(currentYear);
+                }
+            }
+
+            this.value = value;
+        });
+
+        birthMonthInput.addEventListener("input", function () {
+            let value = onlyNumber(this.value);
+
+            if (value.length >= 2) {
+                let monthNum = parseInt(value, 10);
+
+                if (monthNum < 1) monthNum = 1;
+                if (monthNum > 12) monthNum = 12;
+
+                value = String(monthNum).padStart(2, "0");
+            }
+
+            this.value = value;
+        });
+
+        birthDayInput.addEventListener("input", function () {
+            let value = onlyNumber(this.value);
+
+            if (value.length >= 2) {
+                let dayNum = parseInt(value, 10);
+
+                if (dayNum < 1) dayNum = 1;
+                if (dayNum > 31) dayNum = 31;
+
+                value = String(dayNum).padStart(2, "0");
+            }
+
+            this.value = value;
         });
         const genderInputs = document.querySelectorAll('input[name="gender"]');
 
@@ -730,7 +824,7 @@
             }
 
             // 3. 이메일 중복확인
-            if (!isSocialSignup) {
+            if (!isSocialSignup || isKakaoSignup) {
                 if (emailChecked.value !== "true" || checkedEmailValue.value !== currentEmail) {
                     e.preventDefault();
                     alert("이메일 중복 확인을 해주세요.");
