@@ -2,6 +2,7 @@ from flask import render_template, request, jsonify, session
 import routes.owner.owner_menu_db as owner_db
 import routes.owner.owner_notices_db as owner_notice_db
 import routes.owner.owner_board_db as owner_board_db
+import routes.owner.owner_review_db as owner_review_bd
 import math
 
 
