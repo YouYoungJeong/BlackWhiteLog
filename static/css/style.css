@@ -1515,6 +1515,45 @@ body.drawer-open {
     margin-bottom: 0;
 }
 
+.empty-box-login-link {
+    display: inline-block;
+    margin-top: 10px;
+    color: #5f7a61;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.empty-box-login-link:hover {
+    text-decoration: underline;
+}
+
+#detailRestaurantName {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.favorite-star-btn {
+    border: none;
+    background: transparent;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    color: #b8b8b8;
+    transition: transform 0.15s ease, color 0.15s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.favorite-star-btn:hover {
+    transform: scale(1.08);
+}
+
+.favorite-star-btn.active {
+    color: #f2b600;
+}
+
 /* =========================
    14. RESPONSIVE
 ========================= */

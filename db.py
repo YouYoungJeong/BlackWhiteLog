@@ -69,7 +69,7 @@ def fetch_categories():
 # =========================
 # 음식점 목록 조회
 # =========================
-def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visits"):
+def fetch_restaurants(region=None, keyword=None, category_id=None, user_id=None, sort_by="visits"):
     """
     sort_by:
       - visits   : 방문수순
@@ -109,6 +109,11 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visi
             COALESCE(rv.review_count, 0) AS review_count,
             COALESCE(rv.avg_rating, 0) AS avg_rating,
 
+            CASE
+                WHEN uf.favorite_id IS NULL THEN 0
+                ELSE 1
+            END AS is_favorite,
+
             (
                 SELECT COALESCE(ri.thumb_url, ri.image_url)
                 FROM restaurant_images ri
@@ -117,9 +122,13 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visi
                 LIMIT 1
             ) AS image_url
 
-        FROM restaurants r
-        LEFT JOIN restaurant_categories rc
-            ON r.restaurant_category_id = rc.restaurant_category_id
+            FROM restaurants r
+            LEFT JOIN user_favorites uf
+                ON uf.restaurant_id = r.restaurant_id
+            AND uf.user_id = %s
+
+            LEFT JOIN restaurant_categories rc
+                ON r.restaurant_category_id = rc.restaurant_category_id
 
         LEFT JOIN (
             SELECT restaurant_id, COUNT(*) AS visit_count
@@ -143,7 +152,8 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visi
         WHERE 1=1
     """
 
-    params = []
+    effective_user_id = user_id if user_id else 0
+    params = [effective_user_id]
 
     # 운영 가능한 음식점만 보이게 하는 조건
     sql += " AND (r.status IS NULL OR r.status IN ('OPEN', 'ACTIVE')) "
@@ -186,7 +196,161 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visi
                 row["avg_rating"] = float(row["avg_rating"] or 0)
                 row["visit_count"] = int(row["visit_count"] or 0)
                 row["review_count"] = int(row["review_count"] or 0)
+                row["is_favorite"] = bool(row.get("is_favorite", 0))
 
             return rows
     finally:
         conn.close()
+
+## 가게 즐겨찾기 추가 ##
+def fetch_favorite_restaurants(user_id, region=None, category_id=None):
+    sql = """
+        SELECT
+            r.restaurant_id,
+            r.name,
+            r.address,
+            r.road_address,
+            r.latitude,
+            r.longitude,
+            r.phone,
+            r.business_hours,
+            r.description,
+            r.region_sido,
+            r.region_sigungu,
+            r.region_dong,
+            r.status,
+            r.created_at,
+            rc.restaurant_category_name AS category_name,
+            uf.created_at AS favorite_created_at,
+
+            COALESCE(vs.visit_count, 0) AS visit_count,
+            COALESCE(rv.review_count, 0) AS review_count,
+            COALESCE(rv.avg_rating, 0) AS avg_rating,
+
+            (
+                SELECT COALESCE(ri.thumb_url, ri.image_url)
+                FROM restaurant_images ri
+                WHERE ri.restaurant_id = r.restaurant_id
+                ORDER BY ri.sort_order ASC, ri.image_id ASC
+                LIMIT 1
+            ) AS image_url
+
+        FROM user_favorites uf
+        INNER JOIN restaurants r
+            ON uf.restaurant_id = r.restaurant_id
+        LEFT JOIN restaurant_categories rc
+            ON r.restaurant_category_id = rc.restaurant_category_id
+
+        LEFT JOIN (
+            SELECT restaurant_id, COUNT(*) AS visit_count
+            FROM visits
+            GROUP BY restaurant_id
+        ) vs
+            ON r.restaurant_id = vs.restaurant_id
+
+        LEFT JOIN (
+            SELECT
+                v.restaurant_id,
+                COUNT(rv.review_id) AS review_count,
+                ROUND(AVG(rv.rating), 1) AS avg_rating
+            FROM reviews rv
+            INNER JOIN visits v
+                ON rv.visit_id = v.visit_id
+            GROUP BY v.restaurant_id
+        ) rv
+            ON r.restaurant_id = rv.restaurant_id
+
+        WHERE uf.user_id = %s
+          AND (r.status IS NULL OR r.status IN ('OPEN', 'ACTIVE'))
+    """
+
+    params = [user_id]
+
+    if region and region != "전체":
+        sql += " AND r.region_sigungu = %s "
+        params.append(region)
+
+    if category_id and str(category_id).strip():
+        sql += " AND r.restaurant_category_id = %s "
+        params.append(category_id)
+
+    sql += """
+        ORDER BY
+            r.region_sigungu ASC,
+            rc.restaurant_category_name ASC,
+            r.name ASC
+        LIMIT 100
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+
+            for row in rows:
+                row["image_url"] = row["image_url"] or "https://placehold.co/160x120?text=No+Image"
+                row["avg_rating"] = float(row["avg_rating"] or 0)
+                row["visit_count"] = int(row["visit_count"] or 0)
+                row["review_count"] = int(row["review_count"] or 0)
+
+            return rows
+    finally:
+        conn.close()
+
+def is_favorite_restaurant(user_id, restaurant_id):
+    sql = """
+        SELECT 1
+        FROM user_favorites
+        WHERE user_id = %s
+          AND restaurant_id = %s
+        LIMIT 1
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (user_id, restaurant_id))
+            return cursor.fetchone() is not None
+    finally:
+        conn.close()
+
+
+def add_favorite_restaurant(user_id, restaurant_id):
+    sql = """
+        INSERT IGNORE INTO user_favorites (user_id, restaurant_id)
+        VALUES (%s, %s)
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (user_id, restaurant_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def remove_favorite_restaurant(user_id, restaurant_id):
+    sql = """
+        DELETE FROM user_favorites
+        WHERE user_id = %s
+          AND restaurant_id = %s
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (user_id, restaurant_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def toggle_favorite_restaurant(user_id, restaurant_id):
+    if is_favorite_restaurant(user_id, restaurant_id):
+        remove_favorite_restaurant(user_id, restaurant_id)
+        return False
+
+    add_favorite_restaurant(user_id, restaurant_id)
+    return True
