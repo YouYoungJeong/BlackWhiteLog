@@ -15,8 +15,11 @@ const state = {
     filteredItems: [],
     suggestionItems: [],
     activeSuggestionIndex: -1,
-    lastKeyword: ""
+    lastKeyword: "",
+    viewMode: "restaurants"
 };
+
+window.state = state;
 
 /* 이종민 수정한 부분 */
 let naverMap = null;
@@ -143,9 +146,19 @@ function showError() {
 function showEmptyList() {
     restaurantList.innerHTML = `
         <div class="empty-box">
-            조건에 맞는 음식점이 없습니다.
+            즐겨찾기에 추가된 음식점이 없습니다.
         </div>
     `;
+}
+
+function showLoginRequiredForFavorites() {
+    restaurantList.innerHTML = `
+        <div class="empty-box">
+            로그인 후 이용해 주세요.<br />
+            <a href="${window.__INITIAL_STATE__.loginUrl}" class="empty-box-login-link">로그인</a>
+        </div>
+    `;
+    mapMarkers.innerHTML = "";
 }
 
 function normalizeText(value) {
@@ -610,6 +623,15 @@ function buildAllItemsQuery() {
     return params.toString();
 }
 
+function buildFavoritesQuery() {
+    const params = new URLSearchParams({
+        region: regionSelect?.value ?? "",
+        category_id: categorySelect?.value ?? ""
+    });
+
+    return params.toString();
+}
+
 /************************************************************
  * 데이터 가져오기
  ************************************************************/
@@ -625,6 +647,7 @@ function buildAllItemsQuery() {
  */
 async function fetchRestaurants() {
     showLoading();
+    state.viewMode = "restaurants";
 
     const filteredUrl = `${window.__INITIAL_STATE__.apiUrl}?${buildFilteredQuery()}`;
     const allUrl = `${window.__INITIAL_STATE__.apiUrl}?${buildAllItemsQuery()}`;
@@ -658,6 +681,41 @@ async function fetchRestaurants() {
     }
 }
 
+async function fetchFavoriteRestaurants() {
+    showLoading();
+    state.viewMode = "favorites";
+
+    const url = `${window.__INITIAL_STATE__.favoritesApiUrl}?${buildFavoritesQuery()}`;
+
+    try {
+        const response = await fetch(url);
+
+        if (response.status === 401) {
+            showLoginRequiredForFavorites();
+            state.items = [];
+            state.filteredItems = [];
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error("즐겨찾기 API 요청 실패");
+        }
+
+        const data = await response.json();
+
+        state.items = Array.isArray(data) ? data : [];
+        state.filteredItems = [...state.items];
+
+        renderRestaurantList(state.items);
+        await renderMapMarkers(state.items);
+    } catch (error) {
+        console.error(error);
+        showError();
+    }
+}
+
+window.fetchFavoriteRestaurants = fetchFavoriteRestaurants;
+
 /************************************************************
  * 추천 모드 전환
  ************************************************************/
@@ -668,6 +726,7 @@ async function fetchRestaurants() {
  */
 function switchToRecommendMode() {
     state.sortBy = "visits";
+    state.viewMode = "restaurants";
 
     sortChips.forEach((chip) => {
         chip.classList.toggle("active", chip.dataset.sort === "visits");
@@ -1356,6 +1415,12 @@ function bindSortChipEvents() {
             chip.classList.add("active");
 
             state.sortBy = chip.dataset.sort;
+
+            if (chip.dataset.sort === "latest") {
+                fetchFavoriteRestaurants();
+                return;
+            }
+
             fetchRestaurants();
         });
     });
@@ -1408,11 +1473,23 @@ function bindSearchEvents() {
     }
 
     if (regionSelect) {
-        regionSelect.addEventListener("change", fetchRestaurants);
+        regionSelect.addEventListener("change", () => {
+            if (state.viewMode === "favorites") {
+                fetchFavoriteRestaurants();
+                return;
+            }
+            fetchRestaurants();
+        });
     }
 
     if (categorySelect) {
-        categorySelect.addEventListener("change", fetchRestaurants);
+        categorySelect.addEventListener("change", () => {
+            if (state.viewMode === "favorites") {
+                fetchFavoriteRestaurants();
+                return;
+            }
+            fetchRestaurants();
+        });
     }
 
     document.addEventListener("click", (event) => {

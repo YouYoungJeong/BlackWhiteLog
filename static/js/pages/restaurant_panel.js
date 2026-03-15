@@ -6,6 +6,89 @@ const closeDetailBtn = document.getElementById("closeDetailBtn");
 const tabButtons = document.querySelectorAll(".tab-btn");
 const tabPanes = document.querySelectorAll(".tab-pane");
 
+/* 즐겨찾기 버튼 추가 */
+function renderFavoriteButton(restaurant) {
+    const star = restaurant.is_favorite ? "★" : "☆";
+    const activeClass = restaurant.is_favorite ? "active" : "";
+
+    return `
+        <button
+            type="button"
+            class="favorite-star-btn ${activeClass}"
+            data-restaurant-id="${restaurant.restaurant_id}"
+            title="즐겨찾기"
+        >
+            ${star}
+        </button>
+    `;
+}
+
+async function toggleFavoriteFromDetail(restaurantId) {
+    try {
+        const response = await fetch(
+            `${window.__INITIAL_STATE__.favoriteToggleBaseUrl}/${restaurantId}/toggle`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        if (response.status === 401) {
+            alert("로그인 후 이용해 주세요.");
+            window.location.href = window.__INITIAL_STATE__.loginUrl;
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error("즐겨찾기 변경 실패");
+        }
+
+        const data = await response.json();
+        const isFavorite = !!data.is_favorite;
+
+        const favoriteBtn = document.querySelector(".favorite-star-btn");
+        if (favoriteBtn) {
+            favoriteBtn.textContent = isFavorite ? "★" : "☆";
+            favoriteBtn.classList.toggle("active", isFavorite);
+        }
+
+        if (!isFavorite && restaurantDetailPanel) {
+            restaurantDetailPanel.classList.add("hidden");
+        }
+
+        if (window.state) {
+            const updateItem = (item) => {
+                if (Number(item.restaurant_id) === Number(restaurantId)) {
+                    item.is_favorite = isFavorite;
+                }
+            };
+
+            if (Array.isArray(window.state.items)) window.state.items.forEach(updateItem);
+            if (Array.isArray(window.state.filteredItems)) window.state.filteredItems.forEach(updateItem);
+            if (Array.isArray(window.state.allItems)) window.state.allItems.forEach(updateItem);
+
+            if (window.state.viewMode === "favorites" && !isFavorite && typeof window.fetchFavoriteRestaurants === "function") {
+                window.fetchFavoriteRestaurants();
+            }
+        }
+    } catch (error) {
+        console.error(error);
+        alert("즐겨찾기 처리 중 오류가 발생했습니다.");
+    }
+}
+
+function bindDetailFavoriteEvent() {
+    const favoriteBtn = document.querySelector(".favorite-star-btn");
+    if (!favoriteBtn) return;
+
+    favoriteBtn.addEventListener("click", () => {
+        const restaurantId = favoriteBtn.dataset.restaurantId;
+        toggleFavoriteFromDetail(restaurantId);
+    });
+}
+
 // 패널 닫기 이벤트
 if (closeDetailBtn) {
     closeDetailBtn.addEventListener("click", () => {
@@ -48,10 +131,11 @@ tabButtons.forEach(btn => {
 
 // 패널 열기 및 AJAX 정보 호출 함수 
 async function openDetailPanel(restaurantId) {
+    const currentUserId = window.__INITIAL_STATE__?.userId ?? null;
     const detailPanel = document.getElementById("restaurantDetailPanel");
     detailPanel.classList.remove("hidden");
 
-    // 추가: 나중에 리뷰 저장할 때 쓰기 위해 ID를 저장해둡니다.
+    // 추가: 나중에 리ㄴ뷰 저장할 때 쓰기 위해 ID를 저장해둡니다.
     detailPanel.setAttribute("data-id", restaurantId);
     
     // '정보' 탭을 강제로 클릭하여 활성화
@@ -69,7 +153,10 @@ async function openDetailPanel(restaurantId) {
         const data = await response.json();
 
         // 1. 패널 상단 헤더 업데이트
-        document.getElementById("detailRestaurantName").textContent = data.name;
+        document.getElementById("detailRestaurantName").innerHTML = `
+            <span>${data.name}</span>
+            ${renderFavoriteButton(data)}
+        `;
         document.getElementById("detailMainImage").src = data.image_url || "https://dummyimage.com/400x200/e0e0e0/000000.png&text=No+Image";
 
         // 2. 정보 탭 내용 렌더링
@@ -207,6 +294,8 @@ async function openDetailPanel(restaurantId) {
             reviewContainer.innerHTML = `<p style="color:red; text-align:center;">리뷰를 불러오지 못했습니다.</p>`;
             console.error("Review Fetch Error:", reviewError);
         }
+
+        bindDetailFavoriteEvent();
 
     } catch (error) {
         infoTab.innerHTML = `<p style="color:red;">오류 발생: ${error.message}</p>`;
