@@ -1,6 +1,6 @@
 # user_ranking.py
 from flask import Blueprint, jsonify
-from user_ranking_db import get_all_user_rankings, get_user_dashboard_data, get_user_achievements_data
+from .user_ranking_db import get_all_user_rankings, get_user_dashboard_data, get_user_achievements_data
 
 user_ranking_bp = Blueprint('user_ranking', __name__)
 

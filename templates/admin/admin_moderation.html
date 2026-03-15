@@ -27,7 +27,7 @@
             <!-- 제재 등록 -->
             <div class="admin-form-card">
                 <h2>제재 등록</h2>
-                <form action="{{ url_for('admin_moderation') }}" method="POST" class="admin-form">
+                <form action="{{ url_for('admin.admin_moderation') }}" method="POST" class="admin-form">
                     <div>
                         <label for="user_nickname">대상 닉네임</label>
                         <input type="text" id="user_nickname" name="user_nickname" required>
@@ -65,7 +65,7 @@
             </div>
 
             <div class="admin-topbar">
-                <form method="GET" action="{{ url_for('admin_moderation') }}" class="search-form">
+                <form method="GET" action="{{ url_for('admin.admin_moderation') }}" class="search-form">
                     <input type="text" name="report_keyword" value="{{ report_keyword }}" placeholder="신고자 / 대상 / 사유 검색">
                     <select name="report_status">
                         <option value="">전체 상태</option>
@@ -108,10 +108,10 @@
                                     <td>{{ report.status }}</td>
                                     <td>{{ report.created_at }}</td>
                                     <td class="action-cell">
-                                        <form action="{{ url_for('admin_resolve_report', report_id=report.report_id) }}" method="POST" class="inline-form">
+                                        <form action="{{ url_for('admin.admin_resolve_report', report_id=report.report_id) }}" method="POST" class="inline-form">
                                             <button type="submit" class="primary-btn">승인</button>
                                         </form>
-                                        <form action="{{ url_for('admin_reject_report', report_id=report.report_id) }}" method="POST" class="inline-form">
+                                        <form action="{{ url_for('admin.admin_reject_report', report_id=report.report_id) }}" method="POST" class="inline-form">
                                             <button type="submit" class="danger-btn">반려</button>
                                         </form>
                                     </td>
@@ -132,7 +132,7 @@
             </div>
 
             <div class="admin-topbar">
-                <form method="GET" action="{{ url_for('admin_moderation') }}" class="search-form">
+                <form method="GET" action="{{ url_for('admin.admin_moderation') }}" class="search-form">
                     <input type="text" name="sanction_keyword" value="{{ sanction_keyword }}" placeholder="닉네임 / 사유 검색">
                     <select name="sanction_status">
                         <option value="">전체 상태</option>
@@ -175,7 +175,7 @@
                                     <td>{{ sanction.created_at }}</td>
                                     <td class="action-cell">
                                         {% if sanction.status != 'RELEASED' %}
-                                            <form action="{{ url_for('admin_release_sanction', sanction_id=sanction.sanction_id) }}" method="POST" class="inline-form">
+                                            <form action="{{ url_for('admin.admin_release_sanction', sanction_id=sanction.sanction_id) }}" method="POST" class="inline-form">
                                                 <button type="submit" class="secondary-btn">해제</button>
                                             </form>
                                         {% else %}
@@ -194,7 +194,7 @@
             </div>
 
             <div class="bottom-link-wrap">
-                <a href="{{ url_for('admin_page') }}" class="back-link">관리자 메인으로 돌아가기</a>
+                <a href="{{ url_for('admin.admin_page') }}" class="back-link">관리자 메인으로 돌아가기</a>
             </div>
         </div>
     </div>

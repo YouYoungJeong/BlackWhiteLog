@@ -40,7 +40,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     {% endwith %}
 
     <!-- 로그인 -->
-    <form method="POST" action="{{ url_for('login') }}">
+    <form method="POST" action="{{ url_for('login.login') }}">
 
         <div class="input-group">
             <input type="email" name="email" placeholder="이메일">
@@ -59,7 +59,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     <!-- 회원가입 -->
     <div class="join-text">
         처음 오셨나요?
-        <a href="{{ url_for('signup', mode='local') }}">회원가입하기</a>
+        <a href="{{ url_for('login.signup', mode='local') }}">회원가입하기</a>
     </div>
 
     <!-- 구분선 -->
@@ -70,17 +70,17 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     <!-- 소셜 로그인 -->
     <div class="social-login">
 
-        <a href="{{ url_for('login_naver') }}" class="social-btn naver">
+        <a href="{{ url_for('login.login_naver') }}" class="social-btn naver">
         <img src="{{ url_for('static', filename='img/naver.png') }}" class="social-icon" alt="네이버">
         네이버
         </a>
 
-        <a href="{{ url_for('login_kakao') }}" class="social-btn kakao">
+        <a href="{{ url_for('login.login_kakao') }}" class="social-btn kakao">
         <img src="{{ url_for('static', filename='img/kakao.png') }}" class="social-icon" alt="카카오">
         카카오
         </a>
 
-        <a href="{{ url_for('login_google') }}" class="social-btn google">
+        <a href="{{ url_for('login.login_google') }}" class="social-btn google">
         <img src="{{ url_for('static', filename='img/google.png') }}" class="social-icon" alt="구글">
         구글
         </a>
@@ -90,11 +90,11 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     <!-- 하단 링크 -->
     <div class="login-links">
 
-        <a href="{{ url_for('find_id') }}">이메일 찾기</a>
+        <a href="{{ url_for('login.find_id') }}">이메일 찾기</a>
 
         <span>|</span>
 
-        <a href="{{ url_for('find_password') }}">비밀번호 찾기</a>
+        <a href="{{ url_for('login.find_password') }}">비밀번호 찾기</a>
 
     </div>
 
