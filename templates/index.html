@@ -340,7 +340,12 @@
 
     <script>
         window.__INITIAL_STATE__ = {
-            apiUrl: "{{ url_for('api_restaurants') }}"
+            apiUrl: "{{ url_for('api_restaurants') }}",
+            favoritesApiUrl: "{{ url_for('api_favorites') }}",
+            favoriteToggleBaseUrl: "/api/favorites",
+            loginUrl: "{{ url_for('login.login') }}",
+            isLoggedIn: {{ 'true' if user_id else 'false' }},
+            userId: {{ user_id if user_id else 'null' }}
         };
     </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
