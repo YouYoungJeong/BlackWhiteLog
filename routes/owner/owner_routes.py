@@ -1,5 +1,8 @@
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, jsonify, session
 import routes.owner.owner_menu_db as owner_db
+import routes.owner.owner_notices_db as owner_notice_db
+import routes.owner.owner_board_db as owner_board_db
+import routes.owner.owner_review_db as owner_review_db
 import math
 
 
@@ -8,174 +11,1210 @@ def register_owner_routes(app):
 # 오너 보드 페이지
 # -------------------------------------------------------------------------------------
     @app.route("/owner/board", endpoint="owner_board")
-
-
     def owner_board():
-        owner_id = 1
-        total_menu_count = owner_db.get_menu_count_by_owner(owner_id)
+        session_user_id = session.get("user_id")
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        restaurant_menu_list = owner_db.get_menu_count_by_owner(session_owner_id)
+
+        try:
+            db_sidebar_restaurant_list = owner_notice_db.get_restaurant_list_by_owner(session_owner_id)
+
+            if db_sidebar_restaurant_list:
+                sidebar_selected_restaurant_id = db_sidebar_restaurant_list[0]["restaurant_id"]
+                sidebar_selected_restaurant_name = db_sidebar_restaurant_list[0]["name"]
+            else:
+                sidebar_selected_restaurant_id = None
+                sidebar_selected_restaurant_name = ""
+                db_sidebar_restaurant_list = []
+
+            sidebar_notice_current = None
+            db_sidebar_notice_history_list = []
+
+            if sidebar_selected_restaurant_id:
+                db_current_notice = owner_board_db.get_sidebar_current_notice_by_restaurant(
+                    sidebar_selected_restaurant_id
+                )
+
+                if db_current_notice:
+                    sidebar_notice_current = {
+                        "notice_id": db_current_notice["notice_id"],
+                        "restaurant_id": db_current_notice["restaurant_id"],
+                        "notice_title": db_current_notice["notice_title"],
+                        "notice_content": db_current_notice["notice_content"],
+                        "updated_at": db_current_notice["updated_at"].strftime("%Y-%m-%d") if db_current_notice["updated_at"] else ""
+                    }
+
+                db_history_notice_list = owner_board_db.get_sidebar_history_notice_list_by_restaurant(
+                    sidebar_selected_restaurant_id,
+                    limit=3
+                )
+
+                for db_notice in db_history_notice_list:
+                    db_sidebar_notice_history_list.append({
+                        "notice_id": db_notice["notice_id"],
+                        "restaurant_id": db_notice["restaurant_id"],
+                        "notice_title": db_notice["notice_title"],
+                        "notice_content": db_notice["notice_content"],
+                        "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+                    })
+
+        except Exception:
+            db_sidebar_restaurant_list = []
+            sidebar_selected_restaurant_id = None
+            sidebar_selected_restaurant_name = ""
+            sidebar_notice_current = None
+            db_sidebar_notice_history_list = []
 
         return render_template(
             "owner/owner_board.html",
-            total_menu_count=total_menu_count
+            restaurant_menu_list=restaurant_menu_list,
+            session_user_id=session_user_id,
+            session_owner_id=session_owner_id,
+            sidebar_restaurant_list=db_sidebar_restaurant_list,
+            sidebar_selected_restaurant_id=sidebar_selected_restaurant_id,
+            sidebar_selected_restaurant_name=sidebar_selected_restaurant_name,
+            sidebar_notice_current=sidebar_notice_current,
+            sidebar_notice_history_list=db_sidebar_notice_history_list
         )
-    
 
+    @app.route("/owner/board/api/notice_summary", methods=["GET"], endpoint="owner_board_api_notice_summary")
+    def owner_board_api_notice_summary():
+        session_owner_id = session.get("owner_id")
 
+        if not session_owner_id:
+            session_owner_id = 1
 
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
 
+        try:
+            restaurant_list = owner_notice_db.get_restaurant_list_by_owner(session_owner_id)
 
+            if not restaurant_list:
+                return jsonify({
+                    "success": False,
+                    "message": "등록된 가게가 없습니다."
+                }), 404
+
+            restaurant_id_list = [row["restaurant_id"] for row in restaurant_list]
+
+            if client_restaurant_id in restaurant_id_list:
+                selected_restaurant_id = client_restaurant_id
+            else:
+                selected_restaurant_id = restaurant_id_list[0]
+
+            current_notice = None
+            history_notice_list = []
+
+            db_current_notice = owner_board_db.get_sidebar_current_notice_by_restaurant(
+                selected_restaurant_id
+            )
+
+            if db_current_notice:
+                current_notice = {
+                    "notice_id": db_current_notice["notice_id"],
+                    "restaurant_id": db_current_notice["restaurant_id"],
+                    "notice_title": db_current_notice["notice_title"],
+                    "notice_content": db_current_notice["notice_content"],
+                    "updated_at": db_current_notice["updated_at"].strftime("%Y-%m-%d") if db_current_notice["updated_at"] else ""
+                }
+
+            db_history_notice_list = owner_board_db.get_sidebar_history_notice_list_by_restaurant(
+                selected_restaurant_id,
+                limit=3
+            )
+
+            for db_notice in db_history_notice_list:
+                history_notice_list.append({
+                    "notice_id": db_notice["notice_id"],
+                    "restaurant_id": db_notice["restaurant_id"],
+                    "notice_title": db_notice["notice_title"],
+                    "notice_content": db_notice["notice_content"],
+                    "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+                })
+
+            return jsonify({
+                "success": True,
+                "message": "사이드바 공지사항 조회 완료",
+                "restaurant_id": selected_restaurant_id,
+                "current_notice": current_notice,
+                "history_notice_list": history_notice_list
+            })
+
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
 
 # --------------------------------------------------------------------------------------
 # 오너 메뉴 관리 페이지
 # --------------------------------------------------------------------------------------
-    @app.route("/owner/menu_management", methods=["GET", "POST"], endpoint="owner_menu_management")
-    def owner_menu_management():
-        # 임시 오너 id
-        owner_id = 1
-        #수정 menu_id 받기
-        edit_menu_id = request.args.get("edit_menu_id", type=int)
-        edit_menu = None
-
-        # 등록된 메뉴 카드 페이징 처리용 기본값
-        per_page = 5
-        page = request.args.get("page", 1, type=int)
-
-        # page 예외 방지
-        if not page or page < 1:
-            page = 1
-
-        if request.method == "POST":
-            # 값 받아오기
-            menu_id = request.form.get("menu_id", "").strip()
-            menu_name = request.form.get("menu_name", "").strip()
-            price = request.form.get("price", "").strip()
-            menu_category_id = request.form.get("menu_category_id", "").strip()
-            image_file = request.files.get("menu_image")
-            remove_image = request.form.get("remove_image")
-
-            soldout = request.form.get("soldout")
-            status = "OFF" if soldout else "ON"
-            
-            # 이미지 수정 시 기존 이미지 삭제 체크값을 함께 전달받도록 추가
-            # 필수값 검증과 확장자 검증 추가
-            if not menu_name or not price or not menu_category_id:
-                flash("메뉴명, 가격, 카테고리는 필수입니다.")
-                return redirect(
-                    url_for("owner_menu_management", edit_menu_id=menu_id)
-                    if menu_id else url_for("owner_menu_management")
-                )
-
-            if image_file and image_file.filename and not owner_db.allowed_file(image_file.filename):
-                flash("허용 확장자: jpg, jpeg, png, gif, webp")
-                return redirect(
-                    url_for("owner_menu_management", edit_menu_id=menu_id)
-                    if menu_id else url_for("owner_menu_management")
-                )
-
-            # 메뉴 수정 : menu_id가 있으면 UPDATE
-            # 이미지 삭제 여부까지 update_menu로 전달하도록 수정
-            if menu_id and menu_name and price and menu_category_id:
-                owner_db.update_menu(
-                    owner_id=owner_id,
-                    menu_id=menu_id,
-                    menu_category_id=menu_category_id,
-                    menu_name=menu_name,
-                    price=price,
-                    status=status,
-                    image_file=image_file,
-                    remove_image=True if remove_image else False
-                )
-                return redirect(url_for("owner_menu_management"))         
-
-            # 메뉴 추가 : menu_id가 없으면 INSERT
-            if menu_name and price and menu_category_id:
-                owner_db.insert_menu(
-                    owner_id=owner_id,
-                    menu_category_id=menu_category_id,
-                    menu_name=menu_name,
-                    price=price,
-                    status=status,
-                    image_file=image_file
-                )
-
-            return redirect(url_for("owner_menu_management"))
-        
-        # 수정 모드일 때만 수정 대상 메뉴 1건 조회
-        if edit_menu_id:
-            edit_menu = owner_db.get_menu_detail_by_id(owner_id, edit_menu_id)
-
-        # 항상 조회되어야 하는 값들
-        owner = owner_db.get_owner_info(owner_id)
-        restaurant = owner_db.get_restaurant_id_by_owner(owner_id)
-        categories = owner_db.get_menu_categories()
-        menu_list = owner_db.get_menu_list_by_owner(owner_id)
-        
-        # 페이징 전체 메뉴 개수 조회
-        total_menu_count = owner_db.get_menu_count_by_owner(owner_id)
-
-        # 페이징 전체 페이지 수 계산
+    # 수정: 메뉴 목록/개수 조회 기준이 owner_id 대신 restaurant_id가 되도록 함수 매개변수 변경
+    def build_menu_list_payload(restaurant_id, page=1, per_page=5):
+        # 수정: 총 메뉴 개수 조회도 restaurant_id 기준 함수로 변경
+        total_menu_count = owner_db.get_menu_count_by_restaurant(restaurant_id)
         total_pages = math.ceil(total_menu_count / per_page) if total_menu_count > 0 else 1
 
-        # 페이징 page가 총 페이지보다 크면 마지막 페이지로 보정
+        if page < 1:
+            page = 1
+
         if page > total_pages:
             page = total_pages
 
-        # 페이징 LIMIT / OFFSET 계산
         offset = (page - 1) * per_page
 
-        # 현재 페이지 메뉴만 조회
-        menu_list = owner_db.get_menu_list_by_owner(
-            owner_id=owner_id,
+        # 수정: 메뉴 목록 조회 시 owner_id 대신 restaurant_id 전달
+        db_menu_list = owner_db.get_menu_list_by_owner(
+            restaurant_id=restaurant_id,
             limit=per_page,
             offset=offset
         )
 
-        return render_template(
-            "owner/owner_menu_management.html",
-            owner=owner,
-            restaurant=restaurant,
-            categories=categories,
-            menu_list=menu_list,
-            edit_menu=edit_menu,
-            current_page=page,
-            total_pages=total_pages,
-            has_prev=page > 1,
-            has_next=page < total_pages
+        menu_list = []
+        for db_menu in db_menu_list:
+            menu_list.append({
+                "menu_id": db_menu["menu_id"],
+                "menu_name": db_menu["menu_name"],
+                "price": int(db_menu["price"]) if db_menu["price"] is not None else 0,
+                "status": db_menu["status"],
+                "menu_category_name": db_menu["menu_category_name"] or "",
+                "menu_category_id": db_menu["menu_category_id"],
+                "image_url": db_menu["image_url"],
+                "thumb_url": db_menu["thumb_url"],
+                "original_name": db_menu["original_name"]
+            })
+
+        return {
+            "menu_list": menu_list,
+            "current_page": page,
+            "total_pages": total_pages,
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "total_menu_count": total_menu_count
+        }
+
+    # 수정: 오너가 가진 여러 가게 중 현재 선택된 restaurant_id를 결정하는 공통 함수 추가
+    def get_selected_restaurant_id(session_owner_id, client_restaurant_id=None):
+        restaurant_list = owner_db.get_restaurant_list_by_owner(session_owner_id)
+
+        if not restaurant_list:
+            raise ValueError("등록된 가게가 없습니다.")
+
+        restaurant_id_list = [row["restaurant_id"] for row in restaurant_list]
+
+        if client_restaurant_id is not None:
+            try:
+                selected_restaurant_id = int(client_restaurant_id)
+            except (TypeError, ValueError):
+                selected_restaurant_id = restaurant_id_list[0]
+
+            if selected_restaurant_id not in restaurant_id_list:
+                selected_restaurant_id = restaurant_id_list[0]
+        else:
+            selected_restaurant_id = restaurant_id_list[0]
+
+        return selected_restaurant_id, restaurant_list
+
+    @app.route("/owner/menu_management", methods=["GET"], endpoint="owner_menu_management")
+    def owner_menu_management():
+        session_user_id = session.get("user_id")
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        db_owner = owner_db.get_owner_info(session_owner_id)
+        db_categories = owner_db.get_menu_categories()
+
+        selected_restaurant_id, restaurant_list = get_selected_restaurant_id(session_owner_id)
+
+        initial_payload = build_menu_list_payload(
+            restaurant_id=selected_restaurant_id,
+            page=1,
+            per_page=5
         )
 
-        # 삭제 전용 라우트
-    @app.route("/owner/menu/<int:menu_id>/delete", methods=["POST"], endpoint="delete_menu")
-    def delete_menu(menu_id):
-        owner_id = 1
-        owner_db.delete_menu(owner_id, menu_id)
-        return redirect(url_for("owner_menu_management"))
+        return render_template(
+            "owner/owner_menu_management.html",
+            owner=db_owner,
+            restaurant_list=restaurant_list,
+            selected_restaurant_id=selected_restaurant_id,
+            categories=db_categories,
+            initial_payload=initial_payload,
+            session_user_id=session_user_id,
+            session_owner_id=session_owner_id
+        )
+
+    @app.route("/owner/menu_management/api/list", methods=["GET"], endpoint="owner_menu_management_api_list")
+    def owner_menu_management_api_list():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+        page = request.args.get("page", default=1, type=int)
+
+        selected_restaurant_id, restaurant_list = get_selected_restaurant_id(
+            session_owner_id,
+            client_restaurant_id
+        )
+
+        payload = build_menu_list_payload(
+            restaurant_id=selected_restaurant_id,
+            page=page,
+            per_page=5
+        )
+
+        return jsonify({
+            "success": True,
+            "message": "메뉴 목록 조회 완료",
+            "restaurant_id": selected_restaurant_id,
+            "restaurant_list": restaurant_list,
+            **payload
+        })
+
+    @app.route("/owner/menu_management/api/detail/<int:menu_id>", methods=["GET"], endpoint="owner_menu_management_api_detail")
+    def owner_menu_management_api_detail(menu_id):
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+
+        selected_restaurant_id, _ = get_selected_restaurant_id(
+            session_owner_id,
+            client_restaurant_id
+        )
+
+        db_menu_detail = owner_db.get_menu_detail_by_id(selected_restaurant_id, menu_id)
+
+        if not db_menu_detail:
+            return jsonify({
+                "success": False,
+                "message": "메뉴 정보를 찾을 수 없습니다."
+            }), 404
+
+        return jsonify({
+            "success": True,
+            "message": "메뉴 상세 조회 완료",
+            "menu_id": db_menu_detail["menu_id"],
+            "restaurant_id": db_menu_detail["restaurant_id"],
+            "menu_category_id": db_menu_detail["menu_category_id"],
+            "menu_name": db_menu_detail["menu_name"],
+            "price": int(db_menu_detail["price"]) if db_menu_detail["price"] is not None else 0,
+            "status": db_menu_detail["status"],
+            "image_url": db_menu_detail["image_url"],
+            "thumb_url": db_menu_detail["thumb_url"],
+            "original_name": db_menu_detail["original_name"]
+        })
+
+    @app.route("/owner/menu_management/api/save", methods=["POST"], endpoint="owner_menu_management_api_save")
+    def owner_menu_management_api_save():
+        session_user_id = session.get("user_id")
+        session_owner_id = session.get("owner_id")
+        print("request.form =", request.form)
+        print("request.files =", request.files)
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_menu_id = request.form.get("client_menu_id", "").strip()
+        client_menu_name = request.form.get("client_menu_name", "").strip()
+        client_price = request.form.get("client_price", "").strip()
+        client_menu_category_id = request.form.get("client_menu_category_id", "").strip()
+        client_remove_image = request.form.get("client_remove_image", "").strip()
+        client_soldout = request.form.get("client_soldout", "").strip()
+        client_page = request.form.get("client_page", default="1").strip()
+        client_menu_image = request.files.get("client_menu_image")
+
+        if not client_menu_name or not client_price or not client_menu_category_id:
+            return jsonify({
+                "success": False,
+                "message": "메뉴명, 가격, 카테고리는 필수입니다."
+            }), 400
+
+        if client_menu_image and client_menu_image.filename and not owner_db.allowed_file(client_menu_image.filename):
+            return jsonify({
+                "success": False,
+                "message": "허용 확장자: jpg, jpeg, png, gif, webp"
+            }), 400
+
+        menu_status = "OFF" if client_soldout == "Y" else "ON"
+
+        try:
+            restaurant_id, _ = get_selected_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            if client_menu_id:
+                owner_db.update_menu(
+                    restaurant_id=restaurant_id,
+                    menu_id=int(client_menu_id),
+                    menu_category_id=int(client_menu_category_id),
+                    menu_name=client_menu_name,
+                    price=int(client_price),
+                    status=menu_status,
+                    image_file=client_menu_image,
+                    remove_image=True if client_remove_image == "Y" else False
+                )
+
+                action_message = "메뉴가 수정되었습니다."
+                saved_menu_id = int(client_menu_id)
+            else:
+                saved_menu_id = owner_db.insert_menu(
+                    restaurant_id=restaurant_id,
+                    menu_category_id=int(client_menu_category_id),
+                    menu_name=client_menu_name,
+                    price=int(client_price),
+                    status=menu_status,
+                    image_file=client_menu_image
+                )
+                action_message = "메뉴가 등록되었습니다."
+
+            page = int(client_page) if str(client_page).isdigit() else 1
+            payload = build_menu_list_payload(
+                restaurant_id=restaurant_id,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": action_message,
+                "menu_id": saved_menu_id,
+                "restaurant_id": restaurant_id,
+                "session_user_id": session_user_id,
+                "session_owner_id": session_owner_id,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+    @app.route("/owner/menu_management/api/delete/<int:menu_id>", methods=["POST"], endpoint="owner_menu_management_api_delete")
+    def owner_menu_management_api_delete(menu_id):
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_page = request.form.get("client_page", default="1").strip()
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+
+        try:
+            restaurant_id, _ = get_selected_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            owner_db.delete_menu(restaurant_id, menu_id)
+
+            page = int(client_page) if str(client_page).isdigit() else 1
+            payload = build_menu_list_payload(
+                restaurant_id=restaurant_id,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "메뉴가 삭제되었습니다.",
+                "menu_id": menu_id,
+                "restaurant_id": restaurant_id,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
 
 
 # -------------------------------------------------------------------------------------
 # 오너 공지 관리 페이지
 # -------------------------------------------------------------------------------------
+    def build_notice_list_payload(restaurant_id, page=1, per_page=5):
+        total_notice_count = owner_notice_db.get_notice_count_by_restaurant(restaurant_id)
+        total_pages = math.ceil(total_notice_count / per_page) if total_notice_count > 0 else 1
 
-    @app.route("/owner/notice_management", endpoint="owner_notice_management")
+        if page < 1:
+            page = 1
+
+        if page > total_pages:
+            page = total_pages
+
+        offset = (page - 1) * per_page
+
+        db_notice_list = owner_notice_db.get_notice_list_by_restaurant(
+            restaurant_id=restaurant_id,
+            limit=per_page,
+            offset=offset
+        )
+
+        notice_list = []
+        for db_notice in db_notice_list:
+            notice_list.append({
+                "notice_id": db_notice["notice_id"],
+                "owner_id": db_notice["owner_id"],
+                "restaurant_id": db_notice["restaurant_id"],
+                "user_id": db_notice["user_id"],
+                "notice_url": db_notice["notice_url"],
+                "thumb_url": db_notice["thumb_url"],
+                "notice_title": db_notice["notice_title"],
+                "notice_content": db_notice["notice_content"],
+                "is_pinned": int(db_notice["is_pinned"]) if db_notice["is_pinned"] is not None else 0,
+                "created_at": db_notice["created_at"].strftime("%Y-%m-%d") if db_notice["created_at"] else "",
+                "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+            })
+
+        return {
+            "notice_list": notice_list,
+            "current_page": page,
+            "total_pages": total_pages,
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "total_notice_count": total_notice_count
+        }
+
+    def get_selected_notice_restaurant_id(session_owner_id, client_restaurant_id=None):
+        restaurant_list = owner_notice_db.get_restaurant_list_by_owner(session_owner_id)
+
+        if not restaurant_list:
+            raise ValueError("등록된 가게가 없습니다.")
+
+        restaurant_id_list = [row["restaurant_id"] for row in restaurant_list]
+
+        if client_restaurant_id is not None:
+            try:
+                selected_restaurant_id = int(client_restaurant_id)
+            except (TypeError, ValueError):
+                selected_restaurant_id = restaurant_id_list[0]
+
+            if selected_restaurant_id not in restaurant_id_list:
+                selected_restaurant_id = restaurant_id_list[0]
+        else:
+            selected_restaurant_id = restaurant_id_list[0]
+
+        return selected_restaurant_id, restaurant_list
+
+    @app.route("/owner/notice_management", methods=["GET"], endpoint="owner_notice_management")
     def owner_notice_management():
-        return render_template("owner/owner_notice_management.html")
+        session_user_id = session.get("user_id")
+        session_owner_id = session.get("owner_id")
 
-        owner = owner_db.get_owner_info(owner_id)
-        restaurant = owner_db.get_restaurant_id_by_owner(owner_id)
-        categories = owner_db.get_menu_categories()
-        menu_list = owner_db.get_menu_list_by_owner(owner_id)
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+
+        selected_restaurant_id, restaurant_list = get_selected_notice_restaurant_id(
+            session_owner_id,
+            client_restaurant_id
+        )
+
+        initial_payload = build_notice_list_payload(
+            restaurant_id=selected_restaurant_id,
+            page=1,
+            per_page=5
+        )
 
         return render_template(
-            "owner/owner_menu_management.html",
-            owner=owner,
-            restaurant=restaurant,
-            categories=categories,
-            menu_list=menu_list
+            "owner/owner_notice_management.html",
+            restaurant_list=restaurant_list,
+            selected_restaurant_id=selected_restaurant_id,
+            initial_payload=initial_payload,
+            session_user_id=session_user_id,
+            session_owner_id=session_owner_id
         )
+
+    @app.route("/owner/notice_management/api/list", methods=["GET"], endpoint="owner_notice_management_api_list")
+    def owner_notice_management_api_list():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+        page = request.args.get("page", default=1, type=int)
+
+        try:
+            selected_restaurant_id, restaurant_list = get_selected_notice_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            payload = build_notice_list_payload(
+                restaurant_id=selected_restaurant_id,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "공지사항 목록 조회 완료",
+                "restaurant_id": selected_restaurant_id,
+                "restaurant_list": restaurant_list,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+    @app.route("/owner/notice_management/api/detail/<int:notice_id>", methods=["GET"], endpoint="owner_notice_management_api_detail")
+    def owner_notice_management_api_detail(notice_id):
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+
+        try:
+            selected_restaurant_id, _ = get_selected_notice_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            db_notice = owner_notice_db.get_notice_detail_by_id(selected_restaurant_id, notice_id)
+
+            if not db_notice:
+                return jsonify({
+                    "success": False,
+                    "message": "공지사항 정보를 찾을 수 없습니다."
+                }), 404
+
+            return jsonify({
+                "success": True,
+                "message": "공지사항 상세 조회 완료",
+                "notice_id": db_notice["notice_id"],
+                "owner_id": db_notice["owner_id"],
+                "restaurant_id": db_notice["restaurant_id"],
+                "user_id": db_notice["user_id"],
+                "notice_url": db_notice["notice_url"],
+                "thumb_url": db_notice["thumb_url"],
+                "notice_title": db_notice["notice_title"],
+                "notice_content": db_notice["notice_content"],
+                "is_pinned": int(db_notice["is_pinned"]) if db_notice["is_pinned"] is not None else 0,
+                "created_at": db_notice["created_at"].strftime("%Y-%m-%d") if db_notice["created_at"] else "",
+                "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+    @app.route("/owner/notice_management/api/save", methods=["POST"], endpoint="owner_notice_management_api_save")
+    def owner_notice_management_api_save():
+        session_user_id = session.get("user_id")
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_notice_id = request.form.get("client_notice_id", "").strip()
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_notice_title = request.form.get("client_notice_title", "").strip()
+        client_notice_content = request.form.get("client_notice_content", "").strip()
+        client_is_pinned = request.form.get("client_is_pinned", "").strip()
+        client_remove_image = request.form.get("client_remove_image", "").strip()
+        client_page = request.form.get("client_page", default="1").strip()
+        client_notice_image = request.files.get("client_notice_image")
+
+        if not client_notice_title or not client_notice_content:
+            return jsonify({
+                "success": False,
+                "message": "공지사항 제목과 내용은 필수입니다."
+            }), 400
+
+        if client_notice_image and client_notice_image.filename and not owner_notice_db.allowed_file(client_notice_image.filename):
+            return jsonify({
+                "success": False,
+                "message": "허용 확장자: jpg, jpeg, png, gif, webp"
+            }), 400
+
+        try:
+            restaurant_id, _ = get_selected_notice_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            is_pinned = 1 if client_is_pinned == "Y" else 0
+
+            if client_notice_id:
+                owner_notice_db.update_notice(
+                    restaurant_id=restaurant_id,
+                    notice_id=int(client_notice_id),
+                    notice_title=client_notice_title,
+                    notice_content=client_notice_content,
+                    is_pinned=is_pinned,
+                    image_file=client_notice_image,
+                    remove_image=True if client_remove_image == "Y" else False
+                )
+                saved_notice_id = int(client_notice_id)
+                action_message = "공지사항이 수정되었습니다."
+            else:
+                saved_notice_id = owner_notice_db.insert_notice(
+                    owner_id=session_owner_id,
+                    restaurant_id=restaurant_id,
+                    user_id=session_user_id,
+                    notice_title=client_notice_title,
+                    notice_content=client_notice_content,
+                    is_pinned=is_pinned,
+                    image_file=client_notice_image
+                )
+                action_message = "공지사항이 등록되었습니다."
+
+            page = int(client_page) if str(client_page).isdigit() else 1
+            payload = build_notice_list_payload(
+                restaurant_id=restaurant_id,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": action_message,
+                "notice_id": saved_notice_id,
+                "restaurant_id": restaurant_id,
+                "session_user_id": session_user_id,
+                "session_owner_id": session_owner_id,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+    @app.route("/owner/notice_management/api/delete/<int:notice_id>", methods=["POST"], endpoint="owner_notice_management_api_delete")
+    def owner_notice_management_api_delete(notice_id):
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_page = request.form.get("client_page", default="1").strip()
+
+        try:
+            restaurant_id, _ = get_selected_notice_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            owner_notice_db.delete_notice(restaurant_id, notice_id)
+
+            page = int(client_page) if str(client_page).isdigit() else 1
+            payload = build_notice_list_payload(
+                restaurant_id=restaurant_id,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "공지사항이 삭제되었습니다.",
+                "notice_id": notice_id,
+                "restaurant_id": restaurant_id,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
 
 
 # ------------------------------------------------------------------------------------
 # 오너 리뷰 관리 페이지
-# -----------------------------------------------------------------------------------
-    @app.route("/owner/review_management", endpoint="owner_review_management")
+# ------------------------------------------------------------------------------------
+    def get_selected_review_restaurant_id(session_owner_id, client_restaurant_id=None):
+        db_restaurant_list = owner_review_db.get_restaurant_list_by_owner(session_owner_id)
+
+        if not db_restaurant_list:
+            raise ValueError("등록된 가게가 없습니다.")
+
+        db_restaurant_id_list = [db_row["restaurant_id"] for db_row in db_restaurant_list]
+
+        if client_restaurant_id is not None:
+            try:
+                selected_restaurant_id = int(client_restaurant_id)
+            except (TypeError, ValueError):
+                selected_restaurant_id = db_restaurant_id_list[0]
+
+            if selected_restaurant_id not in db_restaurant_id_list:
+                selected_restaurant_id = db_restaurant_id_list[0]
+        else:
+            selected_restaurant_id = db_restaurant_id_list[0]
+
+        return selected_restaurant_id, db_restaurant_list
+
+
+    def convert_review_row_to_payload(db_review):
+        if not db_review:
+            return None
+
+        db_reply_is_active = int(db_review["is_active"]) if db_review["is_active"] is not None else 0
+        db_reply_is_visible = int(db_review["is_visible"]) if db_review["is_visible"] is not None else 1
+
+        if db_reply_is_visible == 0:
+            review_status_text = "숨김"
+        elif db_reply_is_active == 1:
+            review_status_text = "답변완료"
+        else:
+            review_status_text = "미답변"
+
+        review_content_preview = db_review["content"] or ""
+        if len(review_content_preview) > 36:
+            review_content_preview = review_content_preview[:36] + "..."
+
+        return {
+            "review_id": db_review["review_id"],
+            "visit_id": db_review["visit_id"],
+            "user_id": db_review["user_id"],
+            "nickname": db_review["nickname"] or "",
+            "rating": int(db_review["rating"]) if db_review["rating"] is not None else 0,
+            "rating_text": "★" * int(db_review["rating"] or 0) + "☆" * (5 - int(db_review["rating"] or 0)),
+            "content": db_review["content"] or "",
+            "content_preview": review_content_preview,
+            "created_at": db_review["created_at"].strftime("%Y-%m-%d") if db_review["created_at"] else "",
+            "updated_at": db_review["updated_at"].strftime("%Y-%m-%d") if db_review["updated_at"] else "",
+            "reply_id": db_review["reply_id"],
+            "reply_content": db_review["reply_content"] or "",
+            "is_active": db_reply_is_active,
+            "is_visible": db_reply_is_visible,
+            "review_status_text": review_status_text
+        }
+
+
+    def build_review_list_payload(
+        db_restaurant_id,
+        client_tab_status="all",
+        client_sort_type="latest",
+        client_search_keyword="",
+        page=1,
+        per_page=5
+    ):
+        total_review_count = owner_review_db.get_review_count_by_restaurant(
+            db_restaurant_id=db_restaurant_id,
+            client_tab_status=client_tab_status,
+            client_search_keyword=client_search_keyword
+        )
+
+        total_pages = math.ceil(total_review_count / per_page) if total_review_count > 0 else 1
+
+        if page < 1:
+            page = 1
+
+        if page > total_pages:
+            page = total_pages
+
+        offset = (page - 1) * per_page
+
+        db_review_list = owner_review_db.get_review_list_by_restaurant(
+            db_restaurant_id=db_restaurant_id,
+            client_tab_status=client_tab_status,
+            client_sort_type=client_sort_type,
+            client_search_keyword=client_search_keyword,
+            limit=per_page,
+            offset=offset
+        )
+
+        review_list = []
+        for db_review in db_review_list:
+            review_list.append(convert_review_row_to_payload(db_review))
+
+        selected_review_id = review_list[0]["review_id"] if review_list else None
+
+        return {
+            "review_list": review_list,
+            "selected_review_id": selected_review_id,
+            "current_page": page,
+            "total_pages": total_pages,
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "total_review_count": total_review_count,
+            "tab_status": client_tab_status,
+            "sort_type": client_sort_type,
+            "search_keyword": client_search_keyword
+        }
+
+
+    @app.route("/owner/review_management", methods=["GET"], endpoint="owner_review_management")
     def owner_review_management():
-        return render_template("owner/owner_review_management.html")
+        session_user_id = session.get("user_id")
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+        client_tab_status = request.args.get("tab", default="all", type=str).strip().lower()
+        client_sort_type = request.args.get("sort", default="latest", type=str).strip().lower()
+        client_search_keyword = request.args.get("keyword", default="", type=str).strip()
+
+        if client_tab_status not in ["all", "pending", "done", "hidden"]:
+            client_tab_status = "all"
+
+        if client_sort_type not in ["latest", "rating"]:
+            client_sort_type = "latest"
+
+        selected_restaurant_id, db_restaurant_list = get_selected_review_restaurant_id(
+            session_owner_id,
+            client_restaurant_id
+        )
+
+        db_owner = owner_review_db.get_owner_info(session_owner_id)
+        db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+
+        initial_payload = build_review_list_payload(
+            db_restaurant_id=selected_restaurant_id,
+            client_tab_status=client_tab_status,
+            client_sort_type=client_sort_type,
+            client_search_keyword=client_search_keyword,
+            page=1,
+            per_page=5
+        )
+
+        db_detail_review = None
+        if initial_payload["selected_review_id"]:
+            db_detail_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=initial_payload["selected_review_id"]
+            )
+
+        detail_review = convert_review_row_to_payload(db_detail_review)
+        selected_restaurant_name = owner_review_db.get_restaurant_name_by_restaurant_id(selected_restaurant_id)
+
+        return render_template(
+            "owner/owner_review_management.html",
+            owner=db_owner,
+            restaurant_list=db_restaurant_list,
+            selected_restaurant_id=selected_restaurant_id,
+            selected_restaurant_name=selected_restaurant_name,
+            summary_data=db_summary,
+            initial_payload=initial_payload,
+            detail_review=detail_review,
+            session_user_id=session_user_id,
+            session_owner_id=session_owner_id
+        )
+
+
+    @app.route("/owner/review_management/api/list", methods=["GET"], endpoint="owner_review_management_api_list")
+    def owner_review_management_api_list():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+        client_tab_status = request.args.get("tab", default="all", type=str).strip().lower()
+        client_sort_type = request.args.get("sort", default="latest", type=str).strip().lower()
+        client_search_keyword = request.args.get("keyword", default="", type=str).strip()
+        page = request.args.get("page", default=1, type=int)
+
+        if client_tab_status not in ["all", "pending", "done", "hidden"]:
+            client_tab_status = "all"
+
+        if client_sort_type not in ["latest", "rating"]:
+            client_sort_type = "latest"
+
+        try:
+            selected_restaurant_id, db_restaurant_list = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+
+            payload = build_review_list_payload(
+                db_restaurant_id=selected_restaurant_id,
+                client_tab_status=client_tab_status,
+                client_sort_type=client_sort_type,
+                client_search_keyword=client_search_keyword,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 목록 조회 완료",
+                "restaurant_id": selected_restaurant_id,
+                "restaurant_list": db_restaurant_list,
+                "summary_data": db_summary,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/detail/<int:review_id>", methods=["GET"], endpoint="owner_review_management_api_detail")
+    def owner_review_management_api_detail(review_id):
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=review_id
+            )
+
+            if not db_review:
+                return jsonify({
+                    "success": False,
+                    "message": "리뷰 정보를 찾을 수 없습니다."
+                }), 404
+
+            detail_review = convert_review_row_to_payload(db_review)
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 상세 조회 완료",
+                "detail_review": detail_review
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/reply/save", methods=["POST"], endpoint="owner_review_management_api_reply_save")
+    def owner_review_management_api_reply_save():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_review_id = request.form.get("client_review_id", "").strip()
+        client_reply_content = request.form.get("client_reply_content", "").strip()
+
+        if not client_review_id:
+            return jsonify({
+                "success": False,
+                "message": "리뷰 번호가 필요합니다."
+            }), 400
+
+        if not client_reply_content:
+            return jsonify({
+                "success": False,
+                "message": "답변 내용을 입력해주세요."
+            }), 400
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            if owner_review_db.exists_owner_reply_by_review_id(int(client_review_id)):
+                return jsonify({
+                    "success": False,
+                    "message": "이미 등록된 답변이 있습니다. 수정 기능을 사용해주세요."
+                }), 400
+
+            owner_review_db.insert_owner_reply(
+                db_review_id=int(client_review_id),
+                session_owner_id=session_owner_id,
+                db_restaurant_id=selected_restaurant_id,
+                client_reply_content=client_reply_content
+            )
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=int(client_review_id)
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 답변이 등록되었습니다.",
+                "summary_data": db_summary,
+                "detail_review": convert_review_row_to_payload(db_review)
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/reply/update", methods=["POST"], endpoint="owner_review_management_api_reply_update")
+    def owner_review_management_api_reply_update():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_review_id = request.form.get("client_review_id", "").strip()
+        client_reply_content = request.form.get("client_reply_content", "").strip()
+
+        if not client_review_id:
+            return jsonify({
+                "success": False,
+                "message": "리뷰 번호가 필요합니다."
+            }), 400
+
+        if not client_reply_content:
+            return jsonify({
+                "success": False,
+                "message": "수정할 답변 내용을 입력해주세요."
+            }), 400
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            if not owner_review_db.exists_owner_reply_by_review_id(int(client_review_id)):
+                return jsonify({
+                    "success": False,
+                    "message": "기존 답변이 없습니다. 등록 기능을 먼저 사용해주세요."
+                }), 400
+
+            owner_review_db.update_owner_reply(
+                db_review_id=int(client_review_id),
+                session_owner_id=session_owner_id,
+                db_restaurant_id=selected_restaurant_id,
+                client_reply_content=client_reply_content
+            )
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=int(client_review_id)
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 답변이 수정되었습니다.",
+                "summary_data": db_summary,
+                "detail_review": convert_review_row_to_payload(db_review)
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/reply/delete", methods=["POST"], endpoint="owner_review_management_api_reply_delete")
+    def owner_review_management_api_reply_delete():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_review_id = request.form.get("client_review_id", "").strip()
+
+        if not client_review_id:
+            return jsonify({
+                "success": False,
+                "message": "리뷰 번호가 필요합니다."
+            }), 400
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            owner_review_db.delete_owner_reply(int(client_review_id))
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=int(client_review_id)
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 답변이 삭제되었습니다.",
+                "summary_data": db_summary,
+                "detail_review": convert_review_row_to_payload(db_review)
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/reply/hide", methods=["POST"], endpoint="owner_review_management_api_reply_hide")
+    def owner_review_management_api_reply_hide():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_review_id = request.form.get("client_review_id", "").strip()
+
+        if not client_review_id:
+            return jsonify({
+                "success": False,
+                "message": "리뷰 번호가 필요합니다."
+            }), 400
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            if not owner_review_db.exists_owner_reply_by_review_id(int(client_review_id)):
+                owner_review_db.insert_owner_reply(
+                    db_review_id=int(client_review_id),
+                    session_owner_id=session_owner_id,
+                    db_restaurant_id=selected_restaurant_id,
+                    client_reply_content=""
+                )
+
+            owner_review_db.hide_review_reply(int(client_review_id))
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=int(client_review_id)
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰가 숨김 처리되었습니다.",
+                "summary_data": db_summary,
+                "detail_review": convert_review_row_to_payload(db_review)
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
