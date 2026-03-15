@@ -234,8 +234,28 @@ async function openDetailPanel(restaurantId) {
                     const userImgStyle = r.user_image ? `background-image: url('${r.user_image}');` : `background-color: #ddd;`;
                     const reviewImageHtml = r.review_image ? `<img src="${r.review_image}" alt="리뷰 이미지" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 12px;">` : '';
 
-                    const isMine = r.user_id === currentUserId;
-                    const deleteBtn = isMine ? `<button class="delete-review-btn" onclick="deleteReview(${r.review_id}, ${restaurantId})">삭제</button>` : '';
+                    // 쓰레기통 아이콘 + 말풍선 UI
+                    const deleteBtn = r.is_mine ? `
+                        <div class="review-action-wrap">
+                            <button class="btn-review-delete" onclick="toggleDeletePopover(${r.review_id})">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                                삭제
+                            </button>
+                            
+                            <div class="delete-confirm-popover" id="popover-${r.review_id}">
+                                <p>정말 삭제할까요?</p>
+                                <div class="popover-actions">
+                                    <button class="btn-popover-cancel" onclick="toggleDeletePopover(${r.review_id})">취소</button>
+                                    <button class="btn-popover-confirm" onclick="executeDelete(${r.review_id}, ${restaurantId})">삭제</button>
+                                </div>
+                            </div>
+                        </div>
+                    ` : '';
 
                     let imageGalleryHtml = '';
                     // 이미지 나열
@@ -284,18 +304,45 @@ async function openDetailPanel(restaurantId) {
 }
 
 // 삭제 실행 함수
-async function deleteReview(review_id, restaurantId) {
-    if (!confirm("정말 이 리뷰를 삭제하시겠습니까?")) return;
+function toggleDeletePopover(review_id) {
+    // 다른 열려있는 말풍선이 있다면 먼저 닫아줍니다 (깔끔한 UI 유지)
+    document.querySelectorAll('.delete-confirm-popover.show').forEach(popover => {
+        if (popover.id !== `popover-${review_id}`) {
+            popover.classList.remove('show');
+        }
+    });
 
+    const popover = document.getElementById(`popover-${review_id}`);
+    if (popover) {
+        popover.classList.toggle('show');
+    }
+}
+
+// 기존 alert(confirm) 없이 말풍선에서 바로 실행되는 삭제 함수
+async function executeDelete(review_id, restaurantId) {
     try {
         const res = await fetch(`/api/reviews/${review_id}`, { method: "DELETE" });
-        if ((await res.json()).success) {
+        const result = await res.json();
+
+        if (result.success) {
+            // 말풍선에서 누른 거라, 삭제 성공 알림조차 생략하고 스르륵 리스트만 갱신하면 더 고급스럽습니다.
             openDetailPanel(restaurantId); // 목록 갱신
+        } else {
+            alert(result.message || "삭제 권한이 없습니다.");
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error(e); 
+        alert("서버 오류가 발생했습니다.");
+    }
 }
 
 document.addEventListener("click", (event) => {
+
+    // [추가] 말풍선 바깥쪽 아무 곳이나 클릭하면 열려있던 말풍선 닫기
+    if (!event.target.closest('.review-action-wrap')) {
+        document.querySelectorAll('.delete-confirm-popover.show').forEach(p => p.classList.remove('show'));
+    }
+    
     // 1. 클릭된 요소가 '.restaurant-card' 이거나 그 내부의 요소인지 확인합니다.
     const clickedCard = event.target.closest(".restaurant-card");
     
