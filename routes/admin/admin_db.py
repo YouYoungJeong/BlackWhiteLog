@@ -5,7 +5,7 @@ from db import get_connection
 # =========================
 def fetch_all_users():
     sql = """
-        SELECT user_id, email, nickname, role, status, created_at
+        SELECT user_id, email, nickname, role, status, provider, created_at
         FROM users
         ORDER BY created_at DESC
     """
