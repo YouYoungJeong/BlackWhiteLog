@@ -188,16 +188,80 @@ async function openDetailPanel(restaurantId) {
                 menuTab.innerHTML = "<p style='color: var(--subtext);'>등록된 메뉴가 없습니다.</p>";
             } else {
                 let menuHtml = '<ul style="list-style: none; padding: 0; margin: 0;">';
+
                 menus.forEach(m => {
-                    // 가격에 천 단위 콤마(,) 찍기
-                    const priceFormatted = m.price.toLocaleString() + '원';
+                    const priceFormatted = Number(m.price || 0).toLocaleString() + '원';
+                    const hasEaten = Boolean(m.has_eaten);
+                    const eatenCount = Number(m.eaten_count || 0);
+
+                    const stampHtml = hasEaten
+                        ? `
+                            <span style="
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 0px;
+                                margin-left: 8px;
+                            ">
+                                <img
+                                    src="/static/img/stamp.png"
+                                    alt="먹어본 메뉴"
+                                    style="
+                                        width: 22px;
+                                        height: 22px;
+                                        object-fit: contain;
+                                        vertical-align: middle;
+                                    "
+                                >
+                                <span style="
+                                    display: inline-block;
+                                    min-width: 22px;
+                                    padding: 2px 6px;
+                                    border-radius: 999px;
+                                    background: #fff4f4;
+                                    color: #b22222;
+                                    font-size: 12px;
+                                    font-weight: 700;
+                                    line-height: 1.4;
+                                ">
+                                    ${eatenCount}회
+                                </span>
+                            </span>
+                        `
+                        : '';
+
                     menuHtml += `
-                        <li style="display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--line);">
-                            <span style="font-weight: bold; color: var(--text);">${m.menu_name}</span>
-                            <span style="color: var(--point-dark); font-weight: bold;">${priceFormatted}</span>
+                        <li style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            padding: 16px 0;
+                            border-bottom: 1px solid var(--line);
+                            gap: 12px;
+                        ">
+                            <div style="
+                                display: flex;
+                                align-items: center;
+                                min-width: 0;
+                                flex: 1;
+                            ">
+                                <span style="
+                                    font-weight: bold;
+                                    color: var(--text);
+                                    word-break: keep-all;
+                                ">${m.menu_name}</span>
+                                ${stampHtml}
+                            </div>
+
+                            <span style="
+                                color: var(--point-dark);
+                                font-weight: bold;
+                                white-space: nowrap;
+                                flex-shrink: 0;
+                            ">${priceFormatted}</span>
                         </li>
                     `;
                 });
+
                 menuHtml += '</ul>';
                 menuTab.innerHTML = menuHtml;
             }
