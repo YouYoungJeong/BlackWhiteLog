@@ -714,6 +714,7 @@ async function fetchFavoriteRestaurants() {
     }
 }
 
+window.fetchRestaurants = fetchRestaurants;
 window.fetchFavoriteRestaurants = fetchFavoriteRestaurants;
 
 /************************************************************
