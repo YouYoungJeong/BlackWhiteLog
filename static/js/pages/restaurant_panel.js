@@ -48,7 +48,6 @@ tabButtons.forEach(btn => {
 
 // 패널 열기 및 AJAX 정보 호출 함수 
 async function openDetailPanel(restaurantId) {
-    const currentUserId = 1; // 나중에 로그인 세션값으로 대체
     const detailPanel = document.getElementById("restaurantDetailPanel");
     detailPanel.classList.remove("hidden");
 
@@ -202,7 +201,7 @@ async function deleteReview(review_id, restaurantId) {
         const res = await fetch(`/api/reviews/${review_id}`, { method: "DELETE" });
         const result = await res.json();
 
-        // 🌟 수정됨: 서버의 성공/실패 여부를 확인하고 피드백(알림) 주기
+        // 수정됨: 서버의 성공/실패 여부를 확인하고 피드백(알림) 주기
         if (result.success) {
             alert("리뷰가 삭제되었습니다.");
             openDetailPanel(restaurantId); // 목록 갱신

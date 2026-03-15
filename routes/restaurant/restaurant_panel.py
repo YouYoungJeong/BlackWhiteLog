@@ -45,7 +45,10 @@ def api_add_review(restaurant_id):
             return jsonify({"success": False, "message": "데이터가 부족합니다."}), 400
 
         # 유저 ID 설정 (반드시 DB에 존재하는 ID여야 함)
-        user_id = session.get('user_id', 1) 
+        user_id = session.get('user_id') 
+
+        if not user_id:
+            return jsonify({"success": False, "message": "로그인이 필요합니다."}), 401
 
         # 로컬 폴더에 이미지 저장 로직
         image_urls = []

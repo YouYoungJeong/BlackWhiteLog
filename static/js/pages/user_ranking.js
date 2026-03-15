@@ -78,9 +78,21 @@ async function loadRankingData() {
         ]);
 
         const users = await listRes.json();
-        const me = await meRes.json();
 
-        // 좌측 패널: 실시간 랭킹 리스트
+        // 수정/추가된 부분 1: 로그인 여부 확인 및 블러 오버레이 제어
+        let me = null;
+        const blurOverlay = document.getElementById('loginBlurOverlay');
+        
+        if (meRes.status === 401) {
+            // 비로그인 시: 블러 오버레이 켜기
+            if (blurOverlay) blurOverlay.classList.remove('hidden-view');
+        } else {
+            // 로그인 시: 블러 오버레이 끄고 내 데이터 파싱
+            if (blurOverlay) blurOverlay.classList.add('hidden-view');
+            me = await meRes.json();
+        }
+
+        // 좌측 패널: 실시간 랭킹 리스트 (로그인/비로그인 모두 렌더링)
         const listContainer = document.querySelector(".ranking-list-body");
         if (listContainer && users.length > 0) {
             listContainer.innerHTML = users.map((u, i) => {
@@ -89,7 +101,8 @@ async function loadRankingData() {
                 else if (i === 1) rankClass = "silver";
                 else if (i > 2) rankClass = "";
 
-                const isMe = u.user_id === me.user_id;
+                // 수정된 부분 2: me 객체가 있을 때(로그인)만 내 랭킹인지 비교
+                const isMe = me ? (u.user_id === me.user_id) : false; 
                 const highlightClass = isMe ? "my-rank-highlight" : (i < 3 ? "top-rank" : "");
                 const meBadge = isMe ? `<span class="me-badge">ME</span>` : "";
 
@@ -105,6 +118,9 @@ async function loadRankingData() {
                 `;
             }).join('');
         }
+        // 추가된 부분 3: 비로그인 상태면 전체 랭킹까지만 그리고 함수 강제 종료 (아래 에러 방지)
+        if (!me) return;
+
         const allBadges = me.achievements_data.all_achievements;
         const myBadges = me.achievements_data.user_achievements;
         const myBadgeIds = myBadges.map(b => b.achievement_id);
