@@ -35,10 +35,19 @@ def handle_social_login_or_link(provider, social_id, email, nickname, profile_im
         flash("로그인되었습니다.")
         return redirect(url_for("index"))
 
+# ==================================================
+# 카카오 소셜 로그인 시 값을 이상하게 받아옴, 이메일 강제로 비우기
+# ==================================================
+    signup_email = email
+    if provider.upper() == "KAKAO":
+        signup_email = ""
+
+
+
     session["pending_social_link"] = {
         "provider": provider.upper(),
         "social_id": social_id,
-        "email": email,
+        "email": signup_email,
         "nickname": nickname,
         "profile_image_url": profile_image_url,
     }
@@ -197,6 +206,13 @@ def signup():
                 return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
             if password != password_confirm:
                 return render_signup_with_error("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
+
+            if provider.upper() == "KAKAO":
+                if not email:
+                    return render_signup_with_error("카카오 회원가입은 이메일을 직접 입력해주세요.")
+                if email_checked != "true" or checked_email_value != email:
+                    return render_signup_with_error("이메일 중복 확인을 해주세요.")
+
             if nickname_checked != "true" or checked_nickname_value != nickname:
                 return render_signup_with_error("닉네임 중복 확인을 해주세요.")
 
