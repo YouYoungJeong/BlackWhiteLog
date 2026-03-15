@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from functools import wraps
 
 # 음식점 관리용 더미 데이터 import
-from admin_dummy_data import (
+from .admin_dummy_data import (
     DUMMY_CATEGORIES,
     DUMMY_RESTAURANTS,
     get_category_name,
@@ -14,7 +14,15 @@ from admin_dummy_data import (
 )
 
 # DB 함수 import
-from db import (
+from .admin_db import (
+    fetch_all_users,
+    admin_deactivate_user,
+    admin_restore_user,
+    fetch_admin_reports,
+    update_admin_report_status,
+    fetch_admin_sanctions,
+    create_admin_sanction,
+    release_admin_sanction,
     fetch_admin_review_restaurants,
     fetch_admin_reviews_by_restaurant,
     get_admin_review_by_id,
@@ -38,7 +46,7 @@ def admin_required(view_func):
         # 로그인 안 했으면 로그인 페이지로 이동
         if "user_id" not in session:
             flash("로그인이 필요합니다.")
-            return redirect(url_for("login"))
+            return redirect(url_for("login.login"))
 
         # 관리자만 접근 가능
         if session.get("role") != "ADMIN":
@@ -91,7 +99,7 @@ def admin_restaurant_create():
     # GET 요청이면 등록 폼 보여주기
     if request.method == "GET":
         return render_template(
-            "admin_restaurant_form.html",
+            "admin/admin_restaurant_form.html",
             mode="create",
             categories=DUMMY_CATEGORIES,
             restaurant=None,
@@ -108,7 +116,7 @@ def admin_restaurant_create():
     if not restaurant_name:
         flash("음식점 이름을 입력해주세요.")
         return render_template(
-            "admin_restaurant_form.html",
+            "admin/admin_restaurant_form.html",
             mode="create",
             categories=DUMMY_CATEGORIES,
             restaurant=None,
@@ -148,7 +156,7 @@ def admin_restaurant_edit(restaurant_id):
     # GET 요청이면 수정 폼 보여주기
     if request.method == "GET":
         return render_template(
-            "admin_restaurant_form.html",
+            "admin/admin_restaurant_form.html",
             mode="edit",
             categories=DUMMY_CATEGORIES,
             restaurant=restaurant,
@@ -165,7 +173,7 @@ def admin_restaurant_edit(restaurant_id):
     if not restaurant_name:
         flash("음식점 이름을 입력해주세요.")
         return render_template(
-            "admin_restaurant_form.html",
+            "admin/admin_restaurant_form.html",
             mode="edit",
             categories=DUMMY_CATEGORIES,
             restaurant=restaurant,
@@ -370,3 +378,148 @@ def admin_restore_review(review_id):
         flash("리뷰 복구에 실패했습니다.")
 
     return redirect(url_for("admin.admin_review_manage", restaurant_id=review["restaurant_id"]))
+
+# =========================
+# 관리자 페이지
+# =========================
+@admin_bp.route("/admin")
+@admin_required
+def admin_page():
+    return render_template("admin/admin_dashboard.html")
+
+
+# =========================
+# 관리자 회원 관리
+# =========================
+@admin_bp.route("/admin/users")
+@admin_required
+def admin_users():
+    users = fetch_all_users()
+    return render_template("admin/admin_users.html", users=users)
+
+
+# =========================
+# 관리자 회원 비활성화
+# =========================
+@admin_bp.route("/admin/users/<int:user_id>/deactivate", methods=["POST"])
+@admin_required
+def admin_user_deactivate(user_id):
+    admin_deactivate_user(user_id)
+    flash("회원 상태를 DELETED로 변경했습니다.")
+    return redirect(url_for("admin.admin_users"))
+
+
+# =========================
+# 관리자 회원 복구
+# =========================
+@admin_bp.route("/admin/users/<int:user_id>/restore", methods=["POST"])
+@admin_required
+def admin_user_restore(user_id):
+    admin_restore_user(user_id)
+    flash("회원 상태를 ACTIVE로 복구했습니다.")
+    return redirect(url_for("admin.admin_users"))
+
+
+# =========================
+# 관리자 신고 / 제재 통합 관리
+# =========================
+@admin_bp.route("/admin/moderation", methods=["GET", "POST"])
+@admin_required
+def admin_moderation():
+    if request.method == "POST":
+        user_nickname = request.form.get("user_nickname", "").strip()
+        sanction_type = request.form.get("sanction_type", "").strip()
+        reason = request.form.get("reason", "").strip()
+        expire_at = request.form.get("expire_at", "").strip()
+
+        if not user_nickname or not sanction_type or not reason:
+            flash("대상 닉네임, 제재 종류, 사유를 입력해주세요.")
+            return redirect(url_for("admin.admin_moderation"))
+
+        create_admin_sanction(
+            user_nickname=user_nickname,
+            sanction_type=sanction_type,
+            reason=reason,
+            expire_at=expire_at if expire_at else "-"
+        )
+        flash("제재가 등록되었습니다.")
+        return redirect(url_for("admin.admin_moderation"))
+
+    report_keyword = request.args.get("report_keyword", "").strip()
+    report_status = request.args.get("report_status", "").strip()
+
+    sanction_keyword = request.args.get("sanction_keyword", "").strip()
+    sanction_status = request.args.get("sanction_status", "").strip()
+
+    reports = fetch_admin_reports(keyword=report_keyword, status=report_status)
+    sanctions = fetch_admin_sanctions(keyword=sanction_keyword, status=sanction_status)
+
+    return render_template(
+        "admin/admin_moderation.html",
+        reports=reports,
+        sanctions=sanctions,
+        report_keyword=report_keyword,
+        report_status=report_status,
+        sanction_keyword=sanction_keyword,
+        sanction_status=sanction_status,
+    )
+
+
+# =========================
+# 관리자 신고 관리 목록
+# =========================
+@admin_bp.route("/admin/reports")
+@admin_required
+def admin_reports():
+    return redirect(url_for("admin.admin_moderation"))
+
+
+# =========================
+# 신고 승인 처리
+# =========================
+@admin_bp.route("/admin/reports/<int:report_id>/resolve", methods=["POST"])
+@admin_required
+def admin_resolve_report(report_id):
+    success = update_admin_report_status(report_id, "RESOLVED")
+    if success:
+        flash("신고를 처리 완료 상태로 변경했습니다.")
+    else:
+        flash("신고 내역을 찾을 수 없습니다.")
+    return redirect(url_for("admin.admin_moderation"))
+
+
+# =========================
+# 신고 반려 처리
+# =========================
+@admin_bp.route("/admin/reports/<int:report_id>/reject", methods=["POST"])
+@admin_required
+def admin_reject_report(report_id):
+    success = update_admin_report_status(report_id, "REJECTED")
+    if success:
+        flash("신고를 반려 처리했습니다.")
+    else:
+        flash("신고 내역을 찾을 수 없습니다.")
+    return redirect(url_for("admin.admin_moderation"))
+
+
+# =========================
+# 관리자 제재 관리
+# =========================
+@admin_bp.route("/admin/sanctions", methods=["GET", "POST"])
+@admin_required
+def admin_sanctions():
+    return redirect(url_for("admin.admin_moderation"))
+
+
+# =========================
+# 제재 해제
+# =========================
+@admin_bp.route("/admin/sanctions/<int:sanction_id>/release", methods=["POST"])
+@admin_required
+def admin_release_sanction(sanction_id):
+    success = release_admin_sanction(sanction_id)
+    if success:
+        flash("제재를 해제했습니다.")
+    else:
+        flash("제재 내역을 찾을 수 없습니다.")
+    return redirect(url_for("admin.admin_moderation"))

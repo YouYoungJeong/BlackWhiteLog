@@ -1,7 +1,7 @@
 import os
 import uuid
 from flask import Blueprint, jsonify, request, session
-from restaurant_panel_db import get_restaurant_detail, get_restaurant_menus, get_restaurant_reviews, save_restaurant_review
+from .restaurant_panel_db import get_restaurant_detail, get_restaurant_menus, get_restaurant_reviews, save_restaurant_review
 
 restaurant_panel_bp = Blueprint('restaurant_panel_bp', __name__)
 
@@ -78,7 +78,7 @@ def api_add_review(restaurant_id):
 def api_delete_review(review_id):
     user_id = session.get('user_id', 1) # 로그인 구현 전까지 임시 1
     
-    from restaurant_panel_db import delete_review_transaction
+    from .restaurant_panel_db import delete_review_transaction
     if delete_review_transaction(review_id, user_id):
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "삭제 권한이 없거나 오류가 발생했습니다."}), 403

@@ -190,6 +190,7 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, sort_by="visi
             return rows
     finally:
         conn.close()
+<<<<<<< Updated upstream
 
 
 # =========================
@@ -1003,3 +1004,5 @@ def soft_delete_admin_review(review_id):
 # =========================
 def restore_admin_review(review_id):
     return update_admin_review_status(review_id, "ACTIVE")
+=======
+>>>>>>> Stashed changes
