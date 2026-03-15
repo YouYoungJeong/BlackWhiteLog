@@ -1,6 +1,7 @@
 from db import get_connection
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
 # =========================
 # 일반 로그인 검증
 # =========================
@@ -121,43 +122,84 @@ def find_user_by_social(provider, social_id):
         conn.close()
 
 
+# =========================
+# 특정 유저에 특정 provider가 이미 연결되어 있는지 조회
+# 예: 같은 user가 이미 KAKAO를 연결했는지
+# =========================
+def find_social_account_by_user(user_id, provider):
+    sql = """
+        SELECT social_account_id, user_id, provider, provider_user_id
+        FROM user_social_accounts
+        WHERE user_id = %s
+          AND provider = %s
+        LIMIT 1
+    """
 
-# # =========================
-# # 소셜 회원 생성
-# # =========================
-# def create_social_user(nickname, email, provider, social_id, profile_image_url=None):
-#     provider = provider.upper()
+    provider = provider.upper()
 
-#     user_sql = """
-#         INSERT INTO users (email, password_hash, nickname, profile_image_url)
-#         VALUES (%s, NULL, %s, %s)
-#     """
-
-#     social_sql = """
-#         INSERT INTO user_social_accounts (user_id, provider, provider_user_id)
-#         VALUES (%s, %s, %s)
-#     """
-
-#     conn = get_connection()
-#     try:
-#         with conn.cursor() as cursor:
-#             cursor.execute(user_sql, (email, nickname, profile_image_url))
-#             user_id = cursor.lastrowid
-
-#             cursor.execute(social_sql, (user_id, provider, social_id))
-
-#         conn.commit()
-#         return user_id
-#     except:
-#         conn.rollback()
-#         raise
-#     finally:
-#         conn.close()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (user_id, provider))
+            return cursor.fetchone()
+    finally:
+        conn.close()
 
 
 # =========================
-# 소셜 회원가입용 새 함수 추가
-# 바로 회원 생성하지 않고, 회원가입 폼을 한 번 더 거쳐서 가입하는 거
+# 해당 소셜 계정이 이미 다른 계정에 연결되어 있는지 조회
+# =========================
+def is_social_account_already_linked(provider, social_id):
+    sql = """
+        SELECT social_account_id, user_id, provider, provider_user_id
+        FROM user_social_accounts
+        WHERE provider = %s
+          AND provider_user_id = %s
+        LIMIT 1
+    """
+
+    provider = provider.upper()
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (provider, social_id))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+# =========================
+# 기존 회원 계정에 소셜 계정 연결
+# =========================
+def link_social_account(user_id, provider, social_id):
+    provider = provider.upper()
+
+    existing_social = is_social_account_already_linked(provider, social_id)
+    if existing_social:
+        raise ValueError("이미 다른 계정에 연결된 소셜 계정입니다.")
+
+    existing_provider_for_user = find_social_account_by_user(user_id, provider)
+    if existing_provider_for_user:
+        raise ValueError("이미 해당 소셜 계정이 연결되어 있습니다.")
+
+    sql = """
+        INSERT INTO user_social_accounts (user_id, provider, provider_user_id)
+        VALUES (%s, %s, %s)
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (user_id, provider, social_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# =========================
+# 소셜 회원가입
+# 회원가입 폼을 거친 뒤 users + user_social_accounts 저장
 # =========================
 def create_social_user_with_form(nickname, email, password, provider, social_id, profile_image_url=None):
     provider = provider.upper()
@@ -189,6 +231,7 @@ def create_social_user_with_form(nickname, email, password, provider, social_id,
     finally:
         conn.close()
 
+
 # =========================
 # 닉네임으로 이메일 찾기
 # =========================
@@ -209,6 +252,7 @@ def find_email_by_nickname(nickname):
     finally:
         conn.close()
 
+
 # =========================
 # 비밀번호 재설정
 # 이메일 + 닉네임 일치하는 회원의 비밀번호 변경
@@ -228,9 +272,12 @@ def reset_user_password(email, nickname, new_password):
     try:
         with conn.cursor() as cursor:
             cursor.execute(sql, (new_password_hash, email, nickname))
-            return cursor.rowcount > 0
+            changed = cursor.rowcount > 0
+        conn.commit()
+        return changed
     finally:
         conn.close()
+
 
 # =========================
 # 일반 회원 탈퇴 처리
@@ -249,6 +296,7 @@ def withdraw_user(user_id):
         conn.commit()
     finally:
         conn.close()
+
 
 # =========================
 # 탈퇴 회원 복구
@@ -284,6 +332,8 @@ def update_user_nickname(user_id, new_nickname):
     try:
         with conn.cursor() as cursor:
             cursor.execute(sql, (new_nickname, user_id))
-            return cursor.rowcount > 0
+            changed = cursor.rowcount > 0
+        conn.commit()
+        return changed
     finally:
         conn.close()

@@ -8,7 +8,9 @@ restaurant_panel_bp = Blueprint('restaurant_panel_bp', __name__)
 @restaurant_panel_bp.route("/api/restaurants/<int:restaurant_id>")
 def api_restaurant_detail(restaurant_id):
     """특정 음식점 상세 정보 반환 API"""
-    detail = get_restaurant_detail(restaurant_id)
+    user_id = session.get("user_id")
+    detail = get_restaurant_detail(restaurant_id, user_id=user_id)
+
     if detail:
         return jsonify(detail)
     return jsonify({"error": "Restaurant not found"}), 404
