@@ -13,9 +13,40 @@ from .login_db import (
     find_user_by_nickname,
     find_email_by_nickname,
     reset_user_password,
+    link_social_account,
 )
 
 login_bp = Blueprint("login", __name__)
+
+
+def login_user_session(user, provider_name):
+    session["user_email"] = user["email"]
+    session["user_nickname"] = user["nickname"]
+    session["user_id"] = user["user_id"]
+    session["role"] = user.get("role", "USER")
+    session["login_provider"] = provider_name
+
+
+def handle_social_login_or_link(provider, social_id, email, nickname, profile_image_url):
+    user = find_user_by_social(provider, social_id)
+
+    if user:
+        login_user_session(user, provider.lower())
+        flash("로그인되었습니다.")
+        return redirect(url_for("index"))
+
+    session["pending_social_link"] = {
+        "provider": provider.upper(),
+        "social_id": social_id,
+        "email": email,
+        "nickname": nickname,
+        "profile_image_url": profile_image_url,
+    }
+    session["show_social_link_modal"] = True
+    session.pop("social_signup_data", None)
+
+    flash("연결된 계정이 없습니다. 기존 회원이면 계정 연결, 처음이라면 회원가입을 진행해주세요.")
+    return redirect(url_for("login.login"))
 
 
 # =========================
@@ -30,21 +61,53 @@ def login():
         user = verify_user_login(email, password)
 
         if user:
-            session["user_email"] = user["email"]
-            session["user_nickname"] = user["nickname"]
-            session["user_id"] = user["user_id"]
-            session["role"] = user.get("role", "USER")
-            session["login_provider"] = "local"
+            pending_social_link = session.get("pending_social_link")
+
+            if pending_social_link:
+                provider = pending_social_link.get("provider")
+                social_id = pending_social_link.get("social_id")
+
+                if not provider or not social_id:
+                    session.pop("pending_social_link", None)
+                    session.pop("show_social_link_modal", None)
+                    flash("소셜 연동 정보가 올바르지 않습니다. 다시 시도해주세요.")
+                    return redirect(url_for("login.login"))
+
+                try:
+                    link_social_account(user["user_id"], provider, social_id)
+                except ValueError as e:
+                    session.pop("pending_social_link", None)
+                    session.pop("show_social_link_modal", None)
+                    flash(str(e))
+                    return redirect(url_for("login.login"))
+                except Exception:
+                    session.pop("pending_social_link", None)
+                    session.pop("show_social_link_modal", None)
+                    flash("소셜 계정 연결 중 오류가 발생했습니다.")
+                    return redirect(url_for("login.login"))
+
+                session.pop("pending_social_link", None)
+                session.pop("show_social_link_modal", None)
+                flash("기존 계정과 소셜 계정이 연결되었습니다.")
+
+            login_user_session(user, "local")
             return redirect(url_for("index"))
 
         flash("이메일 또는 비밀번호가 올바르지 않거나 탈퇴한 계정입니다.")
         return redirect(url_for("login.login"))
 
-    return render_template("login/login.html")
+    show_social_link_modal = session.pop("show_social_link_modal", False)
+    pending_social_link = session.get("pending_social_link")
+
+    return render_template(
+        "login/login.html",
+        show_social_link_modal=show_social_link_modal,
+        pending_social_link=pending_social_link,
+    )
 
 
 # =========================
-# 일반 회원가입
+# 일반 회원가입 / 소셜 회원가입
 # =========================
 @login_bp.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -52,6 +115,8 @@ def signup():
         mode = request.args.get("mode", "").strip()
         if mode == "local":
             session.pop("social_signup_data", None)
+            session.pop("pending_social_link", None)
+            session.pop("show_social_link_modal", None)
 
     social_data = session.get("social_signup_data", {})
 
@@ -116,6 +181,7 @@ def signup():
             if not social_data or existing_nickname["nickname"] != social_data.get("nickname"):
                 return render_signup_with_error("이미 사용 중인 닉네임입니다.")
 
+        # 소셜 신규 회원가입
         if social_data:
             provider = social_data.get("provider")
             social_id = social_data.get("social_id")
@@ -124,7 +190,9 @@ def signup():
             if not provider or not social_id:
                 flash("소셜 회원가입 정보가 올바르지 않습니다. 다시 시도해주세요.")
                 session.pop("social_signup_data", None)
+                session.pop("pending_social_link", None)
                 return redirect(url_for("login.login"))
+
             if not password or not password_confirm:
                 return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
             if password != password_confirm:
@@ -140,20 +208,20 @@ def signup():
                 social_id=social_id,
                 profile_image_url=profile_image_url,
             )
+
             user = find_user_by_social(provider, social_id)
             if not user:
                 return render_signup_with_error("소셜 회원가입 후 사용자 조회에 실패했습니다.")
 
-            session["user_email"] = user["email"]
-            session["user_nickname"] = user["nickname"]
-            session["user_id"] = user["user_id"]
-            session["role"] = user.get("role", "USER")
-            session["login_provider"] = provider.lower()
+            login_user_session(user, provider.lower())
             session.pop("social_signup_data", None)
+            session.pop("pending_social_link", None)
+            session.pop("show_social_link_modal", None)
 
             flash("간편 회원가입이 완료되었습니다.")
             return redirect(url_for("index"))
 
+        # 일반 회원가입
         if not password or not password_confirm:
             return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
         if password != password_confirm:
@@ -173,7 +241,63 @@ def signup():
 @login_bp.route("/signup/reset")
 def signup_reset():
     session.pop("social_signup_data", None)
+    session.pop("pending_social_link", None)
+    session.pop("show_social_link_modal", None)
     return redirect(url_for("login.signup", mode="local"))
+
+
+# =========================
+# 소셜 연결 선택 페이지
+# =========================
+@login_bp.route("/social/connect-choice")
+def social_connect_choice():
+    pending_social_link = session.get("pending_social_link")
+    if not pending_social_link:
+        flash("소셜 연동 정보가 없습니다. 다시 시도해주세요.")
+        return redirect(url_for("login.login"))
+
+    return render_template(
+        "login/social_connect_choice.html",
+        social_data=pending_social_link
+    )
+
+
+# =========================
+# 기존 회원 계정과 연결하러 로그인 페이지로 이동
+# =========================
+
+#@login_bp.route("/social/connect-existing")
+#def social_connect_existing():
+#    pending_social_link = session.get("pending_social_link")
+#    if not pending_social_link:
+#        flash("소셜 연동 정보가 없습니다. 다시 시도해주세요.")
+#        return redirect(url_for("login.login"))
+#
+#    session["show_social_link_modal"] = True
+#    flash("기존 계정으로 로그인하면 소셜 계정이 연결됩니다.")
+#    return redirect(url_for("login.login"))
+
+
+@login_bp.route("/social/signup")
+def social_signup():
+    pending_social_link = session.get("pending_social_link")
+    if not pending_social_link:
+        flash("소셜 회원가입 정보가 없습니다. 다시 시도해주세요.")
+        return redirect(url_for("login.login"))
+
+    session["social_signup_data"] = pending_social_link
+    session.pop("show_social_link_modal", None)
+    flash("추가 회원정보를 입력해주세요.")
+    return redirect(url_for("login.signup"))
+
+
+@login_bp.route("/social/cancel")
+def social_cancel():
+    session.pop("pending_social_link", None)
+    session.pop("social_signup_data", None)
+    session.pop("show_social_link_modal", None)
+    flash("소셜 로그인 연결이 취소되었습니다.")
+    return redirect(url_for("login.login"))
 
 
 @login_bp.route("/api/check-duplicate")
@@ -252,7 +376,7 @@ def logout():
     provider = session.get("login_provider")
     session.clear()
 
-    if provider == "KAKAO":
+    if provider == "kakao":
         kakao_rest_api_key = os.getenv("KAKAO_REST_API_KEY")
         kakao_logout_redirect_uri = os.getenv("KAKAO_LOGOUT_REDIRECT_URI")
         logout_url = (
@@ -294,6 +418,7 @@ def login_kakao():
 def login_kakao_callback():
     code = request.args.get("code")
     state = request.args.get("state")
+
     if not code:
         flash("카카오 로그인에 실패했습니다.")
         return redirect(url_for("login.login"))
@@ -318,6 +443,7 @@ def login_kakao_callback():
     )
     token_json = token_res.json()
     access_token = token_json.get("access_token")
+
     if not access_token:
         flash(f"카카오 토큰 발급 실패: {token_json}")
         return redirect(url_for("login.login"))
@@ -336,29 +462,18 @@ def login_kakao_callback():
     email = kakao_account.get("email") or f"kakao_{social_id}@kakao.local"
     nickname = profile.get("nickname") or f"kakao_{social_id}"
     profile_image_url = profile.get("profile_image_url")
+
     if not social_id:
         flash("카카오 사용자 정보를 불러오지 못했습니다.")
         return redirect(url_for("login.login"))
 
-    user = find_user_by_social("KAKAO", social_id)
-    if user:
-        session["user_email"] = user["email"]
-        session["user_nickname"] = user["nickname"]
-        session["user_id"] = user["user_id"]
-        session["role"] = user.get("role", "USER")
-        session["login_provider"] = "kakao"
-        flash("로그인되었습니다.")
-        return redirect(url_for("index"))
-
-    session["social_signup_data"] = {
-        "provider": "KAKAO",
-        "social_id": social_id,
-        "email": email,
-        "nickname": nickname,
-        "profile_image_url": profile_image_url,
-    }
-    flash("추가 회원정보를 입력해주세요.")
-    return redirect(url_for("login.signup"))
+    return handle_social_login_or_link(
+        provider="KAKAO",
+        social_id=social_id,
+        email=email,
+        nickname=nickname,
+        profile_image_url=profile_image_url,
+    )
 
 
 @login_bp.route("/login/naver")
@@ -382,6 +497,7 @@ def login_naver():
 def login_naver_callback():
     code = request.args.get("code")
     state = request.args.get("state")
+
     if not code:
         flash("네이버 로그인에 실패했습니다.")
         return redirect(url_for("login.login"))
@@ -399,6 +515,7 @@ def login_naver_callback():
     token_res = requests.post("https://nid.naver.com/oauth2.0/token", params=token_data)
     token_json = token_res.json()
     access_token = token_json.get("access_token")
+
     if not access_token:
         flash(f"네이버 토큰 발급 실패: {token_json}")
         return redirect(url_for("login.login"))
@@ -412,29 +529,18 @@ def login_naver_callback():
     email = user_json.get("email") or f"naver_{social_id}@naver.local"
     nickname = user_json.get("nickname") or f"naver_{social_id}"
     profile_image_url = user_json.get("profile_image")
+
     if not social_id:
         flash("네이버 사용자 정보를 불러오지 못했습니다.")
         return redirect(url_for("login.login"))
 
-    user = find_user_by_social("NAVER", social_id)
-    if user:
-        session["user_email"] = user["email"]
-        session["user_nickname"] = user["nickname"]
-        session["user_id"] = user["user_id"]
-        session["role"] = user.get("role", "USER")
-        session["login_provider"] = "naver"
-        flash("로그인되었습니다.")
-        return redirect(url_for("index"))
-
-    session["social_signup_data"] = {
-        "provider": "NAVER",
-        "social_id": social_id,
-        "email": email,
-        "nickname": nickname,
-        "profile_image_url": profile_image_url,
-    }
-    flash("추가 회원정보를 입력해주세요.")
-    return redirect(url_for("login.signup"))
+    return handle_social_login_or_link(
+        provider="NAVER",
+        social_id=social_id,
+        email=email,
+        nickname=nickname,
+        profile_image_url=profile_image_url,
+    )
 
 
 @login_bp.route("/login/google")
@@ -459,6 +565,7 @@ def login_google():
 def login_google_callback():
     code = request.args.get("code")
     state = request.args.get("state")
+
     if not code:
         flash("구글 로그인에 실패했습니다.")
         return redirect(url_for("login.login"))
@@ -476,6 +583,7 @@ def login_google_callback():
     token_res = requests.post("https://oauth2.googleapis.com/token", data=token_data)
     token_json = token_res.json()
     access_token = token_json.get("access_token")
+
     if not access_token:
         flash(f"구글 토큰 발급 실패: {token_json}")
         return redirect(url_for("login.login"))
@@ -489,29 +597,18 @@ def login_google_callback():
     email = user_json.get("email") or f"google_{social_id}@google.local"
     nickname = user_json.get("name") or f"google_{social_id}"
     profile_image_url = user_json.get("picture")
+
     if not social_id:
         flash("구글 사용자 정보를 불러오지 못했습니다.")
         return redirect(url_for("login.login"))
 
-    user = find_user_by_social("GOOGLE", social_id)
-    if user:
-        session["user_email"] = user["email"]
-        session["user_nickname"] = user["nickname"]
-        session["user_id"] = user["user_id"]
-        session["role"] = user.get("role", "USER")
-        session["login_provider"] = "google"
-        flash("로그인되었습니다.")
-        return redirect(url_for("index"))
-
-    session["social_signup_data"] = {
-        "provider": "GOOGLE",
-        "social_id": social_id,
-        "email": email,
-        "nickname": nickname,
-        "profile_image_url": profile_image_url,
-    }
-    flash("추가 회원정보를 입력해주세요.")
-    return redirect(url_for("login.signup"))
+    return handle_social_login_or_link(
+        provider="GOOGLE",
+        social_id=social_id,
+        email=email,
+        nickname=nickname,
+        profile_image_url=profile_image_url,
+    )
 
 
 @login_bp.route("/withdraw", methods=["POST"])
