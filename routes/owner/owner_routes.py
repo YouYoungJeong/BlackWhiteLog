@@ -3,6 +3,7 @@ import routes.owner.owner_menu_db as owner_db
 import routes.owner.owner_notices_db as owner_notice_db
 import routes.owner.owner_board_db as owner_board_db
 import routes.owner.owner_review_db as owner_review_db
+from routes.owner.owner_review_db import (get_march_review_count_by_restaurant, get_board_review_list_by_restaurant)
 import math
 
 

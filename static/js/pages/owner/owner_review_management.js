@@ -1,3 +1,5 @@
+// static/js/owner/owner_review_management.js
+
 document.addEventListener("DOMContentLoaded", () => {
     // 영역: 페이지 상태
     const pageRoot = document.getElementById("ownerReviewPage");
@@ -5,13 +7,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialFocusReviewId = Number(urlParams.get("focus_review_id") || 0);
+
     const state = {
-        restaurantId: Number(pageRoot.dataset.restaurantId || 0),
-        tab: pageRoot.dataset.tab || "all",
-        sort: pageRoot.dataset.sort || "latest",
-        page: Number(pageRoot.dataset.page || 1),
-        keyword: "",
-        selectedReviewId: null
+        restaurantId: Number(urlParams.get("restaurant_id") || pageRoot.dataset.restaurantId || 0),
+        tab: urlParams.get("tab") || pageRoot.dataset.tab || "all",
+        sort: urlParams.get("sort") || pageRoot.dataset.sort || "latest",
+        page: Number(urlParams.get("page") || pageRoot.dataset.page || 1),
+        keyword: urlParams.get("keyword") || "",
+        selectedReviewId: initialFocusReviewId || null
     };
 
     // 영역: DOM 참조
@@ -123,7 +128,32 @@ document.addEventListener("DOMContentLoaded", () => {
         window.alert(message);
     }
 
-    // 영역: 요약 카드 렌더링
+    // - 추가: 특정 행 포커스 표시
+    function focusReviewRow(reviewId) {
+        if (!reviewTableBody || !reviewId) {
+            return;
+        }
+
+        const targetRow = reviewTableBody.querySelector(`tr[data-review-id="${reviewId}"]`);
+        if (!targetRow) {
+            return;
+        }
+
+        targetRow.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+
+        targetRow.classList.add("is-selected");
+        targetRow.style.outline = "3px solid #9caf7f";
+        targetRow.style.boxShadow = "0 0 0 6px rgba(156, 175, 127, 0.18)";
+
+        window.setTimeout(() => {
+            targetRow.style.outline = "";
+            targetRow.style.boxShadow = "";
+        }, 2200);
+    }
+
     function renderSummary(summaryData) {
         if (!reviewSummaryGrid || !summaryData) {
             return;
@@ -152,7 +182,6 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     }
 
-    // 영역: 목록 렌더링
     function renderReviewTable(reviewList, selectedReviewId) {
         if (!reviewTableBody) {
             return;
@@ -161,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!Array.isArray(reviewList) || reviewList.length === 0) {
             reviewTableBody.innerHTML = `
                 <tr>
-                    <td colspan="6">조회된 리뷰가 없습니다.</td>
+                    <td colspan="5">조회된 리뷰가 없습니다.</td>
                 </tr>
             `;
             return;
@@ -172,20 +201,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
             return `
                 <tr class="${isSelected ? "is-selected" : ""}" data-review-id="${review.review_id}">
-                    <td>${review.review_id}</td>
+                    <td>${escapeHtml(review.updated_at || "")}</td>
                     <td>${escapeHtml(review.nickname || "")}</td>
                     <td class="review-content-cell" title="${escapeHtml(review.content || "")}">
                         ${escapeHtml(review.content_preview || "")}
                     </td>
                     <td>${escapeHtml(review.rating_text || buildStars(review.rating))}</td>
-                    <td>${escapeHtml(review.updated_at || "")}</td>
                     <td>${getStatusBadgeHtml(review)}</td>
                 </tr>
             `;
         }).join("");
     }
 
-    // 영역: 페이징 렌더링
     function renderPagination(currentPage, totalPages) {
         if (!reviewPagination) {
             return;
@@ -220,7 +247,6 @@ document.addEventListener("DOMContentLoaded", () => {
         reviewPagination.innerHTML = html;
     }
 
-    // 영역: 상세 렌더링
     function renderDetail(detailReview) {
         if (!reviewDetailCard) {
             return;
@@ -271,7 +297,6 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     }
 
-    // 영역: 선택 행 표시
     function updateSelectedRow(reviewId) {
         if (!reviewTableBody) {
             return;
@@ -282,7 +307,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 영역: 상세 조회
     async function loadReviewDetail(reviewId) {
         if (!reviewId) {
             renderDetail(null);
@@ -298,9 +322,9 @@ document.addEventListener("DOMContentLoaded", () => {
         state.selectedReviewId = Number(reviewId);
         renderDetail(data.detail_review);
         updateSelectedRow(reviewId);
+        focusReviewRow(reviewId);
     }
 
-    // 영역: 목록 조회
     async function loadReviewList({ keepSelected = true } = {}) {
         syncPageDataset();
 
@@ -341,7 +365,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 영역: 답변 값 읽기
     function getCurrentReplyInfo() {
         const textarea = document.getElementById("reviewReplyTextarea");
 
@@ -358,7 +381,6 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // 영역: 답변 처리
     async function submitReplyAction(actionType) {
         const { reviewId, replyContent } = getCurrentReplyInfo();
 
@@ -417,7 +439,6 @@ document.addEventListener("DOMContentLoaded", () => {
         showAlert(data.message || "처리가 완료되었습니다.");
     }
 
-    // 영역: 가게 선택 이벤트
     if (reviewRestaurantSelect) {
         reviewRestaurantSelect.addEventListener("change", async (event) => {
             state.restaurantId = Number(event.target.value || 0);
@@ -439,7 +460,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 영역: 탭 이벤트
     if (reviewTabGroup) {
         reviewTabGroup.addEventListener("click", async (event) => {
             const button = event.target.closest(".tab-btn");
@@ -464,7 +484,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 영역: 정렬 이벤트
     if (reviewSortGroup) {
         reviewSortGroup.addEventListener("click", async (event) => {
             const button = event.target.closest(".filter-chip");
@@ -488,7 +507,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 영역: 검색 이벤트
     async function handleSearch() {
         state.keyword = (reviewSearchInput?.value || "").trim();
         state.page = 1;
@@ -514,7 +532,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 영역: 목록 클릭
     if (reviewTableBody) {
         reviewTableBody.addEventListener("click", async (event) => {
             const row = event.target.closest("tr[data-review-id]");
@@ -535,7 +552,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 영역: 페이징 클릭
     if (reviewPagination) {
         reviewPagination.addEventListener("click", async (event) => {
             const button = event.target.closest("button[data-page]");
@@ -549,6 +565,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             state.page = nextPage;
+            state.selectedReviewId = null;
 
             try {
                 await loadReviewList({ keepSelected: false });
@@ -558,7 +575,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 영역: 상세 버튼 클릭
     if (reviewDetailCard) {
         reviewDetailCard.addEventListener("click", async (event) => {
             const saveBtn = event.target.closest("#replySaveBtn");
@@ -591,13 +607,20 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 영역: 초기 상태 동기화
     if (reviewSearchInput) {
-        state.keyword = reviewSearchInput.value.trim();
+        reviewSearchInput.value = state.keyword;
     }
 
     const initialSelectedRow = reviewTableBody?.querySelector("tr.is-selected[data-review-id]");
-    if (initialSelectedRow) {
+    if (initialSelectedRow && !state.selectedReviewId) {
         state.selectedReviewId = Number(initialSelectedRow.dataset.reviewId || 0);
+    }
+
+    // - 추가: 보드에서 focus_review_id로 넘어온 경우 첫 진입 즉시 포커스
+    if (state.selectedReviewId) {
+        focusReviewRow(state.selectedReviewId);
+        loadReviewDetail(state.selectedReviewId).catch((error) => {
+            showAlert(error.message);
+        });
     }
 });

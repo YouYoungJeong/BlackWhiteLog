@@ -1218,6 +1218,24 @@ body.drawer-open {
 }
 
 /* =========================================================
+    리뷰 카드 클릭형 보강
+   ========================================================= */
+.review-item[role="button"] {
+    cursor: pointer;
+    border-radius: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    padding: 12px;
+}
+
+.review-item[role="button"]:hover,
+.review-item[role="button"]:focus {
+    background: #fafbf8;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
+    outline: none;
+}
+
+/* =========================================================
     모바일 대응
    ========================================================= */
 @media (max-width: 768px) {
