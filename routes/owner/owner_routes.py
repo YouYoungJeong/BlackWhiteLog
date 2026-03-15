@@ -2,7 +2,7 @@ from flask import render_template, request, jsonify, session
 import routes.owner.owner_menu_db as owner_db
 import routes.owner.owner_notices_db as owner_notice_db
 import routes.owner.owner_board_db as owner_board_db
-import routes.owner.owner_review_db as owner_review_bd
+import routes.owner.owner_review_db as owner_review_db
 import math
 
 
@@ -740,7 +740,481 @@ def register_owner_routes(app):
 
 # ------------------------------------------------------------------------------------
 # 오너 리뷰 관리 페이지
-# -----------------------------------------------------------------------------------
-    @app.route("/owner/review_management", endpoint="owner_review_management")
+# ------------------------------------------------------------------------------------
+    def get_selected_review_restaurant_id(session_owner_id, client_restaurant_id=None):
+        db_restaurant_list = owner_review_db.get_restaurant_list_by_owner(session_owner_id)
+
+        if not db_restaurant_list:
+            raise ValueError("등록된 가게가 없습니다.")
+
+        db_restaurant_id_list = [db_row["restaurant_id"] for db_row in db_restaurant_list]
+
+        if client_restaurant_id is not None:
+            try:
+                selected_restaurant_id = int(client_restaurant_id)
+            except (TypeError, ValueError):
+                selected_restaurant_id = db_restaurant_id_list[0]
+
+            if selected_restaurant_id not in db_restaurant_id_list:
+                selected_restaurant_id = db_restaurant_id_list[0]
+        else:
+            selected_restaurant_id = db_restaurant_id_list[0]
+
+        return selected_restaurant_id, db_restaurant_list
+
+
+    def convert_review_row_to_payload(db_review):
+        if not db_review:
+            return None
+
+        db_reply_is_active = int(db_review["is_active"]) if db_review["is_active"] is not None else 0
+        db_reply_is_visible = int(db_review["is_visible"]) if db_review["is_visible"] is not None else 1
+
+        if db_reply_is_visible == 0:
+            review_status_text = "숨김"
+        elif db_reply_is_active == 1:
+            review_status_text = "답변완료"
+        else:
+            review_status_text = "미답변"
+
+        review_content_preview = db_review["content"] or ""
+        if len(review_content_preview) > 36:
+            review_content_preview = review_content_preview[:36] + "..."
+
+        return {
+            "review_id": db_review["review_id"],
+            "visit_id": db_review["visit_id"],
+            "user_id": db_review["user_id"],
+            "nickname": db_review["nickname"] or "",
+            "rating": int(db_review["rating"]) if db_review["rating"] is not None else 0,
+            "rating_text": "★" * int(db_review["rating"] or 0) + "☆" * (5 - int(db_review["rating"] or 0)),
+            "content": db_review["content"] or "",
+            "content_preview": review_content_preview,
+            "created_at": db_review["created_at"].strftime("%Y-%m-%d") if db_review["created_at"] else "",
+            "updated_at": db_review["updated_at"].strftime("%Y-%m-%d") if db_review["updated_at"] else "",
+            "reply_id": db_review["reply_id"],
+            "reply_content": db_review["reply_content"] or "",
+            "is_active": db_reply_is_active,
+            "is_visible": db_reply_is_visible,
+            "review_status_text": review_status_text
+        }
+
+
+    def build_review_list_payload(
+        db_restaurant_id,
+        client_tab_status="all",
+        client_sort_type="latest",
+        client_search_keyword="",
+        page=1,
+        per_page=5
+    ):
+        total_review_count = owner_review_db.get_review_count_by_restaurant(
+            db_restaurant_id=db_restaurant_id,
+            client_tab_status=client_tab_status,
+            client_search_keyword=client_search_keyword
+        )
+
+        total_pages = math.ceil(total_review_count / per_page) if total_review_count > 0 else 1
+
+        if page < 1:
+            page = 1
+
+        if page > total_pages:
+            page = total_pages
+
+        offset = (page - 1) * per_page
+
+        db_review_list = owner_review_db.get_review_list_by_restaurant(
+            db_restaurant_id=db_restaurant_id,
+            client_tab_status=client_tab_status,
+            client_sort_type=client_sort_type,
+            client_search_keyword=client_search_keyword,
+            limit=per_page,
+            offset=offset
+        )
+
+        review_list = []
+        for db_review in db_review_list:
+            review_list.append(convert_review_row_to_payload(db_review))
+
+        selected_review_id = review_list[0]["review_id"] if review_list else None
+
+        return {
+            "review_list": review_list,
+            "selected_review_id": selected_review_id,
+            "current_page": page,
+            "total_pages": total_pages,
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "total_review_count": total_review_count,
+            "tab_status": client_tab_status,
+            "sort_type": client_sort_type,
+            "search_keyword": client_search_keyword
+        }
+
+
+    @app.route("/owner/review_management", methods=["GET"], endpoint="owner_review_management")
     def owner_review_management():
-        return render_template("owner/owner_review_management.html")
+        session_user_id = session.get("user_id")
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+        client_tab_status = request.args.get("tab", default="all", type=str).strip().lower()
+        client_sort_type = request.args.get("sort", default="latest", type=str).strip().lower()
+        client_search_keyword = request.args.get("keyword", default="", type=str).strip()
+
+        if client_tab_status not in ["all", "pending", "done", "hidden"]:
+            client_tab_status = "all"
+
+        if client_sort_type not in ["latest", "rating"]:
+            client_sort_type = "latest"
+
+        selected_restaurant_id, db_restaurant_list = get_selected_review_restaurant_id(
+            session_owner_id,
+            client_restaurant_id
+        )
+
+        db_owner = owner_review_db.get_owner_info(session_owner_id)
+        db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+
+        initial_payload = build_review_list_payload(
+            db_restaurant_id=selected_restaurant_id,
+            client_tab_status=client_tab_status,
+            client_sort_type=client_sort_type,
+            client_search_keyword=client_search_keyword,
+            page=1,
+            per_page=5
+        )
+
+        db_detail_review = None
+        if initial_payload["selected_review_id"]:
+            db_detail_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=initial_payload["selected_review_id"]
+            )
+
+        detail_review = convert_review_row_to_payload(db_detail_review)
+        selected_restaurant_name = owner_review_db.get_restaurant_name_by_restaurant_id(selected_restaurant_id)
+
+        return render_template(
+            "owner/owner_review_management.html",
+            owner=db_owner,
+            restaurant_list=db_restaurant_list,
+            selected_restaurant_id=selected_restaurant_id,
+            selected_restaurant_name=selected_restaurant_name,
+            summary_data=db_summary,
+            initial_payload=initial_payload,
+            detail_review=detail_review,
+            session_user_id=session_user_id,
+            session_owner_id=session_owner_id
+        )
+
+
+    @app.route("/owner/review_management/api/list", methods=["GET"], endpoint="owner_review_management_api_list")
+    def owner_review_management_api_list():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+        client_tab_status = request.args.get("tab", default="all", type=str).strip().lower()
+        client_sort_type = request.args.get("sort", default="latest", type=str).strip().lower()
+        client_search_keyword = request.args.get("keyword", default="", type=str).strip()
+        page = request.args.get("page", default=1, type=int)
+
+        if client_tab_status not in ["all", "pending", "done", "hidden"]:
+            client_tab_status = "all"
+
+        if client_sort_type not in ["latest", "rating"]:
+            client_sort_type = "latest"
+
+        try:
+            selected_restaurant_id, db_restaurant_list = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+
+            payload = build_review_list_payload(
+                db_restaurant_id=selected_restaurant_id,
+                client_tab_status=client_tab_status,
+                client_sort_type=client_sort_type,
+                client_search_keyword=client_search_keyword,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 목록 조회 완료",
+                "restaurant_id": selected_restaurant_id,
+                "restaurant_list": db_restaurant_list,
+                "summary_data": db_summary,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/detail/<int:review_id>", methods=["GET"], endpoint="owner_review_management_api_detail")
+    def owner_review_management_api_detail(review_id):
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=review_id
+            )
+
+            if not db_review:
+                return jsonify({
+                    "success": False,
+                    "message": "리뷰 정보를 찾을 수 없습니다."
+                }), 404
+
+            detail_review = convert_review_row_to_payload(db_review)
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 상세 조회 완료",
+                "detail_review": detail_review
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/reply/save", methods=["POST"], endpoint="owner_review_management_api_reply_save")
+    def owner_review_management_api_reply_save():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_review_id = request.form.get("client_review_id", "").strip()
+        client_reply_content = request.form.get("client_reply_content", "").strip()
+
+        if not client_review_id:
+            return jsonify({
+                "success": False,
+                "message": "리뷰 번호가 필요합니다."
+            }), 400
+
+        if not client_reply_content:
+            return jsonify({
+                "success": False,
+                "message": "답변 내용을 입력해주세요."
+            }), 400
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            if owner_review_db.exists_owner_reply_by_review_id(int(client_review_id)):
+                return jsonify({
+                    "success": False,
+                    "message": "이미 등록된 답변이 있습니다. 수정 기능을 사용해주세요."
+                }), 400
+
+            owner_review_db.insert_owner_reply(
+                db_review_id=int(client_review_id),
+                session_owner_id=session_owner_id,
+                db_restaurant_id=selected_restaurant_id,
+                client_reply_content=client_reply_content
+            )
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=int(client_review_id)
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 답변이 등록되었습니다.",
+                "summary_data": db_summary,
+                "detail_review": convert_review_row_to_payload(db_review)
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/reply/update", methods=["POST"], endpoint="owner_review_management_api_reply_update")
+    def owner_review_management_api_reply_update():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_review_id = request.form.get("client_review_id", "").strip()
+        client_reply_content = request.form.get("client_reply_content", "").strip()
+
+        if not client_review_id:
+            return jsonify({
+                "success": False,
+                "message": "리뷰 번호가 필요합니다."
+            }), 400
+
+        if not client_reply_content:
+            return jsonify({
+                "success": False,
+                "message": "수정할 답변 내용을 입력해주세요."
+            }), 400
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            if not owner_review_db.exists_owner_reply_by_review_id(int(client_review_id)):
+                return jsonify({
+                    "success": False,
+                    "message": "기존 답변이 없습니다. 등록 기능을 먼저 사용해주세요."
+                }), 400
+
+            owner_review_db.update_owner_reply(
+                db_review_id=int(client_review_id),
+                session_owner_id=session_owner_id,
+                db_restaurant_id=selected_restaurant_id,
+                client_reply_content=client_reply_content
+            )
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=int(client_review_id)
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 답변이 수정되었습니다.",
+                "summary_data": db_summary,
+                "detail_review": convert_review_row_to_payload(db_review)
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/reply/delete", methods=["POST"], endpoint="owner_review_management_api_reply_delete")
+    def owner_review_management_api_reply_delete():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_review_id = request.form.get("client_review_id", "").strip()
+
+        if not client_review_id:
+            return jsonify({
+                "success": False,
+                "message": "리뷰 번호가 필요합니다."
+            }), 400
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            owner_review_db.delete_owner_reply(int(client_review_id))
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=int(client_review_id)
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰 답변이 삭제되었습니다.",
+                "summary_data": db_summary,
+                "detail_review": convert_review_row_to_payload(db_review)
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
+    @app.route("/owner/review_management/api/reply/hide", methods=["POST"], endpoint="owner_review_management_api_reply_hide")
+    def owner_review_management_api_reply_hide():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_review_id = request.form.get("client_review_id", "").strip()
+
+        if not client_review_id:
+            return jsonify({
+                "success": False,
+                "message": "리뷰 번호가 필요합니다."
+            }), 400
+
+        try:
+            selected_restaurant_id, _ = get_selected_review_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            if not owner_review_db.exists_owner_reply_by_review_id(int(client_review_id)):
+                owner_review_db.insert_owner_reply(
+                    db_review_id=int(client_review_id),
+                    session_owner_id=session_owner_id,
+                    db_restaurant_id=selected_restaurant_id,
+                    client_reply_content=""
+                )
+
+            owner_review_db.hide_review_reply(int(client_review_id))
+
+            db_summary = owner_review_db.get_review_summary_by_restaurant(selected_restaurant_id)
+            db_review = owner_review_db.get_review_detail_by_review_id(
+                db_restaurant_id=selected_restaurant_id,
+                db_review_id=int(client_review_id)
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "리뷰가 숨김 처리되었습니다.",
+                "summary_data": db_summary,
+                "detail_review": convert_review_row_to_payload(db_review)
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
