@@ -65,8 +65,63 @@ document.addEventListener("DOMContentLoaded", () => {
             rankingDashboardOverlay.classList.remove('hidden-view');
         }
     });
+    // 서머리 카드 누르면 랭킹텝 이동
+    const activitySummaryBtn = document.getElementById('activitySummaryBtn');
+    if (activitySummaryBtn) {
+        activitySummaryBtn.addEventListener('click', () => {
+            // 네비게이션 바에 있는 '랭킹' 정렬 칩을 찾아서 대신 클릭해줍니다.
+            const rankingChip = document.querySelector('.sort-chip[data-sort="rating"]');
+            if (rankingChip) {
+                rankingChip.click();
+            }
+        });
+    }
+    // 요약 데이터 불러오기
+    loadRankingSummary();
 });
 
+// 랭킹 요약 데이터 로드
+async function loadRankingSummary() {
+    const summaryCard = document.getElementById('activitySummaryBtn');
+    if (!summaryCard) return; // 로그인 안 해서 카드가 없으면 동작 안 함
+
+    try {
+        const res = await fetch('/api/ranking/summary');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // 1. 텍스트 없는 깔끔한 게이지 퍼센트 채우기 (다이아몬드 승급 기준인 10000점 만점 기준)
+        const gaugeFill = document.getElementById('summaryGaugeFill');
+        if (gaugeFill) {
+            const percent = Math.min(((data.point || 0) / 300) * 100, 100);
+            gaugeFill.style.width = percent + "%";
+        }
+
+        // 2. 방문 도장 개수
+        const visitCount = document.getElementById('summaryVisitCount');
+        if (visitCount) visitCount.innerText = data.visit_count || 0;
+
+        // 3. 내 랭킹 등수
+        const myRank = document.getElementById('summaryMyRank');
+        if (myRank) myRank.innerText = `#${data.my_rank || '-'}`;
+
+        // 4. 최근 뱃지 이미지 (글자 빼고 이미지만)
+        const latestBadge = document.getElementById('summaryLatestBadge');
+        if (latestBadge) {
+            if (data.latest_badge_img) {
+                latestBadge.innerHTML = `<img src="${data.latest_badge_img}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                latestBadge.style.background = "transparent";
+                latestBadge.style.border = "1px solid #ddd";
+            } else {
+                latestBadge.innerHTML = `<span style="font-size: 10px; color: #999;">없음</span>`;
+            }
+        }
+    } catch(e) {
+        console.error("랭킹 요약 데이터 로드 실패:", e);
+    }
+}
+
+//////////////////////////////////////-----------------------------/////////////////////////////////////////////////////
 // =========================================================
 // 데이터 Fetch 및 화면 렌더링 로직
 // =========================================================

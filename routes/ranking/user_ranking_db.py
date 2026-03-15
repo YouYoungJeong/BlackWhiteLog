@@ -61,3 +61,45 @@ def get_user_achievements_data(user_id):
         return {"all_achievements": [], "user_achievements": []}
     finally:
         conn.close()
+
+def get_ranking_summary(user_id):
+    """랭킹 요약 카드용 데이터 (게이지, 방문수, 내 랭킹, 최근 뱃지) 반환"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. 내 포인트 조회 (게이지 렌더링 및 등수 계산용)
+            cursor.execute("SELECT point FROM users WHERE user_id = %s", (user_id,))
+            user_info = cursor.fetchone()
+            my_point = user_info['point'] if user_info and user_info['point'] else 0
+
+            # 2. 방문 도장 개수 (visits 테이블에서 내 user_id 카운트)
+            cursor.execute("SELECT COUNT(*) AS visit_count FROM visits WHERE user_id = %s", (user_id,))
+            visit_count = cursor.fetchone()['visit_count']
+
+            # 3. 내 랭킹 (나보다 점수가 높은 사람의 수 + 1)
+            cursor.execute("SELECT COUNT(*) + 1 AS my_rank FROM users WHERE point > %s", (my_point,))
+            my_rank = cursor.fetchone()['my_rank']
+
+            # 4. 최근 획득 뱃지 이미지 (시간순 내림차순 정렬 후 1개 추출)
+            cursor.execute("""
+                SELECT a.icon_url 
+                FROM user_achievements ua
+                JOIN achievements a ON ua.achievement_id = a.achievement_id
+                WHERE ua.user_id = %s
+                ORDER BY ua.earned_at DESC, ua.user_achievement_id DESC
+                LIMIT 1
+            """, (user_id,))
+            latest_badge_row = cursor.fetchone()
+            latest_badge_img = latest_badge_row['icon_url'] if latest_badge_row else None
+
+            return {
+                "point": my_point,
+                "visit_count": visit_count,
+                "my_rank": my_rank,
+                "latest_badge_img": latest_badge_img
+            }
+    except Exception as e:
+        print(f"❌ DB Error (get_ranking_summary): {e}")
+        return None
+    finally:
+        conn.close()
