@@ -1,15 +1,25 @@
+# =========================
+# 공통 DB 연결 함수 import
+# =========================
 from db import get_connection
-from werkzeug.security import generate_password_hash, check_password_hash
+
+# 비밀번호 해시 생성 / 검증용
+from werkzeug.security import generate_password_hash
+
 
 # =========================
 # 일반 로그인 검증
+# 이메일로 사용자 조회 후 비밀번호가 맞는지 확인
+# 탈퇴한 계정은 제외
 # =========================
+from werkzeug.security import check_password_hash
+
 def verify_user_login(email, password):
     sql = """
         SELECT *
         FROM users
         WHERE email = %s
-          AND (status IS NULL OR status <> 'DELETED')
+          AND status <> 'DELETED'
         LIMIT 1
     """
 
@@ -19,15 +29,20 @@ def verify_user_login(email, password):
             cursor.execute(sql, (email,))
             user = cursor.fetchone()
 
-            if user and check_password_hash(user["password_hash"], password):
-                return user
-            return None
+            if not user:
+                return None
+
+            if not check_password_hash(user["password_hash"], password):
+                return None
+
+            return user
     finally:
         conn.close()
 
 
 # =========================
 # 이메일로 회원 조회
+# 회원가입 중복 확인, 비밀번호 찾기 등에 사용
 # =========================
 def find_user_by_email(email):
     sql = """
@@ -48,6 +63,7 @@ def find_user_by_email(email):
 
 # =========================
 # 닉네임으로 회원 조회
+# 닉네임 중복 확인할 때 사용
 # =========================
 def find_user_by_nickname(nickname):
     sql = """
@@ -68,6 +84,8 @@ def find_user_by_nickname(nickname):
 
 # =========================
 # 일반 회원가입
+# 비밀번호는 해시로 저장
+# 기본 role 은 USER
 # =========================
 def create_user(nickname, email, password):
     password_hash = generate_password_hash(password)
@@ -88,7 +106,8 @@ def create_user(nickname, email, password):
 
 # =========================
 # 소셜 로그인용 사용자 조회
-# provider + social_id 기준 조회
+# provider + social_id 기준으로 조회
+# user_social_accounts 와 users 테이블 조인
 # =========================
 def find_user_by_social(provider, social_id):
     sql = """
@@ -110,6 +129,7 @@ def find_user_by_social(provider, social_id):
         LIMIT 1
     """
 
+    # provider 값은 대문자로 통일
     provider = provider.upper()
 
     conn = get_connection()
@@ -121,31 +141,32 @@ def find_user_by_social(provider, social_id):
         conn.close()
 
 
-
-# # =========================
-# # 소셜 회원 생성
-# # =========================
+# =========================
+# 예전 소셜 회원 생성 함수
+# 지금은 사용 안 해서 주석 처리
+# 필요하면 나중에 다시 사용할 수 있음
+# =========================
 # def create_social_user(nickname, email, provider, social_id, profile_image_url=None):
 #     provider = provider.upper()
-
+#
 #     user_sql = """
 #         INSERT INTO users (email, password_hash, nickname, profile_image_url)
 #         VALUES (%s, NULL, %s, %s)
 #     """
-
+#
 #     social_sql = """
 #         INSERT INTO user_social_accounts (user_id, provider, provider_user_id)
 #         VALUES (%s, %s, %s)
 #     """
-
+#
 #     conn = get_connection()
 #     try:
 #         with conn.cursor() as cursor:
 #             cursor.execute(user_sql, (email, nickname, profile_image_url))
 #             user_id = cursor.lastrowid
-
+#
 #             cursor.execute(social_sql, (user_id, provider, social_id))
-
+#
 #         conn.commit()
 #         return user_id
 #     except:
@@ -156,18 +177,21 @@ def find_user_by_social(provider, social_id):
 
 
 # =========================
-# 소셜 회원가입용 새 함수 추가
-# 바로 회원 생성하지 않고, 회원가입 폼을 한 번 더 거쳐서 가입하는 거
+# 소셜 회원가입
+# 소셜 로그인 후 추가 회원정보 입력까지 마치면 저장
+# users 테이블 + user_social_accounts 테이블에 함께 저장
 # =========================
 def create_social_user_with_form(nickname, email, password, provider, social_id, profile_image_url=None):
     provider = provider.upper()
     password_hash = generate_password_hash(password)
 
+    # users 테이블 저장
     user_sql = """
         INSERT INTO users (email, password_hash, nickname, profile_image_url, role)
         VALUES (%s, %s, %s, %s, 'USER')
     """
 
+    # 소셜 계정 연결 테이블 저장
     social_sql = """
         INSERT INTO user_social_accounts (user_id, provider, provider_user_id)
         VALUES (%s, %s, %s)
@@ -176,21 +200,28 @@ def create_social_user_with_form(nickname, email, password, provider, social_id,
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
+            # users 테이블에 먼저 저장
             cursor.execute(user_sql, (email, password_hash, nickname, profile_image_url))
             user_id = cursor.lastrowid
 
+            # 방금 생성한 user_id를 user_social_accounts에 저장
             cursor.execute(social_sql, (user_id, provider, social_id))
 
         conn.commit()
         return user_id
+
     except Exception:
         conn.rollback()
         raise
+
     finally:
         conn.close()
 
+
 # =========================
 # 닉네임으로 이메일 찾기
+# 아이디 찾기 기능에서 사용
+# 탈퇴한 계정은 제외
 # =========================
 def find_email_by_nickname(nickname):
     sql = """
@@ -209,31 +240,35 @@ def find_email_by_nickname(nickname):
     finally:
         conn.close()
 
+
 # =========================
 # 비밀번호 재설정
-# 이메일 + 닉네임 일치하는 회원의 비밀번호 변경
+# 이메일 회원의 비밀번호를 새 비밀번호로 변경
+# 탈퇴한 계정은 제외
 # =========================
-def reset_user_password(email, nickname, new_password):
-    new_password_hash = generate_password_hash(new_password)
+def reset_user_password(email, new_password):
+    hashed_password = generate_password_hash(new_password)
 
     sql = """
         UPDATE users
         SET password_hash = %s
         WHERE email = %s
-          AND nickname = %s
-          AND (status IS NULL OR status <> 'DELETED')
+          AND status <> 'DELETED'
     """
 
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (new_password_hash, email, nickname))
+            cursor.execute(sql, (hashed_password, email))
+            conn.commit()
             return cursor.rowcount > 0
     finally:
         conn.close()
 
+
 # =========================
 # 일반 회원 탈퇴 처리
+# 실제 삭제가 아니라 status 값을 DELETED 로 변경
 # =========================
 def withdraw_user(user_id):
     sql = """
@@ -250,8 +285,10 @@ def withdraw_user(user_id):
     finally:
         conn.close()
 
+
 # =========================
 # 탈퇴 회원 복구
+# status 값을 ACTIVE 로 다시 변경
 # =========================
 def restore_user(user_id):
     sql = """
@@ -271,6 +308,7 @@ def restore_user(user_id):
 
 # =========================
 # 닉네임 변경
+# 탈퇴하지 않은 회원만 변경 가능
 # =========================
 def update_user_nickname(user_id, new_nickname):
     sql = """
