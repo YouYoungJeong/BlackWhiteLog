@@ -148,8 +148,7 @@ async function openDetailPanel(restaurantId) {
                     const userImgStyle = r.user_image ? `background-image: url('${r.user_image}');` : `background-color: #ddd;`;
                     const reviewImageHtml = r.review_image ? `<img src="${r.review_image}" alt="리뷰 이미지" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 12px;">` : '';
 
-                    const isMine = r.user_id === currentUserId;
-                    const deleteBtn = isMine ? `<button class="delete-review-btn" onclick="deleteReview(${r.review_id}, ${restaurantId})">삭제</button>` : '';
+                    const deleteBtn = r.is_mine ? `<button class="delete-review-btn text-btn danger" onclick="deleteReview(${r.review_id}, ${restaurantId})" style="float: right; font-size: 13px; cursor: pointer;">삭제</button>` : '';
 
                     let imageGalleryHtml = '';
                     // 이미지 나열
@@ -201,10 +200,19 @@ async function deleteReview(review_id, restaurantId) {
 
     try {
         const res = await fetch(`/api/reviews/${review_id}`, { method: "DELETE" });
-        if ((await res.json()).success) {
+        const result = await res.json();
+
+        // 🌟 수정됨: 서버의 성공/실패 여부를 확인하고 피드백(알림) 주기
+        if (result.success) {
+            alert("리뷰가 삭제되었습니다.");
             openDetailPanel(restaurantId); // 목록 갱신
+        } else {
+            alert(result.message || "삭제 권한이 없습니다.");
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error(e); 
+        alert("서버 오류가 발생했습니다.");
+    }
 }
 
 document.addEventListener("click", (event) => {
