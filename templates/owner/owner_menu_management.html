@@ -5,36 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>흑백로그 | 메뉴 관리</title>
 
-    <!-- 공통 레이아웃 / 드로어 / 메뉴관리 전용 스타일 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_layout_common.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_drawer.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_menu_management.css') }}">
 
-    <!-- JS에서 최초 렌더링과 Ajax 통신에 사용할 초기 데이터 / API 경로 -->
-    <script>
-        window.ownerMenuInitialData = {{ initial_payload | tojson }};
-        window.ownerMenuSelectedRestaurantId = {{ selected_restaurant_id | tojson }};
-        window.ownerMenuApi = {
-            listUrl: "{{ url_for('owner_menu_management_api_list') }}",
-            saveUrl: "{{ url_for('owner_menu_management_api_save') }}",
-            detailBaseUrl: "/owner/menu_management/api/detail",
-            deleteBaseUrl: "/owner/menu_management/api/delete"
-        };
-    </script>
-
-    <!-- 공통 드로어 동작 / 메뉴관리 전용 Ajax 처리 -->
     <script defer src="{{ url_for('static', filename='js/pages/owner/owner_drawer.js') }}"></script>
     <script defer src="{{ url_for('static', filename='js/pages/owner/owner_menu_management.js') }}"></script>
 </head>
 <body>
     <div class="owner-menu-page">
 
-        <!-- =========================
-             상단 헤더 영역
-             ========================= -->
         <header class="top-header">
             <div class="header-left">
-                <!-- 로고 클릭 시 오너 대시보드로 이동 -->
                 <a href="{{ url_for('owner_board') }}" class="brand-wrap" aria-label="흑백로그 오너 대시보드로 이동">
                     <div class="brand-logo">
                         <img
@@ -47,16 +29,13 @@
             </div>
 
             <div class="header-right">
-                <!-- 현재는 고정 텍스트, 필요시 서버 날짜값으로 교체 가능 -->
                 <p class="today-date">2026.03.13 FRI</p>
 
-                <!-- 세션/DB에서 전달받은 오너 이름 출력 -->
                 <div class="store-profile">
                     <p class="store-name">{{ owner.owner_name }}</p>
                     <div class="profile-circle" aria-hidden="true">👨‍🍳</div>
                 </div>
 
-                <!-- 사이드 드로어 열기 버튼 -->
                 <button
                     type="button"
                     class="menu-toggle"
@@ -71,110 +50,129 @@
         </header>
 
         <main class="main-content">
-
-            <!-- =========================
-                 메뉴 등록 / 수정 폼 카드
-                 ========================= -->
             <section class="menu-form-card">
+                <!-- 플래시 메시지 출력 추가 -->
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="form-message-list">
+                            {% for m in messages %}
+                                <p class="form-message-item">{{ m }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
 
-                <!-- Ajax 처리 결과 메시지 출력 영역 -->
-                <div class="form-message-list" id="formMessageList" hidden></div>
+                <!-- 파일 업로드를 위해 enctype 추가 -->
+                <form action="{{ url_for('owner_menu_management') }}" method="post" enctype="multipart/form-data">
 
-                <form id="menuForm" enctype="multipart/form-data">
-                    <!-- 등록모드 / 수정모드에 따라 JS에서 제목이 변경됨 -->
-                    <h2 class="section-title" id="formTitle">메뉴 등록</h2>
+                    <!-- 수정 모드 / 등록 모드 제목 분기 -->
+                    <h2 class="section-title">
+                        {% if edit_menu %}
+                            메뉴 수정
+                        {% else %}
+                            메뉴 등록
+                        {% endif %}
+                    </h2>
 
-                    <!-- 수정 시 menu_id 저장 / 현재 페이지 유지용 hidden 값 -->
-                    <input type="hidden" id="client-menu-id" name="client_menu_id" value="">
-                    <input type="hidden" id="client-page" name="client_page" value="1">
-                    <input type="hidden" id="client-restaurant-id" name="client_restaurant_id" value="{{ selected_restaurant_id }}">
+                    <!-- 수정 시 어떤 menu를 수정할지 넘기는 hidden 값 -->
+                    <input
+                        type="hidden"
+                        name="menu_id"
+                        value="{% if edit_menu %}{{ edit_menu.menu_id }}{% endif %}"
+                    >
 
-                    <!-- =========================
-                         이미지 업로드 + 기본 정보
-                         ========================= -->
                     <div class="menu-upload-section">
                         <h3 class="sub-title">메뉴 사진 등록</h3>
 
                         <div class="upload-form-grid">
                             <div class="image-upload-box">
-                                <!-- 이미지 미리보기 영역 -->
+                                <!--  수정 모드면 DB의 thumb_url 출력 -->
                                 <div class="preview-image-wrap" id="previewImageWrap">
-                                    <div class="preview-empty" id="previewEmpty"></div>
-                                    <img
-                                        src=""
-                                        alt="메뉴 이미지 미리보기"
-                                        class="preview-image"
-                                        id="previewImage"
-                                        style="display: none;"
-                                    >
+                                    {% if edit_menu and edit_menu.thumb_url %}
+                                        <img
+                                            src="{{ url_for('static', filename=edit_menu.thumb_url) }}"
+                                            alt="메뉴 이미지 미리보기"
+                                            class="preview-image"
+                                            id="previewImage"
+                                        >
+                                    {% elif edit_menu and edit_menu.image_url %}
+                                        <img
+                                            src="{{ url_for('static', filename=edit_menu.image_url) }}"
+                                            alt="메뉴 이미지 미리보기"
+                                            class="preview-image"
+                                            id="previewImage"
+                                        >
+                                    {% else %}
+                                        <div class="preview-empty" id="previewEmpty"></div>
+                                        <img
+                                            src=""
+                                            alt="메뉴 이미지 미리보기"
+                                            class="preview-image"
+                                            id="previewImage"
+                                            style="display: none;"
+                                        >
+                                    {% endif %}
                                 </div>
 
-                                <!-- 실제 file input은 숨기고 label 버튼으로 업로드 -->
+                                <!-- - 업로드 이미지는 기존처럼 미리보기 가능하게 두고 수정 모드에서는 DB 저장 경로 이미지를 우선 출력 -->
                                 <label for="menu-image-input" class="point-btn upload-btn">이미지 업로드</label>
 
                                 <input
                                     type="file"
                                     id="menu-image-input"
-                                    name="client_menu_image"
+                                    name="menu_image"
                                     accept="image/*"
                                     class="image-file-input"
+                                    data-default-image="{% if edit_menu and edit_menu.thumb_url %}{{ url_for('static', filename=edit_menu.thumb_url) }}{% elif edit_menu and edit_menu.image_url %}{{ url_for('static', filename=edit_menu.image_url) }}{% else %}{% endif %}"
                                 >
 
-                                <!-- 업로드 파일명 / 기존 파일명 안내 -->
-                                <p class="image-guide-text" id="imageGuideText">이미지 미등록</p>
+                                <p class="image-guide-text" id="imageGuideText">
+                                    {% if edit_menu and edit_menu.original_name %}
+                                        현재 파일: {{ edit_menu.original_name }}
+                                    {% else %}
+                                        이미지 미등록
+                                    {% endif %}
+                                </p>
 
-                                <!-- 수정 모드에서 기존 이미지 삭제 여부 선택 -->
-                                <label class="check-item image-remove-check" id="removeImageLabel">
-                                    <input
-                                        type="checkbox"
-                                        name="client_remove_image"
-                                        id="remove-image-input"
-                                        value="Y"
-                                    >
-                                    <span>기존 이미지 삭제</span>
-                                </label>
+                                <!-- - 수정 시 이미지만 삭제할 수 있도록 체크박스 추가 -->
+                                {% if edit_menu %}
+                                    <label class="check-item image-remove-check">
+                                        <input
+                                            type="checkbox"
+                                            name="remove_image"
+                                            id="remove-image-input"
+                                            value="1"
+                                        >
+                                        <span>기존 이미지 삭제</span>
+                                    </label>
+                                {% endif %}
                             </div>
 
+                            <!-- 수정: 메뉴명/가격 입력 영역을 같은 menu-input-area 내부에 유지
+                                menu-input-area가 먼저 닫히면 가격칸이 카드 흐름 밖으로 밀릴 수 있음 -->
                             <div class="menu-input-area">
-                                <!-- 가게 선택 토글 -->
-                                <div class="form-row form-column">
-                                    <label>가게 선택</label>
-
-                                    <div class="restaurant-toggle-group" id="restaurantToggleGroup">
-                                        {% for restaurant in restaurant_list %}
-                                            <label class="restaurant-toggle-item">
-                                                <input
-                                                    type="radio"
-                                                    name="restaurant_toggle"
-                                                    value="{{ restaurant.restaurant_id }}"
-                                                    {% if restaurant.restaurant_id == selected_restaurant_id %}checked{% endif %}
-                                                >
-                                                <span>{{ restaurant.name }}</span>
-                                            </label>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-
-                                <!-- 메뉴명 입력 -->
                                 <div class="form-row form-column">
                                     <label for="menu-name">메뉴명</label>
+                                    <!-- 수정 모드일 때 기존 메뉴명 자동 채우기 -->
                                     <input
                                         type="text"
                                         id="menu-name"
-                                        name="client_menu_name"
+                                        name="menu_name"
                                         placeholder="메뉴명을 입력하세요"
+                                        value="{% if edit_menu %}{{ edit_menu.menu_name }}{% endif %}"
                                     >
                                 </div>
 
-                                <!-- 가격 입력 -->
                                 <div class="form-row form-column">
                                     <label for="menu-price">가격</label>
                                     <div class="price-input-wrap">
+                                        <!-- 수정: 수정 모드에서도 가격이 유지되도록 value 추가 -->
                                         <input
                                             type="number"
                                             id="menu-price"
-                                            name="client_price"
+                                            name="price"
                                             placeholder="가격 입력"
+                                            value="{% if edit_menu %}{{ edit_menu.price }}{% endif %}"
                                         >
                                         <span class="price-unit">원</span>
                                     </div>
@@ -183,18 +181,17 @@
                         </div>
                     </div>
 
-                    <!-- =========================
-                         상세 정보 영역
-                         ========================= -->
                     <div class="menu-detail-section">
                         <div class="form-row horizontal-row">
                             <div class="field-group category-group">
                                 <label for="menu-category">카테고리</label>
-
-                                <!-- DB에서 받아온 카테고리 목록 출력 -->
-                                <select id="menu-category" name="client_menu_category_id">
+                                <select id="menu-category" name="menu_category_id">
                                     {% for category in categories %}
-                                        <option value="{{ category.menu_category_id }}">
+                                        <!-- 수정: 수정 모드일 때 기존 카테고리 selected 유지 -->
+                                        <option
+                                            value="{{ category.menu_category_id }}"
+                                            {% if edit_menu and edit_menu.menu_category_id == category.menu_category_id %}selected{% endif %}
+                                        >
                                             {{ category.menu_category_name }}
                                         </option>
                                     {% endfor %}
@@ -203,66 +200,157 @@
                         </div>
                     </div>
 
-                    <!-- =========================
-                         옵션 / 상태 영역
-                         ========================= -->
+                    <!-- 수정: 옵션/품절처리/버튼 영역이 반드시 form 내부 카드 흐름에 남도록
+                        upload/detail 섹션과 같은 레벨로 구조 정리 -->
                     <div class="menu-option-section">
                         <h3 class="sub-title">옵션 설정</h3>
 
-                        <!-- 현재 옵션 그룹 UI 확장용 자리 -->
                         <div class="option-group-wrap">
                             <button type="button" class="outline-btn option-add-btn">＋ 옵션 그룹 추가</button>
                         </div>
 
-                        <!-- 품절 여부 체크 -->
                         <div class="checkbox-row">
                             <label class="check-item">
+                                <!-- 수정 모드에서 기존 품절 여부 반영 -->
                                 <input
                                     type="checkbox"
-                                    name="client_soldout"
-                                    id="soldout-input"
-                                    value="Y"
+                                    name="soldout"
+                                    {% if edit_menu and edit_menu.status == 'OFF' %}
+                                        checked
+                                    {% endif %}
                                 >
                                 <span>품절 처리</span>
                             </label>
                         </div>
                     </div>
 
-                    <!-- =========================
-                         하단 액션 버튼
-                         ========================= -->
+                    <!--취소/등록 버튼도 form 내부 마지막 영역으로 유지
+                        확대/축소 시 카드 밖으로 분리되지 않도록 카드의 하단 구성요소로 고정 -->
                     <div class="action-btn-row">
-                        <!-- 수정 취소 / 입력 초기화 -->
-                        <button type="button" class="ghost-btn" id="cancelEditBtn">취소</button>
+                        <!-- 수정 모드 취소하면 일반 등록 모드로 복귀 -->
+                        <a href="{{ url_for('owner_menu_management') }}" class="ghost-btn">취소</a>
 
-                        <!-- 등록모드: 등록완료 / 수정모드: 수정완료 -->
-                        <button type="submit" class="point-btn" id="submitBtn">등록완료</button>
+                        <!-- 수정/등록 버튼 문구 분기 -->
+                        <button type="submit" class="point-btn">
+                            {% if edit_menu %}
+                                수정완료
+                            {% else %}
+                                등록완료
+                            {% endif %}
+                        </button>
                     </div>
                 </form>
             </section>
 
-            <!-- =========================
-                 등록된 메뉴 목록 카드
-                 ========================= -->
-            <section class="registered-menu-card">
-                <div class="registered-menu-card-header">
-                    <h2 class="section-title">등록된 메뉴</h2>
+            <!-- ---------------------------------------------------------------------------
+                등록된 음식 목록 파트
+            -------------------------------------------------------------------------------->
 
-                    <!-- Ajax 렌더링 후 총 메뉴 개수 출력 -->
-                    <p class="registered-menu-count" id="registeredMenuCount"></p>
+            <section class="registered-menu-card">
+                <h2 class="section-title">등록된 메뉴</h2>
+
+                <div class="registered-menu-list">
+                    {% if menu_list %}
+                        {% for menu in menu_list %}
+                            <article class="registered-menu-item">
+                                <div class="registered-menu-thumb">
+                                <!-- - 등록된 메뉴 카드도 restaurant_images의 thumb_url 또는 image_url을 실제 출력하도록 수정 -->
+                                    {% if menu.thumb_url %}
+                                        <img
+                                            src="{{ url_for('static', filename=menu.thumb_url) }}"
+                                            alt="{{ menu.menu_name }} 이미지"
+                                        >
+                                    {% elif menu.image_url %}
+                                        <img
+                                            src="{{ url_for('static', filename=menu.image_url) }}"
+                                            alt="{{ menu.menu_name }} 이미지"
+                                        >
+                                    {% else %}
+                                        <div class="registered-menu-thumb-empty"></div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="registered-menu-info">
+                                    <p class="registered-menu-name">{{ menu.menu_name }}</p>
+                                    <p class="registered-menu-price">{{ "{:,}".format(menu.price) }}원</p>
+                                    <p class="registered-menu-category">{{ menu.menu_category_name }}</p>
+                                    <p class="registered-menu-status">
+                                        {% if menu.status == 'OFF' %}
+                                            품절
+                                        {% else %}
+                                            판매중
+                                        {% endif %}
+                                    </p>
+
+<!-- - DB에 저장된 원본 파일명 확인용 표시 추가 -->
+                                    {% if menu.original_name %}
+                                        <p class="registered-menu-file">파일명: {{ menu.original_name }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <div class="registered-menu-actions">
+                                    <!-- 수정 버튼 클릭 -> 확인창 -> GET 수정 모드 진입 -->
+                                    <form
+                                        action="{{ url_for('owner_menu_management') }}"
+                                        method="get"
+                                        onsubmit="return confirmEdit();"
+                                    >
+                                        <input type="hidden" name="edit_menu_id" value="{{ menu.menu_id }}">
+                                        <button type="submit" class="menu-edit-btn">수정</button>
+                                    </form>
+
+                                    <!-- 삭제 버튼 클릭 -> 확인창 -> POST 삭제 -->
+                                    <form
+                                        action="{{ url_for('delete_menu', menu_id=menu.menu_id) }}"
+                                        method="post"
+                                        onsubmit="return confirmDelete();"
+                                    >
+                                        <button type="submit" class="menu-delete-btn">삭제</button>
+                                    </form>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    {% else %}
+                        <p class="empty-menu-message">등록된 메뉴가 없습니다.</p>
+                    {% endif %}
                 </div>
 
-                <!-- JS가 메뉴 목록을 그려주는 영역 -->
-                <div class="registered-menu-list" id="registeredMenuList"></div>
+                <!-- [추가] 등록된 메뉴 카드 내부 페이지네이션 -->
+                {% if total_pages > 1 %}
+                    <div class="pagination-wrap">
+                        {% if has_prev %}
+                            <a
+                                href="{{ url_for('owner_menu_management', page=current_page - 1) }}"
+                                class="pagination-btn pagination-nav"
+                            >
+                                이전
+                            </a>
+                        {% endif %}
 
-                <!-- JS가 SPA 방식 페이지 버튼을 그려주는 영역 -->
-                <div class="pagination-wrap" id="paginationWrap"></div>
+                        <div class="pagination-list">
+                            {% for page_num in range(1, total_pages + 1) %}
+                                <a
+                                    href="{{ url_for('owner_menu_management', page=page_num) }}"
+                                    class="pagination-btn {% if page_num == current_page %}is-active{% endif %}"
+                                >
+                                    {{ page_num }}
+                                </a>
+                            {% endfor %}
+                        </div>
+
+                        {% if has_next %}
+                            <a
+                                href="{{ url_for('owner_menu_management', page=current_page + 1) }}"
+                                class="pagination-btn pagination-nav"
+                            >
+                                다음
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
             </section>
         </main>
 
-        <!-- =========================
-             푸터 영역
-             ========================= -->
         <footer class="site-footer">
             <div class="footer-inner">
                 <div class="footer-brand">
@@ -279,14 +367,8 @@
         </footer>
     </div>
 
-    <!-- =========================
-         사이드 드로어 배경
-         ========================= -->
     <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
 
-    <!-- =========================
-         사이드 드로어 메뉴
-         ========================= -->
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
         <div class="side-drawer__header">
             <button

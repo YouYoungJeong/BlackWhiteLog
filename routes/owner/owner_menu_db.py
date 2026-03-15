@@ -1,23 +1,23 @@
 import os
 import uuid
 import pymysql
-from PIL import Image
 from dotenv import load_dotenv
-
-
+from werkzeug.utils import secure_filename
+from PIL import Image  
+# Python Imaging Library로 이미지 열기/저장, 크기 변경, 
+# 포맷 변환(JPG ↔ PNG ↔ WEBP), 썸네일 작성(비율 유지 축소) 등 작업 가능
 load_dotenv()
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
-
-MENU_IMAGE_DIR = os.path.join(PROJECT_DIR, "static", "img", "owner")
-MENU_THUMB_DIR = os.path.join(PROJECT_DIR, "static", "img", "owner", "thumbs")
+# owner 메뉴 이미지 저장 경로 추가
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.path.dirname(BASE_DIR)
+MENU_IMAGE_DIR = os.path.join(PROJECT_DIR, "static" , "img", "owner")
+MENU_THUMB_DIR = os.path.join(MENU_IMAGE_DIR, "thumbs")
+ALLOWED_EXT = {"jpg", "jpeg", "png", "gif", "webp"}
+THUMB_MAX_SIZE = (240, 240)
 
 os.makedirs(MENU_IMAGE_DIR, exist_ok=True)
 os.makedirs(MENU_THUMB_DIR, exist_ok=True)
-
-ALLOWED_EXT = {"jpg", "jpeg", "png", "gif", "webp"}
-THUMB_MAX_SIZE = (300, 300)
 
 
 def get_connection():
@@ -36,33 +36,28 @@ def get_connection():
 #====================================================================================
 # owner_menu_management.html
 #-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------
 # 이미지 파일 처리 - menu_management
 #-------------------------------------------------------------------------------------
 
-# 전달받는 값   : filename: 클라이언트가 업로드한 파일명
-# 반환값        :  허용 확장자면 True, 아니면 False
+# 업로드 허용 확장자 검사 함수 추가
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
 
 
-# 전달받는 값   : stored_name: 서버에 저장된 실제 파일명
-# 반환값        : static 기준 원본 이미지 상대경로
+# static 기준 상대경로 생성 함수 추가
 def build_menu_image_rel_path(stored_name):
     return f"img/owner/{stored_name}"
 
 
-# 전달받는 값   : stored_name: 서버에 저장된 실제 파일명
-# 반환값        :  static 기준 썸네일 이미지 상대경로
 def build_menu_thumb_rel_path(stored_name):
     return f"img/owner/thumbs/{stored_name}"
 
 
-# 전달받는 값
-# - src_abs: 원본 이미지 절대경로
-# - thumb_abs: 썸네일 저장 절대경로
-# 반환값 :   없음
+# 썸네일 생성 함수 추가
 def make_thumbnail(src_abs, thumb_abs):
     ext = os.path.splitext(thumb_abs)[1].lower()
+
     with Image.open(src_abs) as image:
         image.thumbnail(THUMB_MAX_SIZE)
 
@@ -84,8 +79,7 @@ def make_thumbnail(src_abs, thumb_abs):
             image.save(thumb_abs)
 
 
-# 전달받는 값   : image_file: 클라이언트가 업로드한 이미지 파일 객체
-# 반환값        : original_name, stored_name, image_url, thumb_url 딕셔너리
+#  업로드 파일 저장 + 썸네일 생성 + DB 저장용 메타데이터 반환
 def save_menu_image_file(image_file):
     raw_name = (image_file.filename or "").strip()
 
@@ -105,9 +99,6 @@ def save_menu_image_file(image_file):
 
     image_file.save(image_abs_path)
     make_thumbnail(image_abs_path, thumb_abs_path)
-    # 저장경로 확인
-    print("image_abs_path =", image_abs_path)
-    print("thumb_abs_path =", thumb_abs_path)
 
     return {
         "original_name": original_name,
@@ -116,9 +107,7 @@ def save_menu_image_file(image_file):
         "thumb_url": build_menu_thumb_rel_path(stored_name)
     }
 
-
-# 전달받는 값   : rel_path: static 기준 상대경로
-# 반환값        : 없음
+# 실제 파일 삭제 안전 처리
 def safe_remove_file(rel_path):
     if not rel_path:
         return
@@ -131,12 +120,7 @@ def safe_remove_file(rel_path):
     except Exception:
         pass
 
-
-# 전달받는 값
-# - cursor: conn.cursor()
-# - restaurant_id: DB의 식당 번호
-# - menu_id: DB의 메뉴 번호
-# 반환값 : restaurant_images 테이블의 대표 이미지 1건
+# restaurant_images에서 menu_id 기준 대표 이미지 1건 조회 
 def get_menu_image_by_menu_id(cursor, restaurant_id, menu_id):
     sql = """
         SELECT
@@ -159,13 +143,7 @@ def get_menu_image_by_menu_id(cursor, restaurant_id, menu_id):
     return cursor.fetchone()
 
 
-# 전달받는 값
-# - cursor: conn.cursor()
-# - restaurant_id: DB의 식당 번호
-# - menu_id: DB의 메뉴 번호
-# - image_data: 저장된 이미지 메타데이터 딕셔너리
-# - sort_order: 이미지 정렬 순서
-# 반환값 : 없음
+# restaurant_images insert 함수 추가
 def insert_menu_image(cursor, restaurant_id, menu_id, image_data, sort_order=1):
     sql = """
         INSERT INTO restaurant_images
@@ -196,12 +174,7 @@ def insert_menu_image(cursor, restaurant_id, menu_id, image_data, sort_order=1):
         )
     )
 
-
-# 전달받는 값
-# - cursor: conn.cursor()
-# - image_id: 수정할 이미지 번호
-# - image_data: 저장된 이미지 딕셔너리
-# 반환값    : 없음
+# restaurant_images update 함수 추가
 def update_menu_image(cursor, image_id, image_data):
     sql = """
         UPDATE restaurant_images
@@ -223,12 +196,7 @@ def update_menu_image(cursor, image_id, image_data):
         )
     )
 
-
-# 전달받는 값
-# - cursor: conn.cursor()
-# - restaurant_id: DB의 식당 번호
-# - menu_id: DB의 메뉴 번호
-# 반환값    : 없음
+# restaurant_images delete 함수 추가
 def delete_menu_image_by_menu_id(cursor, restaurant_id, menu_id):
     current_image = get_menu_image_by_menu_id(cursor, restaurant_id, menu_id)
 
@@ -244,10 +212,6 @@ def delete_menu_image_by_menu_id(cursor, restaurant_id, menu_id):
         cursor.execute(sql, (restaurant_id, menu_id))
 
 
-# 전달받는 값
-# - owner_id: DB의 owner_id
-# 반환값
-# - owners 테이블 1건
 def get_owner_info(owner_id):
     conn = get_connection()
     try:
@@ -264,10 +228,6 @@ def get_owner_info(owner_id):
         conn.close()
 
 
-# 전달받는 값
-# - owner_id: DB의 owner_id
-# 반환값
-# - restaurants 테이블 1건
 def get_restaurant_id_by_owner(owner_id):
     conn = get_connection()
     try:
@@ -283,31 +243,9 @@ def get_restaurant_id_by_owner(owner_id):
     finally:
         conn.close()
 
-
-# 전달받는 값
-# - owner_id: DB의 owner_id
-# 반환값
-# - 해당 owner의 restaurants 목록
-def get_restaurant_list_by_owner(owner_id):
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            sql = """
-                SELECT restaurant_id, name, status
-                FROM restaurants
-                WHERE owner_id = %s
-                ORDER BY restaurant_id ASC
-            """
-            cursor.execute(sql, (owner_id,))
-            return cursor.fetchall()
-    finally:
-        conn.close()
-
-
 # -------------------------------------------------------------------------------------
 # 메뉴 카테고리 조회
 # -------------------------------------------------------------------------------------
-# 반환값    : menu_categories 전체 목록
 def get_menu_categories():
     conn = get_connection()
     try:
@@ -322,7 +260,6 @@ def get_menu_categories():
     finally:
         conn.close()
 
-
 #------------------------------------------------------------------------------------
 # 등록된 메뉴 출력 (페이징)- menu_management
 #------------------------------------------------------------------------------------
@@ -330,22 +267,13 @@ def get_menu_categories():
 # -------------------------------------------------------------------------------------
 # 등록된 메뉴 목록 조회
 # -------------------------------------------------------------------------------------
-# 전달받는 값
-# - restaurant_id: DB의 restaurant_id
-# - limit: 페이지당 조회 개수
-# - offset: 시작 위치
-# 반환값 : 해당 restaurant의 메뉴 목록
-# 수정: owner_id 대신 restaurant_id를 직접 받아 해당 식당 메뉴만 조회하도록 변경
-def get_menu_list_by_owner(restaurant_id, limit=None, offset=None):
+def get_menu_list_by_owner(owner_id, limit=None, offset=None):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             sql = """
                 SELECT
-                    r.owner_id,
-                    r.restaurant_id,
                     rm.menu_id,
-                    rm.menu_category_id,
                     rm.menu_name,
                     rm.price,
                     rm.status,
@@ -361,12 +289,19 @@ def get_menu_list_by_owner(restaurant_id, limit=None, offset=None):
                 LEFT JOIN restaurant_images ri
                     ON ri.restaurant_id = rm.restaurant_id
                     AND ri.menu_id = rm.menu_id
-                WHERE r.restaurant_id = %s
+                    AND ri.image_id = (
+                        SELECT image_id
+                        FROM restaurant_images
+                        WHERE restaurant_id = rm.restaurant_id
+                        AND menu_id = rm.menu_id
+                        ORDER BY sort_order ASC, image_id ASC
+                        LIMIT 1
+                    )
+                WHERE r.owner_id = %s
                 ORDER BY rm.menu_id DESC
             """
 
-            # 수정: 하드코딩 params = [1] 제거 후 전달받은 restaurant_id 사용
-            params = [restaurant_id]
+            params = [owner_id]
 
             if limit is not None and offset is not None:
                 sql += " LIMIT %s OFFSET %s"
@@ -381,48 +316,20 @@ def get_menu_list_by_owner(restaurant_id, limit=None, offset=None):
 # -------------------------------------------------------------------------------------
 # 등록된 메뉴 총 개수 조회
 # -------------------------------------------------------------------------------------
-# 전달받는 값
-# - restaurant_id: DB의 restaurant_id
-# 반환값
-# - 해당 restaurant의 메뉴 총 개수
-def get_menu_count_by_restaurant(restaurant_id):
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            sql = """
-                SELECT COUNT(*) AS cnt
-                FROM restaurant_menus
-                WHERE restaurant_id = %s
-            """
-            cursor.execute(sql, (restaurant_id,))
-            row = cursor.fetchone()
-            return row["cnt"] if row else 0
-    finally:
-        conn.close()
-
-
-# 전달받는 값
-# - owner_id: DB의 owner_id
-# 반환값
-# - 해당 owner의 메뉴 총 개수
 def get_menu_count_by_owner(owner_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             sql = """
-                SELECT
-                    r.restaurant_id,
-                    r.name,
-                    COUNT(rm.menu_id) AS cnt
-                FROM restaurants r
-                LEFT JOIN restaurant_menus rm
+                SELECT COUNT(*) AS cnt
+                FROM restaurant_menus rm
+                INNER JOIN restaurants r
                     ON rm.restaurant_id = r.restaurant_id
                 WHERE r.owner_id = %s
-                GROUP BY r.restaurant_id, r.name
-                ORDER BY r.restaurant_id ASC
             """
             cursor.execute(sql, (owner_id,))
-            return cursor.fetchall()
+            row = cursor.fetchone()
+            return row["cnt"] if row else 0
     finally:
         conn.close()
 
@@ -430,12 +337,7 @@ def get_menu_count_by_owner(owner_id):
 # -------------------------------------------------------------------------------------
 # 메뉴 상세 조회
 # -------------------------------------------------------------------------------------
-# 전달받는 값
-# - restaurant_id: DB의 restaurant_id
-# - menu_id: DB의 menu_id
-# 반환값
-# - 해당 메뉴 1건 상세정보
-def get_menu_detail_by_id(restaurant_id, menu_id):
+def get_menu_detail_by_id(owner_id, menu_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
@@ -452,6 +354,8 @@ def get_menu_detail_by_id(restaurant_id, menu_id):
                     ri.original_name,
                     ri.stored_name
                 FROM restaurant_menus rm
+                INNER JOIN restaurants r
+                    ON rm.restaurant_id = r.restaurant_id
                 LEFT JOIN restaurant_images ri
                     ON ri.restaurant_id = rm.restaurant_id
                     AND ri.menu_id = rm.menu_id
@@ -463,32 +367,29 @@ def get_menu_detail_by_id(restaurant_id, menu_id):
                         ORDER BY sort_order ASC, image_id ASC
                         LIMIT 1
                     )
-                WHERE rm.restaurant_id = %s
+                WHERE r.owner_id = %s
                 AND rm.menu_id = %s
                 LIMIT 1
             """
-            cursor.execute(sql, (restaurant_id, menu_id))
+            cursor.execute(sql, (owner_id, menu_id))
             return cursor.fetchone()
     finally:
         conn.close()
 
-
 #------------------------------------------------------------------------------------
 # 메뉴 등록 (insert) - menu_management
 #------------------------------------------------------------------------------------
-# 전달받는 값
-# - restaurant_id: 등록할 restaurant_id
-# - menu_category_id: 카테고리 번호
-# - menu_name: 메뉴명
-# - price: 가격
-# - status: 판매 상태
-# - image_file: 업로드 파일 객체
-# 반환값
-# - 새로 등록된 menu_id
-def insert_menu(restaurant_id, menu_category_id, menu_name, price, status="ON", image_file=None):
+
+def insert_menu(owner_id, menu_category_id, menu_name, price, status, image_file=None):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
+            restaurant = get_restaurant_id_by_owner(owner_id)
+            if not restaurant:
+                raise ValueError("해당 owner의 restaurant가 없습니다.")
+
+            restaurant_id = restaurant["restaurant_id"]
+
             sql = """
                 INSERT INTO restaurant_menus
                 (
@@ -505,67 +406,75 @@ def insert_menu(restaurant_id, menu_category_id, menu_name, price, status="ON", 
             """
             cursor.execute(
                 sql,
-                (restaurant_id, menu_category_id, menu_name, price, status)
+                (
+                    restaurant_id,
+                    menu_category_id,
+                    menu_name,
+                    price,
+                    status
+                )
             )
+
             menu_id = cursor.lastrowid
 
             if image_file and image_file.filename:
                 image_data = save_menu_image_file(image_file)
-                insert_menu_image(cursor, restaurant_id, menu_id, image_data, sort_order=1)
+                insert_menu_image(
+                    cursor=cursor,
+                    restaurant_id=restaurant_id,
+                    menu_id=menu_id,
+                    image_data=image_data,
+                    sort_order=1
+                )
 
-        conn.commit()
-        return menu_id
+            conn.commit()
+            return menu_id
     except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
 
-
-#------------------------------------------------------------------------------------
-# 메뉴 수정 (update) - menu_management
-#------------------------------------------------------------------------------------
-# 전달받는 값
-# - restaurant_id: 수정할 메뉴의 restaurant_id
-# - menu_id: 수정할 menu_id
-# - menu_category_id: 카테고리 번호
-# - menu_name: 메뉴명
-# - price: 가격
-# - status: 판매 상태
-# - image_file: 새 업로드 파일 객체
-# - remove_image: 기존 이미지 삭제 여부
-# 반환값
-# - 없음
-def update_menu(
-    restaurant_id,
-    menu_id,
-    menu_category_id,
-    menu_name,
-    price,
-    status="ON",
-    image_file=None,
-    remove_image=False
-):
+def update_menu(owner_id, menu_id, menu_category_id, menu_name, price, status, image_file=None, remove_image=False):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
+            restaurant = get_restaurant_id_by_owner(owner_id)
+            if not restaurant:
+                raise ValueError("해당 owner의 restaurant가 없습니다.")
+
+            restaurant_id = restaurant["restaurant_id"]
+
             sql = """
-                UPDATE restaurant_menus
+                UPDATE restaurant_menus rm
+                INNER JOIN restaurants r
+                    ON rm.restaurant_id = r.restaurant_id
                 SET
-                    menu_category_id = %s,
-                    menu_name = %s,
-                    price = %s,
-                    status = %s
-                WHERE restaurant_id = %s
-                AND menu_id = %s
+                    rm.menu_category_id = %s,
+                    rm.menu_name = %s,
+                    rm.price = %s,
+                    rm.status = %s
+                WHERE r.owner_id = %s
+                AND rm.menu_id = %s
+                AND rm.restaurant_id = %s
             """
             cursor.execute(
                 sql,
-                (menu_category_id, menu_name, price, status, restaurant_id, menu_id)
+                (
+                    menu_category_id,
+                    menu_name,
+                    price,
+                    status,
+                    owner_id,
+                    menu_id,
+                    restaurant_id
+                )
             )
 
+            # 현재 "이미지" 조회 후 수정/삭제 처리하도록 정리
             current_image = get_menu_image_by_menu_id(cursor, restaurant_id, menu_id)
 
+            # 수정 화면에서 "이미지" 삭제 체크만 해도 기존 파일과 DB row를 함께 지우도록 추가
             if remove_image:
                 delete_menu_image_by_menu_id(cursor, restaurant_id, menu_id)
                 current_image = None
@@ -578,38 +487,48 @@ def update_menu(
                     safe_remove_file(current_image.get("thumb_url"))
                     update_menu_image(cursor, current_image["image_id"], image_data)
                 else:
-                    insert_menu_image(cursor, restaurant_id, menu_id, image_data, sort_order=1)
+                    insert_menu_image(
+                        cursor=cursor,
+                        restaurant_id=restaurant_id,
+                        menu_id=menu_id,
+                        image_data=image_data,
+                        sort_order=1
+                    )
 
-        conn.commit()
+            conn.commit()
     except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
-
-
 #------------------------------------------------------------------------------------
-# 메뉴 삭제 (delete) - menu_management
+# 메뉴 삭제 (DELETE) - menu_management
 #------------------------------------------------------------------------------------
-# 전달받는 값
-# - restaurant_id: 삭제할 메뉴의 restaurant_id
-# - menu_id: 삭제할 menu_id
-# 반환값
-# - 없음
-def delete_menu(restaurant_id, menu_id):
+# 실제 삭제 처리
+def delete_menu(owner_id, menu_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
+            restaurant = get_restaurant_id_by_owner(owner_id)
+            if not restaurant:
+                raise ValueError("해당 owner의 restaurant가 없습니다.")
+
+            restaurant_id = restaurant["restaurant_id"]
+
             delete_menu_image_by_menu_id(cursor, restaurant_id, menu_id)
 
             sql = """
-                DELETE FROM restaurant_menus
-                WHERE restaurant_id = %s
-                AND menu_id = %s
+                DELETE rm
+                FROM restaurant_menus rm
+                INNER JOIN restaurants r
+                    ON rm.restaurant_id = r.restaurant_id
+                WHERE r.owner_id = %s
+                AND rm.menu_id = %s
+                AND rm.restaurant_id = %s
             """
-            cursor.execute(sql, (restaurant_id, menu_id))
+            cursor.execute(sql, (owner_id, menu_id, restaurant_id))
 
-        conn.commit()
+            conn.commit()
     except Exception:
         conn.rollback()
         raise

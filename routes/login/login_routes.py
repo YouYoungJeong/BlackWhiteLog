@@ -1,0 +1,527 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+import os
+import requests
+import secrets
+
+from .login_db import (
+    verify_user_login,
+    create_user,
+    find_user_by_email,
+    find_user_by_social,
+    create_social_user_with_form,
+    withdraw_user,
+    find_user_by_nickname,
+    find_email_by_nickname,
+    reset_user_password,
+)
+
+login_bp = Blueprint("login", __name__)
+
+
+# =========================
+# 일반 로그인
+# =========================
+@login_bp.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+
+        user = verify_user_login(email, password)
+
+        if user:
+            session["user_email"] = user["email"]
+            session["user_nickname"] = user["nickname"]
+            session["user_id"] = user["user_id"]
+            session["role"] = user.get("role", "USER")
+            session["login_provider"] = "local"
+            return redirect(url_for("index"))
+
+        flash("이메일 또는 비밀번호가 올바르지 않거나 탈퇴한 계정입니다.")
+        return redirect(url_for("login.login"))
+
+    return render_template("login/login.html")
+
+
+# =========================
+# 일반 회원가입
+# =========================
+@login_bp.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "GET":
+        mode = request.args.get("mode", "").strip()
+        if mode == "local":
+            session.pop("social_signup_data", None)
+
+    social_data = session.get("social_signup_data", {})
+
+    if request.method == "POST":
+        nickname = request.form.get("nickname", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "").strip()
+        password_confirm = request.form.get("password_confirm", "").strip()
+
+        gender = request.form.get("gender", "").strip()
+        birth_year = request.form.get("birth_year", "").strip()
+        birth_month = request.form.get("birth_month", "").strip()
+        birth_day = request.form.get("birth_day", "").strip()
+
+        postcode = request.form.get("postcode", "").strip()
+        road_address = request.form.get("roadAddress", "").strip()
+        jibun_address = request.form.get("jibunAddress", "").strip()
+        detail_address = request.form.get("detailAddress", "").strip()
+        extra_address = request.form.get("extraAddress", "").strip()
+
+        ad_agree = request.form.get("ad_agree", "")
+        email_checked = request.form.get("email_checked", "false")
+        checked_email_value = request.form.get("checked_email_value", "").strip()
+        nickname_checked = request.form.get("nickname_checked", "false")
+        checked_nickname_value = request.form.get("checked_nickname_value", "").strip()
+
+        form_data = {
+            "email": email,
+            "nickname": nickname,
+            "gender": gender,
+            "birth_year": birth_year,
+            "birth_month": birth_month,
+            "birth_day": birth_day,
+            "postcode": postcode,
+            "roadAddress": road_address,
+            "jibunAddress": jibun_address,
+            "detailAddress": detail_address,
+            "extraAddress": extra_address,
+            "ad_agree": ad_agree,
+        }
+
+        def render_signup_with_error(message):
+            flash(message)
+            return render_template("login/signup.html", social_data=social_data, form_data=form_data)
+
+        if not nickname or not email:
+            return render_signup_with_error("이메일과 닉네임을 입력해주세요.")
+        if not gender:
+            return render_signup_with_error("성별을 선택해주세요.")
+        if not birth_year or not birth_month or not birth_day:
+            return render_signup_with_error("생년월일을 입력해주세요.")
+        if not postcode or not road_address:
+            return render_signup_with_error("주소 검색을 통해 주소를 입력해주세요.")
+
+        existing_user = find_user_by_email(email)
+        if existing_user:
+            if not social_data or existing_user["email"] != social_data.get("email"):
+                return render_signup_with_error("이미 가입된 이메일입니다.")
+
+        existing_nickname = find_user_by_nickname(nickname)
+        if existing_nickname:
+            if not social_data or existing_nickname["nickname"] != social_data.get("nickname"):
+                return render_signup_with_error("이미 사용 중인 닉네임입니다.")
+
+        if social_data:
+            provider = social_data.get("provider")
+            social_id = social_data.get("social_id")
+            profile_image_url = social_data.get("profile_image_url")
+
+            if not provider or not social_id:
+                flash("소셜 회원가입 정보가 올바르지 않습니다. 다시 시도해주세요.")
+                session.pop("social_signup_data", None)
+                return redirect(url_for("login.login"))
+            if not password or not password_confirm:
+                return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
+            if password != password_confirm:
+                return render_signup_with_error("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
+            if nickname_checked != "true" or checked_nickname_value != nickname:
+                return render_signup_with_error("닉네임 중복 확인을 해주세요.")
+
+            create_social_user_with_form(
+                nickname=nickname,
+                email=email,
+                password=password,
+                provider=provider,
+                social_id=social_id,
+                profile_image_url=profile_image_url,
+            )
+            user = find_user_by_social(provider, social_id)
+            if not user:
+                return render_signup_with_error("소셜 회원가입 후 사용자 조회에 실패했습니다.")
+
+            session["user_email"] = user["email"]
+            session["user_nickname"] = user["nickname"]
+            session["user_id"] = user["user_id"]
+            session["role"] = user.get("role", "USER")
+            session["login_provider"] = provider.lower()
+            session.pop("social_signup_data", None)
+
+            flash("간편 회원가입이 완료되었습니다.")
+            return redirect(url_for("index"))
+
+        if not password or not password_confirm:
+            return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
+        if password != password_confirm:
+            return render_signup_with_error("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
+        if email_checked != "true" or checked_email_value != email:
+            return render_signup_with_error("이메일 중복 확인을 해주세요.")
+        if nickname_checked != "true" or checked_nickname_value != nickname:
+            return render_signup_with_error("닉네임 중복 확인을 해주세요.")
+
+        create_user(nickname, email, password)
+        flash("회원가입이 완료되었습니다. 로그인해주세요.")
+        return redirect(url_for("login.login"))
+
+    return render_template("login/signup.html", social_data=social_data, form_data={})
+
+
+@login_bp.route("/signup/reset")
+def signup_reset():
+    session.pop("social_signup_data", None)
+    return redirect(url_for("login.signup", mode="local"))
+
+
+@login_bp.route("/api/check-duplicate")
+def check_duplicate():
+    check_type = request.args.get("type", "").strip()
+    value = request.args.get("value", "").strip()
+
+    if not value:
+        return jsonify({"available": False, "message": "값을 입력해주세요."})
+
+    if check_type == "email":
+        user = find_user_by_email(value)
+        return jsonify({
+            "available": not bool(user),
+            "message": "사용 가능한 이메일입니다." if not user else "이미 사용 중인 이메일입니다."
+        })
+    elif check_type == "nickname":
+        user = find_user_by_nickname(value)
+        return jsonify({
+            "available": not bool(user),
+            "message": "사용 가능한 닉네임입니다." if not user else "이미 사용 중인 닉네임입니다."
+        })
+
+    return jsonify({"available": False, "message": "잘못된 요청입니다."})
+
+
+@login_bp.route("/find-id", methods=["GET", "POST"])
+def find_id():
+    found_email = None
+    if request.method == "POST":
+        nickname = request.form.get("nickname", "").strip()
+        if not nickname:
+            flash("닉네임을 입력해주세요.")
+            return redirect(url_for("login.find_id"))
+
+        user = find_email_by_nickname(nickname)
+        if not user:
+            flash("일치하는 회원 정보를 찾을 수 없습니다.")
+            return redirect(url_for("login.find_id"))
+        found_email = user["email"]
+
+    return render_template("login/find_id.html", found_email=found_email)
+
+
+@login_bp.route("/find-password", methods=["GET", "POST"])
+def find_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        nickname = request.form.get("nickname", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+        new_password_confirm = request.form.get("new_password_confirm", "").strip()
+
+        if not email or not nickname or not new_password or not new_password_confirm:
+            flash("모든 항목을 입력해주세요.")
+            return redirect(url_for("login.find_password"))
+        if new_password != new_password_confirm:
+            flash("새 비밀번호가 일치하지 않습니다.")
+            return redirect(url_for("login.find_password"))
+        if len(new_password) < 4:
+            flash("비밀번호는 4자 이상 입력해주세요.")
+            return redirect(url_for("login.find_password"))
+
+        success = reset_user_password(email, nickname, new_password)
+        if not success:
+            flash("입력한 정보와 일치하는 회원을 찾을 수 없습니다.")
+            return redirect(url_for("login.find_password"))
+
+        flash("비밀번호가 재설정되었습니다. 다시 로그인해주세요.")
+        return redirect(url_for("login.login"))
+
+    return render_template("login/find_password.html")
+
+
+@login_bp.route("/logout")
+def logout():
+    provider = session.get("login_provider")
+    session.clear()
+
+    if provider == "KAKAO":
+        kakao_rest_api_key = os.getenv("KAKAO_REST_API_KEY")
+        kakao_logout_redirect_uri = os.getenv("KAKAO_LOGOUT_REDIRECT_URI")
+        logout_url = (
+            "https://kauth.kakao.com/oauth/logout"
+            f"?client_id={kakao_rest_api_key}"
+            f"&logout_redirect_uri={kakao_logout_redirect_uri}"
+        )
+        return redirect(logout_url)
+
+    if provider in ["naver", "google", "local", None]:
+        flash("로그아웃되었습니다.")
+        return redirect(url_for("index"))
+
+
+@login_bp.route("/logout/kakao/callback")
+def logout_kakao_callback():
+    flash("로그아웃되었습니다.")
+    return redirect(url_for("index"))
+
+
+@login_bp.route("/login/kakao")
+def login_kakao():
+    kakao_rest_api_key = os.getenv("KAKAO_REST_API_KEY")
+    redirect_uri = os.getenv("KAKAO_REDIRECT_URI")
+    state = secrets.token_urlsafe(16)
+    session["oauth_state"] = state
+
+    auth_url = (
+        "https://kauth.kakao.com/oauth/authorize"
+        f"?client_id={kakao_rest_api_key}"
+        f"&redirect_uri={redirect_uri}"
+        f"&response_type=code"
+        f"&state={state}"
+    )
+    return redirect(auth_url)
+
+
+@login_bp.route("/login/kakao/callback")
+def login_kakao_callback():
+    code = request.args.get("code")
+    state = request.args.get("state")
+    if not code:
+        flash("카카오 로그인에 실패했습니다.")
+        return redirect(url_for("login.login"))
+    if state != session.get("oauth_state"):
+        flash("잘못된 요청입니다.")
+        return redirect(url_for("login.login"))
+
+    token_data = {
+        "grant_type": "authorization_code",
+        "client_id": os.getenv("KAKAO_REST_API_KEY"),
+        "redirect_uri": os.getenv("KAKAO_REDIRECT_URI"),
+        "code": code,
+    }
+    client_secret = os.getenv("KAKAO_CLIENT_SECRET")
+    if client_secret:
+        token_data["client_secret"] = client_secret
+
+    token_res = requests.post(
+        "https://kauth.kakao.com/oauth/token",
+        data=token_data,
+        headers={"Content-type": "application/x-www-form-urlencoded;charset=utf-8"},
+    )
+    token_json = token_res.json()
+    access_token = token_json.get("access_token")
+    if not access_token:
+        flash(f"카카오 토큰 발급 실패: {token_json}")
+        return redirect(url_for("login.login"))
+
+    user_res = requests.get(
+        "https://kapi.kakao.com/v2/user/me",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-type": "application/x-www-form-urlencoded;charset=utf-8",
+        },
+    )
+    user_json = user_res.json()
+    social_id = str(user_json.get("id"))
+    kakao_account = user_json.get("kakao_account", {})
+    profile = kakao_account.get("profile", {})
+    email = kakao_account.get("email") or f"kakao_{social_id}@kakao.local"
+    nickname = profile.get("nickname") or f"kakao_{social_id}"
+    profile_image_url = profile.get("profile_image_url")
+    if not social_id:
+        flash("카카오 사용자 정보를 불러오지 못했습니다.")
+        return redirect(url_for("login.login"))
+
+    user = find_user_by_social("KAKAO", social_id)
+    if user:
+        session["user_email"] = user["email"]
+        session["user_nickname"] = user["nickname"]
+        session["user_id"] = user["user_id"]
+        session["role"] = user.get("role", "USER")
+        session["login_provider"] = "kakao"
+        flash("로그인되었습니다.")
+        return redirect(url_for("index"))
+
+    session["social_signup_data"] = {
+        "provider": "KAKAO",
+        "social_id": social_id,
+        "email": email,
+        "nickname": nickname,
+        "profile_image_url": profile_image_url,
+    }
+    flash("추가 회원정보를 입력해주세요.")
+    return redirect(url_for("login.signup"))
+
+
+@login_bp.route("/login/naver")
+def login_naver():
+    naver_client_id = os.getenv("NAVER_CLIENT_ID")
+    redirect_uri = os.getenv("NAVER_REDIRECT_URI")
+    state = secrets.token_urlsafe(16)
+    session["oauth_state"] = state
+
+    auth_url = (
+        "https://nid.naver.com/oauth2.0/authorize"
+        f"?response_type=code"
+        f"&client_id={naver_client_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&state={state}"
+    )
+    return redirect(auth_url)
+
+
+@login_bp.route("/login/naver/callback")
+def login_naver_callback():
+    code = request.args.get("code")
+    state = request.args.get("state")
+    if not code:
+        flash("네이버 로그인에 실패했습니다.")
+        return redirect(url_for("login.login"))
+    if state != session.get("oauth_state"):
+        flash("잘못된 요청입니다.")
+        return redirect(url_for("login.login"))
+
+    token_data = {
+        "grant_type": "authorization_code",
+        "client_id": os.getenv("NAVER_CLIENT_ID"),
+        "client_secret": os.getenv("NAVER_CLIENT_SECRET"),
+        "code": code,
+        "state": state,
+    }
+    token_res = requests.post("https://nid.naver.com/oauth2.0/token", params=token_data)
+    token_json = token_res.json()
+    access_token = token_json.get("access_token")
+    if not access_token:
+        flash(f"네이버 토큰 발급 실패: {token_json}")
+        return redirect(url_for("login.login"))
+
+    user_res = requests.get(
+        "https://openapi.naver.com/v1/nid/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    user_json = user_res.json().get("response", {})
+    social_id = user_json.get("id")
+    email = user_json.get("email") or f"naver_{social_id}@naver.local"
+    nickname = user_json.get("nickname") or f"naver_{social_id}"
+    profile_image_url = user_json.get("profile_image")
+    if not social_id:
+        flash("네이버 사용자 정보를 불러오지 못했습니다.")
+        return redirect(url_for("login.login"))
+
+    user = find_user_by_social("NAVER", social_id)
+    if user:
+        session["user_email"] = user["email"]
+        session["user_nickname"] = user["nickname"]
+        session["user_id"] = user["user_id"]
+        session["role"] = user.get("role", "USER")
+        session["login_provider"] = "naver"
+        flash("로그인되었습니다.")
+        return redirect(url_for("index"))
+
+    session["social_signup_data"] = {
+        "provider": "NAVER",
+        "social_id": social_id,
+        "email": email,
+        "nickname": nickname,
+        "profile_image_url": profile_image_url,
+    }
+    flash("추가 회원정보를 입력해주세요.")
+    return redirect(url_for("login.signup"))
+
+
+@login_bp.route("/login/google")
+def login_google():
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+    state = secrets.token_urlsafe(16)
+    session["oauth_state"] = state
+
+    auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        f"?client_id={google_client_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&response_type=code"
+        f"&scope=openid%20email%20profile"
+        f"&state={state}"
+    )
+    return redirect(auth_url)
+
+
+@login_bp.route("/login/google/callback")
+def login_google_callback():
+    code = request.args.get("code")
+    state = request.args.get("state")
+    if not code:
+        flash("구글 로그인에 실패했습니다.")
+        return redirect(url_for("login.login"))
+    if state != session.get("oauth_state"):
+        flash("잘못된 요청입니다.")
+        return redirect(url_for("login.login"))
+
+    token_data = {
+        "code": code,
+        "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+        "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+        "redirect_uri": os.getenv("GOOGLE_REDIRECT_URI"),
+        "grant_type": "authorization_code",
+    }
+    token_res = requests.post("https://oauth2.googleapis.com/token", data=token_data)
+    token_json = token_res.json()
+    access_token = token_json.get("access_token")
+    if not access_token:
+        flash(f"구글 토큰 발급 실패: {token_json}")
+        return redirect(url_for("login.login"))
+
+    user_res = requests.get(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    user_json = user_res.json()
+    social_id = user_json.get("id")
+    email = user_json.get("email") or f"google_{social_id}@google.local"
+    nickname = user_json.get("name") or f"google_{social_id}"
+    profile_image_url = user_json.get("picture")
+    if not social_id:
+        flash("구글 사용자 정보를 불러오지 못했습니다.")
+        return redirect(url_for("login.login"))
+
+    user = find_user_by_social("GOOGLE", social_id)
+    if user:
+        session["user_email"] = user["email"]
+        session["user_nickname"] = user["nickname"]
+        session["user_id"] = user["user_id"]
+        session["role"] = user.get("role", "USER")
+        session["login_provider"] = "google"
+        flash("로그인되었습니다.")
+        return redirect(url_for("index"))
+
+    session["social_signup_data"] = {
+        "provider": "GOOGLE",
+        "social_id": social_id,
+        "email": email,
+        "nickname": nickname,
+        "profile_image_url": profile_image_url,
+    }
+    flash("추가 회원정보를 입력해주세요.")
+    return redirect(url_for("login.signup"))
+
+
+@login_bp.route("/withdraw", methods=["POST"])
+def withdraw():
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("로그인이 필요합니다.")
+        return redirect(url_for("login.login"))
+
+    withdraw_user(user_id)
+    session.clear()
+    flash("회원 탈퇴가 완료되었습니다.")
+    return redirect(url_for("index"))

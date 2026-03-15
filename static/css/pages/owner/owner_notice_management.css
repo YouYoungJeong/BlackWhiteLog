@@ -1,14 +1,9 @@
 @charset "UTF-8";
 
-/* ==================================================================================
-   공지사항 관리 페이지 스타일 요약
-   ----------------------------------------------------------------------------------
-   1. 작성 카드와 목록 카드를 분리한다.
-   2. 미리보기 박스는 기본 문구 없이 빈 공백으로 시작한다.
-   3. 이미지가 선택되면 미리보기 img 만 표시된다.
-   4. 공지 썸네일, 페이징, SPA용 버튼 스타일을 포함한다.
-   ================================================================================== */
-
+/* =========================
+   공지사항 페이지 전용 토큰
+   - 공통 헤더/푸터/드로어 스타일은 owner_layout_common.css / owner_drawer.css에서 관리
+   ========================= */
 :root {
     --bg: #f5f6f2;
     --card: #fcfcfb;
@@ -43,6 +38,9 @@ body {
     min-height: 100vh;
 }
 
+/* =========================
+   페이지 레이아웃
+   ========================= */
 .owner-notice-page {
     min-height: 100vh;
     display: flex;
@@ -58,6 +56,9 @@ body {
     gap: 22px;
 }
 
+/* =========================
+   공지 카드 공통
+   ========================= */
 .notice-card,
 .notice-list-card {
     background: var(--card);
@@ -85,6 +86,9 @@ body {
     font-size: 0.98rem;
 }
 
+/* =========================
+   공지 작성 폼
+   ========================= */
 .notice-form {
     padding: 28px;
 }
@@ -103,15 +107,13 @@ body {
 
 .form-group input[type="text"],
 .form-group textarea,
-.form-group input[type="file"],
-.notice-select {
+.form-group input[type="file"] {
     width: 100%;
     font: inherit;
 }
 
 .form-group input[type="text"],
-.form-group textarea,
-.notice-select {
+.form-group textarea {
     border: 1px solid var(--line-strong);
     border-radius: 14px;
     background: #ffffff;
@@ -121,8 +123,7 @@ body {
 }
 
 .form-group input[type="text"]:focus,
-.form-group textarea:focus,
-.notice-select:focus {
+.form-group textarea:focus {
     border-color: var(--point);
     box-shadow: 0 0 0 4px rgba(143, 165, 139, 0.12);
 }
@@ -152,34 +153,6 @@ body {
     background: transparent;
 }
 
-/* 요청사항 반영
-   - 기본 문구 없이 빈 미리보기 박스만 표시 */
-.notice-image-preview-box {
-    min-height: 210px;
-    border: 1px dashed var(--line-strong);
-    border-radius: 14px;
-    background: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    padding: 12px;
-}
-
-.notice-image-preview {
-    display: block;
-    width: 100%;
-    max-height: 186px;
-    object-fit: cover;
-    border-radius: 12px;
-}
-
-.preview-actions {
-    margin-top: 10px;
-    display: flex;
-    justify-content: flex-end;
-}
-
 .notice-option-row {
     display: flex;
     gap: 24px;
@@ -203,6 +176,10 @@ body {
     accent-color: var(--point-dark);
 }
 
+/* =========================
+   버튼
+   - 공통 헤더 버튼은 owner_layout_common.css 사용
+   ========================= */
 .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -228,6 +205,12 @@ body {
     color: var(--text);
 }
 
+.btn-outline {
+    border: 1px solid var(--point);
+    background: #f7faf6;
+    color: var(--point-dark);
+}
+
 .btn-primary {
     border: 1px solid var(--point-dark);
     background: linear-gradient(180deg, #9db197 0%, #7f957a 100%);
@@ -239,17 +222,11 @@ body {
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
-.notice-list-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 18px 28px 0;
-    font-size: 1rem;
-    font-weight: 700;
-}
-
+/* =========================
+   등록된 공지 리스트
+   ========================= */
 .notice-list {
-    padding: 24px 28px 20px;
+    padding: 24px 28px 28px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -266,14 +243,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-}
-
-.notice-top-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    margin-bottom: 10px;
 }
 
 .notice-badge {
@@ -293,17 +263,6 @@ body {
     font-size: 0.92rem;
 }
 
-.notice-item-body {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-}
-
-.notice-item-text {
-    flex: 1;
-    min-width: 0;
-}
-
 .notice-item h3 {
     margin: 0 0 8px;
     font-size: 1.1rem;
@@ -315,24 +274,6 @@ body {
     margin: 0;
     color: #4b5563;
     line-height: 1.6;
-    white-space: pre-line;
-}
-
-.notice-thumb-wrap {
-    width: 120px;
-    min-width: 120px;
-    height: 120px;
-    border-radius: 14px;
-    overflow: hidden;
-    border: 1px solid var(--line);
-    background: #fafbf8;
-}
-
-.notice-thumb {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
 }
 
 .notice-item-actions {
@@ -367,36 +308,9 @@ body {
     margin-bottom: 10px;
 }
 
-.notice-pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 12px;
-    padding: 0 28px 28px;
-}
-
-.btn-page {
-    min-width: 88px;
-    height: 42px;
-    border: 1px solid var(--line-strong);
-    border-radius: 12px;
-    background: #ffffff;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.btn-page:disabled {
-    opacity: 0.45;
-    cursor: default;
-}
-
-.page-status {
-    min-width: 72px;
-    text-align: center;
-    font-weight: 700;
-}
-
+/* =========================
+   반응형
+   ========================= */
 @media (max-width: 900px) {
     .page-main {
         padding: 0 16px 24px;
@@ -404,9 +318,7 @@ body {
 
     .card-header,
     .notice-form,
-    .notice-list,
-    .notice-list-meta,
-    .notice-pagination {
+    .notice-list {
         padding-left: 20px;
         padding-right: 20px;
     }
@@ -419,6 +331,7 @@ body {
 
     .file-grid {
         grid-template-columns: 1fr;
+        gap: 0;
     }
 
     .notice-option-row {
@@ -435,70 +348,13 @@ body {
         width: 100%;
     }
 
-    .notice-item-body {
+    .notice-item-top {
         flex-direction: column;
-    }
-
-    .notice-thumb-wrap {
-        width: 100%;
-        height: 180px;
+        align-items: flex-start;
+        gap: 8px;
     }
 
     .notice-item-actions {
         justify-content: flex-start;
-    }
-}
-.notice-item {
-    overflow: hidden;
-}
-
-.notice-item-body {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    min-width: 0;
-}
-
-.notice-item-text {
-    flex: 1;
-    min-width: 0;
-}
-
-.notice-item-text h3 {
-    margin: 0 0 8px;
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    line-height: 1.45;
-}
-
-.notice-item-text p {
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    line-height: 1.6;
-    max-height: 120px;
-    overflow-y: auto;
-    padding-right: 6px;
-}
-
-.notice-thumb-wrap {
-    flex-shrink: 0;
-}
-
-.notice-thumb {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-@media (max-width: 768px) {
-    .notice-item-body {
-        flex-direction: column;
-    }
-
-    .notice-thumb-wrap {
-        width: 100%;
     }
 }
