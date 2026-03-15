@@ -261,6 +261,28 @@ def get_notice_detail_by_id(restaurant_id, notice_id):
 
 
 # 전달받는 값
+# - cursor: 현재 DB 커서
+# - restaurant_id: 식당 번호
+# - exclude_notice_id: 제외할 공지 번호
+# 반환값
+# - 없음
+def clear_pinned_notice_by_restaurant(cursor, restaurant_id, exclude_notice_id=None):
+    sql = """
+        UPDATE owner_notices
+        SET is_pinned = 0
+        WHERE restaurant_id = %s
+        AND is_pinned = 1
+    """
+    params = [restaurant_id]
+
+    if exclude_notice_id is not None:
+        sql += " AND notice_id <> %s"
+        params.append(exclude_notice_id)
+
+    cursor.execute(sql, tuple(params))
+
+
+# 전달받는 값
 # - owner_id: 오너 번호
 # - restaurant_id: 식당 번호
 # - user_id: 작성자 유저 번호
@@ -289,6 +311,9 @@ def insert_notice(
                 image_data = save_notice_image_file(image_file)
                 notice_url = image_data["notice_url"]
                 thumb_url = image_data["thumb_url"]
+
+            if int(is_pinned) == 1:
+                clear_pinned_notice_by_restaurant(cursor, restaurant_id)
 
             sql = """
                 INSERT INTO owner_notices
@@ -376,6 +401,13 @@ def update_notice(
                 notice_url = image_data["notice_url"]
                 thumb_url = image_data["thumb_url"]
 
+            if int(is_pinned) == 1:
+                clear_pinned_notice_by_restaurant(
+                    cursor,
+                    restaurant_id,
+                    exclude_notice_id=notice_id
+                )
+
             sql = """
                 UPDATE owner_notices
                 SET
@@ -411,7 +443,6 @@ def update_notice(
 # 전달받는 값
 # - restaurant_id: 식당 번호
 # - notice_id: 공지 번호
-
 def delete_notice(restaurant_id, notice_id):
     conn = get_connection()
     try:

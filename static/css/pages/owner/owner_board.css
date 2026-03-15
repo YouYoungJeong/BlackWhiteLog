@@ -719,16 +719,18 @@ a {
     max-width: 60%;
     min-width: 0;
     gap: 12px;
-    justify-content: center;
+    justify-content: flex-start;
     font-size: clamp(1.05rem, 1.5vw, 1.4rem);
+    text-align: left;
 }
 
 .menu-count-box {
     flex: 0 0 40%;
     max-width: 40%;
     min-width: 0;
-    justify-content: center;
+    justify-content: flex-start;
     font-size: clamp(1rem, 1.3vw, 1.3rem);
+    text-align: left;
 }
 
 .menu-type-box .emoji {

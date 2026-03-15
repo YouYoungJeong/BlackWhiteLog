@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 5. 삭제 클릭 시 DB 삭제 후 목록을 다시 렌더링한다.
     // 6. 오너보드 공지 카드를 클릭해 이동한 경우 query string 의 restaurant_id, focus_notice_id 를 읽어
     //    해당 페이지의 noticeList 내부 카드 위치로 스크롤하고 시각적으로 포커스한다.
+    // 7. 초기 진입 시 query string 의 restaurant_id 가 있으면 해당 가게 목록을 다시 조회한 뒤 포커스를 시도한다.
     // ==================================================================================
 
     const noticeForm = document.getElementById("noticeForm");
@@ -171,6 +172,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const restaurantId = restaurantSelect.value;
 
         const response = await fetch(`/owner/notice_management/api/list?restaurant_id=${encodeURIComponent(restaurantId)}&page=${encodeURIComponent(page)}`);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("notice list response error =", errorText);
+            alert("공지사항 목록을 불러오지 못했습니다.");
+            return;
+        }
+
         const result = await response.json();
 
         if (!result.success) {
@@ -185,6 +194,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const restaurantId = restaurantSelect.value;
 
         const response = await fetch(`/owner/notice_management/api/detail/${noticeId}?restaurant_id=${encodeURIComponent(restaurantId)}`);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("notice detail response error =", errorText);
+            alert("공지사항 상세 정보를 불러오지 못했습니다.");
+            return;
+        }
+
         const result = await response.json();
 
         if (!result.success) {
@@ -228,6 +245,13 @@ document.addEventListener("DOMContentLoaded", () => {
             body: formData
         });
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("notice save response error =", errorText);
+            alert("공지사항 저장에 실패했습니다.");
+            return;
+        }
+
         const result = await response.json();
 
         if (!result.success) {
@@ -249,6 +273,13 @@ document.addEventListener("DOMContentLoaded", () => {
             method: "POST",
             body: formData
         });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("notice delete response error =", errorText);
+            alert("공지사항 삭제에 실패했습니다.");
+            return;
+        }
 
         const result = await response.json();
 
@@ -337,7 +368,13 @@ document.addEventListener("DOMContentLoaded", () => {
         has_next: false
     });
 
-    if (focusNoticeId) {
-        focusNoticeCard(focusNoticeId);
-    }
+    window.setTimeout(async () => {
+        if (queryRestaurantId) {
+            await loadNoticeList(1);
+        }
+
+        if (focusNoticeId) {
+            focusNoticeCard(focusNoticeId);
+        }
+    }, 0);
 });

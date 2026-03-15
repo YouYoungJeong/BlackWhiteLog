@@ -1,8 +1,8 @@
 from flask import render_template, request, jsonify, session
 import routes.owner.owner_menu_db as owner_db
 import routes.owner.owner_notices_db as owner_notice_db
+import routes.owner.owner_board_db as owner_board_db
 import math
-
 
 
 def register_owner_routes(app):
@@ -30,45 +30,36 @@ def register_owner_routes(app):
                 sidebar_selected_restaurant_name = ""
                 db_sidebar_restaurant_list = []
 
-            db_sidebar_notice_current = None
+            sidebar_notice_current = None
             db_sidebar_notice_history_list = []
 
             if sidebar_selected_restaurant_id:
-                db_sidebar_notice_current = owner_notice_db.get_notice_list_by_restaurant(
-                    sidebar_selected_restaurant_id,
-                    limit=1,
-                    offset=0
-                )
-
-            sidebar_notice_current = None
-            if db_sidebar_notice_current:
-                for db_notice in db_sidebar_notice_current:
-                    if int(db_notice["is_pinned"]) == 1:
-                        sidebar_notice_current = {
-                            "notice_id": db_notice["notice_id"],
-                            "restaurant_id": db_notice["restaurant_id"],
-                            "notice_title": db_notice["notice_title"],
-                            "notice_content": db_notice["notice_content"],
-                            "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
-                        }
-                        break
-
-            if sidebar_selected_restaurant_id:
-                db_notice_list = owner_notice_db.get_notice_list_by_restaurant(
+                db_current_notice = owner_board_db.get_sidebar_current_notice_by_restaurant(
                     sidebar_selected_restaurant_id
                 )
 
-                for db_notice in db_notice_list:
-                    if int(db_notice["is_pinned"]) == 0:
-                        db_sidebar_notice_history_list.append({
-                            "notice_id": db_notice["notice_id"],
-                            "restaurant_id": db_notice["restaurant_id"],
-                            "notice_title": db_notice["notice_title"],
-                            "notice_content": db_notice["notice_content"],
-                            "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
-                        })
+                if db_current_notice:
+                    sidebar_notice_current = {
+                        "notice_id": db_current_notice["notice_id"],
+                        "restaurant_id": db_current_notice["restaurant_id"],
+                        "notice_title": db_current_notice["notice_title"],
+                        "notice_content": db_current_notice["notice_content"],
+                        "updated_at": db_current_notice["updated_at"].strftime("%Y-%m-%d") if db_current_notice["updated_at"] else ""
+                    }
 
-                db_sidebar_notice_history_list = db_sidebar_notice_history_list[:3]
+                db_history_notice_list = owner_board_db.get_sidebar_history_notice_list_by_restaurant(
+                    sidebar_selected_restaurant_id,
+                    limit=3
+                )
+
+                for db_notice in db_history_notice_list:
+                    db_sidebar_notice_history_list.append({
+                        "notice_id": db_notice["notice_id"],
+                        "restaurant_id": db_notice["restaurant_id"],
+                        "notice_title": db_notice["notice_title"],
+                        "notice_content": db_notice["notice_content"],
+                        "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+                    })
 
         except Exception:
             db_sidebar_restaurant_list = []
@@ -88,6 +79,75 @@ def register_owner_routes(app):
             sidebar_notice_current=sidebar_notice_current,
             sidebar_notice_history_list=db_sidebar_notice_history_list
         )
+
+    @app.route("/owner/board/api/notice_summary", methods=["GET"], endpoint="owner_board_api_notice_summary")
+    def owner_board_api_notice_summary():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+
+        try:
+            restaurant_list = owner_notice_db.get_restaurant_list_by_owner(session_owner_id)
+
+            if not restaurant_list:
+                return jsonify({
+                    "success": False,
+                    "message": "등록된 가게가 없습니다."
+                }), 404
+
+            restaurant_id_list = [row["restaurant_id"] for row in restaurant_list]
+
+            if client_restaurant_id in restaurant_id_list:
+                selected_restaurant_id = client_restaurant_id
+            else:
+                selected_restaurant_id = restaurant_id_list[0]
+
+            current_notice = None
+            history_notice_list = []
+
+            db_current_notice = owner_board_db.get_sidebar_current_notice_by_restaurant(
+                selected_restaurant_id
+            )
+
+            if db_current_notice:
+                current_notice = {
+                    "notice_id": db_current_notice["notice_id"],
+                    "restaurant_id": db_current_notice["restaurant_id"],
+                    "notice_title": db_current_notice["notice_title"],
+                    "notice_content": db_current_notice["notice_content"],
+                    "updated_at": db_current_notice["updated_at"].strftime("%Y-%m-%d") if db_current_notice["updated_at"] else ""
+                }
+
+            db_history_notice_list = owner_board_db.get_sidebar_history_notice_list_by_restaurant(
+                selected_restaurant_id,
+                limit=3
+            )
+
+            for db_notice in db_history_notice_list:
+                history_notice_list.append({
+                    "notice_id": db_notice["notice_id"],
+                    "restaurant_id": db_notice["restaurant_id"],
+                    "notice_title": db_notice["notice_title"],
+                    "notice_content": db_notice["notice_content"],
+                    "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+                })
+
+            return jsonify({
+                "success": True,
+                "message": "사이드바 공지사항 조회 완료",
+                "restaurant_id": selected_restaurant_id,
+                "current_notice": current_notice,
+                "history_notice_list": history_notice_list
+            })
+
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
 
 # --------------------------------------------------------------------------------------
 # 오너 메뉴 관리 페이지
@@ -164,7 +224,6 @@ def register_owner_routes(app):
         session_owner_id = session.get("owner_id")
 
         if not session_owner_id:
-            # 임시 오너값
             session_owner_id = 1
 
         db_owner = owner_db.get_owner_info(session_owner_id)
@@ -172,7 +231,6 @@ def register_owner_routes(app):
 
         selected_restaurant_id, restaurant_list = get_selected_restaurant_id(session_owner_id)
 
-        # 수정: 초기 메뉴 목록도 restaurant_id 기준으로 조회
         initial_payload = build_menu_list_payload(
             restaurant_id=selected_restaurant_id,
             page=1,
@@ -195,7 +253,6 @@ def register_owner_routes(app):
         session_owner_id = session.get("owner_id")
 
         if not session_owner_id:
-            # 임시 오너값
             session_owner_id = 1
 
         client_restaurant_id = request.args.get("restaurant_id", type=int)
@@ -225,7 +282,6 @@ def register_owner_routes(app):
         session_owner_id = session.get("owner_id")
 
         if not session_owner_id:
-            # 임시 오너값
             session_owner_id = 1
 
         client_restaurant_id = request.args.get("restaurant_id", type=int)
@@ -235,7 +291,6 @@ def register_owner_routes(app):
             client_restaurant_id
         )
 
-        # 수정: 상세 조회도 owner_id 대신 restaurant_id 기준으로 조회
         db_menu_detail = owner_db.get_menu_detail_by_id(selected_restaurant_id, menu_id)
 
         if not db_menu_detail:
@@ -264,8 +319,8 @@ def register_owner_routes(app):
         session_owner_id = session.get("owner_id")
         print("request.form =", request.form)
         print("request.files =", request.files)
+
         if not session_owner_id:
-            # 임시 오너값
             session_owner_id = 1
 
         client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
@@ -293,7 +348,6 @@ def register_owner_routes(app):
         menu_status = "OFF" if client_soldout == "Y" else "ON"
 
         try:
-            # 수정: 저장/수정 시 owner_id로 restaurant_id를 구해서 restaurant_id 기준 함수에 전달
             restaurant_id, _ = get_selected_restaurant_id(
                 session_owner_id,
                 client_restaurant_id
@@ -351,14 +405,12 @@ def register_owner_routes(app):
         session_owner_id = session.get("owner_id")
 
         if not session_owner_id:
-            # 임시 오너값
             session_owner_id = 1
 
         client_page = request.form.get("client_page", default="1").strip()
         client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
 
         try:
-            # 수정: 삭제도 owner_id로 restaurant_id를 조회해서 restaurant_id 기준으로 삭제
             restaurant_id, _ = get_selected_restaurant_id(
                 session_owner_id,
                 client_restaurant_id
@@ -390,9 +442,6 @@ def register_owner_routes(app):
 # -------------------------------------------------------------------------------------
 # 오너 공지 관리 페이지
 # -------------------------------------------------------------------------------------
-    # 공지사항 목록 payload 생성
-    # - restaurant_id 기준으로 공지 목록/페이지/개수를 공통 계산한다.
-    # - SPA 응답용 JSON 구성 중복을 줄이기 위해 분리한다.
     def build_notice_list_payload(restaurant_id, page=1, per_page=5):
         total_notice_count = owner_notice_db.get_notice_count_by_restaurant(restaurant_id)
         total_pages = math.ceil(total_notice_count / per_page) if total_notice_count > 0 else 1
@@ -436,7 +485,6 @@ def register_owner_routes(app):
             "total_notice_count": total_notice_count
         }
 
-    # 공지사항 화면에서 선택된 식당 공통 처리
     def get_selected_notice_restaurant_id(session_owner_id, client_restaurant_id=None):
         restaurant_list = owner_notice_db.get_restaurant_list_by_owner(session_owner_id)
 
@@ -466,7 +514,12 @@ def register_owner_routes(app):
         if not session_owner_id:
             session_owner_id = 1
 
-        selected_restaurant_id, restaurant_list = get_selected_notice_restaurant_id(session_owner_id)
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+
+        selected_restaurant_id, restaurant_list = get_selected_notice_restaurant_id(
+            session_owner_id,
+            client_restaurant_id
+        )
 
         initial_payload = build_notice_list_payload(
             restaurant_id=selected_restaurant_id,
@@ -682,8 +735,6 @@ def register_owner_routes(app):
                 "success": False,
                 "message": str(error)
             }), 500
-
-
 
 
 # ------------------------------------------------------------------------------------
