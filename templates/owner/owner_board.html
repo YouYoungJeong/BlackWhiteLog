@@ -374,13 +374,11 @@
                         </div>
                     </div>
 
-                    <!-- =================================================
+    <!-- =================================================
     우측 컬럼 리뷰 요약 카드
     - 상단 mini-stat-card : 3월 리뷰 수 표시
     - 하단 review-card : restaurant_id 기준 최신 리뷰 5개 미리보기
     - 카드 클릭 시 review_management 페이지로 이동
-    - 공지사항 카드처럼 Jinja 최초 렌더링 후,
-      추후 JS SPA 방식으로도 확장 가능한 구조
     ================================================= -->
 <div class="right-column">
 
@@ -392,26 +390,13 @@
     <div class="mini-stat-card card">
         <div class="mini-stat-top">
             <h3>3월 리뷰</h3>
-
-            <!-- =================================================
-                리뷰 관리 페이지 이동 버튼
-                - restaurant_id 기준으로 리뷰 관리 페이지 이동
-                ================================================= -->
-            <a
-                href="{{ url_for('owner_review_management', restaurant_id=selected_restaurant_id) }}"
-                class="circle-arrow"
-                aria-label="리뷰 관리 페이지로 이동"
-            >
-                →
-            </a>
         </div>
-
         <!-- =================================================
             3월 리뷰 개수 출력
             - board_review_data.march_review_count 사용
             ================================================= -->
         <div class="stat-number">
-            {{ board_review_data.march_review_count }}
+            {{ board_review_data.march_review_count if board_review_data else 0 }}
         </div>
     </div>
 
@@ -425,18 +410,6 @@
     <div class="review-card card" id="boardReviewCard">
         <div class="notice-header">
             <h3>최근 리뷰</h3>
-
-            <!-- =================================================
-                전체 리뷰 보기 버튼
-                - 기본은 리뷰 관리 페이지로 이동
-                ================================================= -->
-            <a
-                href="{{ url_for('owner_review_management', restaurant_id=selected_restaurant_id) }}"
-                class="circle-arrow"
-                aria-label="전체 리뷰 보기"
-            >
-                →
-            </a>
         </div>
 
         <!-- =================================================
@@ -445,79 +418,79 @@
             - 없으면 empty 카드 표시
             ================================================= -->
         <div class="review-list" id="boardReviewList">
-            {% if board_review_data.review_list %}
+            {% if board_review_data and board_review_data.review_list %}
                 {% for review in board_review_data.review_list %}
                     <div
                         class="review-item"
                         data-review-id="{{ review.review_id }}"
-                        data-restaurant-id="{{ selected_restaurant_id }}"
+                        data-restaurant-id="{{ review.restaurant_id }}"
                         tabindex="0"
                         role="button"
                         aria-label="리뷰 상세 보기"
-                        onclick="location.href='{{ url_for('owner.review_management', restaurant_id=selected_restaurant_id, focus_review_id=review.review_id) }}'"
-                        onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); location.href='{{ url_for('owner.review_management', restaurant_id=selected_restaurant_id, focus_review_id=review.review_id) }}'; }"
+                        onclick="location.href='{{ url_for('owner_review_management', restaurant_id=review.restaurant_id) }}?review_id={{ review.review_id }}&page={{ review.review_page }}'"
+                        onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); location.href='{{ url_for('owner_review_management', restaurant_id=review.restaurant_id) }}?review_id={{ review.review_id }}&page={{ review.review_page }}'; }"
                     >
-                        <!-- =================================================
-                            리뷰 작성자 프로필
-                            - profile_image_url 이 있으면 이미지 출력
-                            - 없으면 기본 아이콘 출력
-                            ================================================= -->
-                        <div class="review-profile">
-                            {% if review.profile_image_url %}
-                                <img
-                                    src="{{ review.profile_image_url }}"
-                                    alt="{{ review.nickname }} 프로필 이미지"
-                                    style="width:100%; height:100%; object-fit:cover; border-radius:50%;"
-                                >
-                            {% else %}
-                                👤
-                            {% endif %}
-                        </div>
+                                    <!-- =================================================
+                                        리뷰 작성자 프로필
+                                        - profile_image_url 이 있으면 이미지 출력
+                                        - 없으면 기본 아이콘 출력
+                                        ================================================= -->
+                                    <div class="review-profile">
+                                        {% if review.profile_image_url %}
+                                            <img
+                                                src="{{ review.profile_image_url }}"
+                                                alt="{{ review.nickname }} 프로필 이미지"
+                                                style="width:100%; height:100%; object-fit:cover; border-radius:50%;"
+                                            >
+                                        {% else %}
+                                            👤
+                                        {% endif %}
+                                    </div>
 
-                        <!-- =================================================
-                            리뷰 본문 영역
-                            - 닉네임 / 별점 / 날짜
-                            - 내용은 2줄 정도 보여주고 길면 CSS에서 정리
-                            ================================================= -->
-                        <div class="review-content">
-                            <div class="review-top">
-                                <strong>{{ review.nickname }}</strong>
-                                <span class="stars">{{ review.rating_text }}</span>
-                                <span class="review-date">{{ review.updated_at }}</span>
+                                    <!-- =================================================
+                                        리뷰 본문 영역
+                                        - 닉네임 / 별점 / 날짜
+                                        - 내용은 2줄 정도 보여주고 길면 CSS에서 정리
+                                        ================================================= -->
+                                    <div class="review-content">
+                                        <div class="review-top">
+                                            <strong>{{ review.nickname }}</strong>
+                                            <span class="stars">{{ review.rating_text }}</span>
+                                            <span class="review-date">{{ review.updated_at }}</span>
+                                        </div>
+
+                                        <p>{{ review.content }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="review-item">
+                                <div class="review-profile">📝</div>
+                                <div class="review-content">
+                                    <div class="review-top">
+                                        <strong>등록된 리뷰 없음</strong>
+                                        <span class="review-date">-</span>
+                                    </div>
+                                    <p>아직 등록된 리뷰가 없습니다. 고객 리뷰가 작성되면 이 영역에 최신순으로 최대 5개까지 표시됩니다.</p>
+                                </div>
                             </div>
+                        {% endif %}
+                    </div>
 
-                            <p>{{ review.content }}</p>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div class="review-item">
-                    <div class="review-profile">📝</div>
-                    <div class="review-content">
-                        <div class="review-top">
-                            <strong>등록된 리뷰 없음</strong>
-                            <span class="review-date">-</span>
-                        </div>
-                        <p>아직 등록된 리뷰가 없습니다. 고객 리뷰가 작성되면 이 영역에 최신순으로 최대 5개까지 표시됩니다.</p>
-                    </div>
+                    <!-- =================================================
+                        하단 전체보기 버튼
+                        - review_management 페이지로 이동
+                        ================================================= -->
+                    <a
+                        href="{{ url_for('owner_review_management', restaurant_id=sidebar_selected_restaurant_id) }}"
+                        class="fill-btn review-more-btn"
+                    >
+                        리뷰 전체보기
+                    </a>
                 </div>
-            {% endif %}
-        </div>
-
-        <!-- =================================================
-            하단 전체보기 버튼
-            - review_management 페이지로 이동
-            ================================================= -->
-        <a
-            href="{{ url_for('owner_review_management', restaurant_id=selected_restaurant_id) }}"
-            class="fill-btn review-more-btn"
-        >
-            리뷰 전체보기
-        </a>
-    </div>
-</div>
-                </section>
-            </section>
+            </div>
+        </section>
+            
         </main>
 
         <!-- =========================================================

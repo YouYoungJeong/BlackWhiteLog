@@ -4,6 +4,14 @@ import routes.owner.owner_notices_db as owner_notice_db
 import routes.owner.owner_board_db as owner_board_db
 import routes.owner.owner_review_db as owner_review_db
 from routes.owner.owner_review_db import (get_march_review_count_by_restaurant, get_board_review_list_by_restaurant)
+from routes.owner.owner_board_db import (
+    get_restaurant_list_by_owner,
+    get_sidebar_current_notice_by_restaurant,
+    get_sidebar_history_notice_list_by_restaurant,
+)
+from routes.owner.owner_review_db import (
+    get_board_review_summary_by_restaurant,
+)
 import math
 
 
@@ -35,6 +43,12 @@ def register_owner_routes(app):
             sidebar_notice_current = None
             db_sidebar_notice_history_list = []
 
+            # - 추가: 오너 보드 리뷰 카드 기본값
+            board_review_data = {
+                "march_review_count": 0,
+                "review_list": []
+            }
+
             if sidebar_selected_restaurant_id:
                 db_current_notice = owner_board_db.get_sidebar_current_notice_by_restaurant(
                     sidebar_selected_restaurant_id
@@ -63,12 +77,26 @@ def register_owner_routes(app):
                         "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
                     })
 
+                # - 추가: owner_board.html 에서 사용하는 리뷰 카드 데이터 생성
+                # - 3월 리뷰 수 + 최신 리뷰 3개를 한 번에 전달
+                board_review_data = owner_review_db.get_board_review_summary_by_restaurant(
+                    sidebar_selected_restaurant_id,
+                    limit=3
+                )
+
         except Exception:
             db_sidebar_restaurant_list = []
             sidebar_selected_restaurant_id = None
             sidebar_selected_restaurant_name = ""
             sidebar_notice_current = None
             db_sidebar_notice_history_list = []
+
+            # - 추가: 예외 발생 시에도 템플릿에서 board_review_data undefined 에러가 나지 않도록 기본값 유지
+            board_review_data = {
+                "march_review_count": 0,
+                "review_list": []
+            }
+
 
         return render_template(
             "owner/owner_board.html",
@@ -79,7 +107,8 @@ def register_owner_routes(app):
             sidebar_selected_restaurant_id=sidebar_selected_restaurant_id,
             sidebar_selected_restaurant_name=sidebar_selected_restaurant_name,
             sidebar_notice_current=sidebar_notice_current,
-            sidebar_notice_history_list=db_sidebar_notice_history_list
+            sidebar_notice_history_list=db_sidebar_notice_history_list,
+            board_review_data=board_review_data
         )
 
     @app.route("/owner/board/api/notice_summary", methods=["GET"], endpoint="owner_board_api_notice_summary")
