@@ -8,7 +8,9 @@ restaurant_panel_bp = Blueprint('restaurant_panel_bp', __name__)
 @restaurant_panel_bp.route("/api/restaurants/<int:restaurant_id>")
 def api_restaurant_detail(restaurant_id):
     """특정 음식점 상세 정보 반환 API"""
-    detail = get_restaurant_detail(restaurant_id)
+    user_id = session.get("user_id")
+    detail = get_restaurant_detail(restaurant_id, user_id=user_id)
+
     if detail:
         return jsonify(detail)
     return jsonify({"error": "Restaurant not found"}), 404
@@ -23,6 +25,14 @@ def api_restaurant_menus(restaurant_id):
 def api_restaurant_reviews(restaurant_id):
     """특정 음식점의 리뷰 목록 반환 API"""
     reviews = get_restaurant_reviews(restaurant_id)
+
+    # 세션에서 현재 로그인한 유저 ID 가져오기
+    current_user_id = session.get('user_id')
+
+    # 각 리뷰에 '내 리뷰인지' 판별하는 is_mine 플래그 추가
+    for review in reviews:
+        review['is_mine'] = (current_user_id == review['user_id'])
+
     return jsonify(reviews)
 
 @restaurant_panel_bp.route("/api/restaurants/<int:restaurant_id>/reviews", methods=["POST"])
@@ -37,7 +47,10 @@ def api_add_review(restaurant_id):
             return jsonify({"success": False, "message": "데이터가 부족합니다."}), 400
 
         # 유저 ID 설정 (반드시 DB에 존재하는 ID여야 함)
-        user_id = session.get('user_id', 1) 
+        user_id = session.get('user_id') 
+
+        if not user_id:
+            return jsonify({"success": False, "message": "로그인이 필요합니다."}), 401
 
         # 로컬 폴더에 이미지 저장 로직
         image_urls = []
@@ -76,7 +89,10 @@ def api_add_review(restaurant_id):
 
 @restaurant_panel_bp.route("/api/reviews/<int:review_id>", methods=["DELETE"])
 def api_delete_review(review_id):
-    user_id = session.get('user_id', 1) # 로그인 구현 전까지 임시 1
+    user_id = session.get('user_id') # 유저 아이디 받아 삭제 기능
+
+    if not user_id:
+        return jsonify({"success": False, "message": "로그인이 필요합니다."}), 401
     
     from .restaurant_panel_db import delete_review_transaction
     if delete_review_transaction(review_id, user_id):

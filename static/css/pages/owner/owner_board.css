@@ -2,8 +2,6 @@
 
 /* =========================================================
     전역 초기화
-    - 브라우저 기본 여백 제거
-    - box-sizing 통일
    ========================================================= */
 * {
     margin: 0;
@@ -12,8 +10,7 @@
 }
 
 /* =========================================================
-    공통 색상 / 반경 / 그림자 변수
-    페이지 전체 톤앤매너를 여기서 관리
+    공통 변수
    ========================================================= */
 :root {
     --bg: #f5f6f2;
@@ -30,12 +27,12 @@
     --radius-lg: 22px;
     --radius-md: 16px;
     --radius-sm: 12px;
+    --sidebar-notice-current-height: 168px;
+    --sidebar-notice-history-card-height: 112px;
 }
 
 /* =========================================================
     body 기본 스타일
-    - 폰트 지정
-    - 상단에 옅은 배경 그라데이션
    ========================================================= */
 body {
     font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
@@ -43,7 +40,6 @@ body {
     color: var(--text);
 }
 
-/* 버튼 기본값 초기화 */
 button {
     border: none;
     background: none;
@@ -51,7 +47,6 @@ button {
     font-family: inherit;
 }
 
-/* 링크 기본 밑줄 제거, 상속색 사용 */
 a {
     text-decoration: none;
     color: inherit;
@@ -59,8 +54,6 @@ a {
 
 /* =========================================================
     페이지 전체 래퍼
-    - 최대 폭 제한
-    - 화면 가운데 정렬
    ========================================================= */
 .owner-board-page {
     width: min(1380px, calc(100% - 32px));
@@ -84,14 +77,12 @@ a {
     margin-bottom: 22px;
 }
 
-/* 헤더 왼쪽 */
 .header-left {
     display: flex;
     align-items: center;
     gap: 46px;
 }
 
-/* 브랜드 묶음 */
 .brand-wrap {
     display: flex;
     align-items: center;
@@ -103,7 +94,6 @@ a {
     align-items: center;
 }
 
-/* 로고 크기 */
 .main-logo {
     height: 75px;
     width: auto;
@@ -111,13 +101,11 @@ a {
     object-fit: contain;
 }
 
-/* 상단 내비 */
 .top-nav {
     display: flex;
     gap: 34px;
 }
 
-/* 상단 메뉴 링크 */
 .nav-link {
     position: relative;
     font-size: 1.1rem;
@@ -126,7 +114,6 @@ a {
     padding: 10px 0;
 }
 
-/* 활성 메뉴 밑줄 */
 .nav-link.active::after {
     content: "";
     position: absolute;
@@ -138,33 +125,28 @@ a {
     border-radius: 999px;
 }
 
-/* 헤더 오른쪽 */
 .header-right {
     display: flex;
     align-items: center;
     gap: 18px;
 }
 
-/* 날짜 텍스트 */
 .today-date {
     color: #707070;
     font-size: 1.1rem;
 }
 
-/* 가게 프로필 묶음 */
 .store-profile {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-/* 가게 이름 */
 .store-name {
     font-size: 1.35rem;
     font-weight: 700;
 }
 
-/* 원형 프로필 */
 .profile-circle {
     width: 54px;
     height: 54px;
@@ -177,7 +159,6 @@ a {
     border: 1px solid #e7e1d9;
 }
 
-/* 햄버거 버튼 */
 .menu-toggle {
     width: 54px;
     height: 54px;
@@ -190,7 +171,6 @@ a {
 
 /* =========================================================
     전체 레이아웃
-    - 왼쪽 사이드바 + 오른쪽 메인 영역
    ========================================================= */
 .board-layout {
     display: grid;
@@ -223,7 +203,9 @@ a {
     flex: 0 0 auto;
 }
 
-/* 사이드바 공지 카드 */
+/* =========================================================
+    사이드바 공지 카드
+   ========================================================= */
 .sidebar-notice {
     margin-top: 0;
     margin-bottom: 16px;
@@ -248,8 +230,65 @@ a {
     color: #222;
 }
 
-/* 현재 공지 카드 */
+/* =========================================================
+    가게 선택 토글
+   ========================================================= */
+.sidebar-notice-toggle-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sidebar-notice-toggle-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #555;
+    padding-left: 2px;
+}
+
+.sidebar-notice-toggle-box {
+    position: relative;
+}
+
+.sidebar-notice-toggle-select {
+    width: 100%;
+    height: 48px;
+    padding: 0 42px 0 14px;
+    border: 1px solid #dfe5d8;
+    border-radius: 14px;
+    background: #fff;
+    color: #222;
+    font-size: 0.95rem;
+    font-weight: 600;
+    appearance: none;
+    outline: none;
+}
+
+.sidebar-notice-toggle-select:focus {
+    border-color: #9caf7f;
+    box-shadow: 0 0 0 4px rgba(156, 175, 127, 0.14);
+}
+
+.sidebar-notice-toggle-icon {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    color: #6e7765;
+    pointer-events: none;
+}
+
+/* =========================================================
+    현재 공지 카드
+    - 카드 사이즈 고정
+    - 제목 1줄 말줄임
+    - 내용 2줄 말줄임
+   ========================================================= */
 .sidebar-notice-current {
+    height: var(--sidebar-notice-current-height);
+    min-height: var(--sidebar-notice-current-height);
+    max-height: var(--sidebar-notice-current-height);
     padding: 14px;
     border: 1px solid #e7ece2;
     border-radius: 18px;
@@ -257,9 +296,21 @@ a {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow: hidden;
 }
 
-/* 현재 공지 뱃지 */
+.sidebar-notice-current.is-clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sidebar-notice-current.is-clickable:hover,
+.sidebar-notice-current.is-clickable:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+    outline: none;
+}
+
 .notice-badge {
     align-self: flex-start;
     padding: 4px 10px;
@@ -268,28 +319,52 @@ a {
     color: #fff;
     font-size: 0.78rem;
     font-weight: 700;
+    flex-shrink: 0;
 }
 
-.sidebar-notice-current strong {
+.notice-badge.empty {
+    background: #b8beb2;
+}
+
+.sidebar-notice-current .notice-title,
+.notice-history-card .notice-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-notice-current .notice-title {
     font-size: 1rem;
     font-weight: 800;
     color: #2b2b2b;
 }
 
-.sidebar-notice-current p {
+.sidebar-notice-current .notice-content,
+.notice-history-card .notice-content {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.sidebar-notice-current .notice-content {
     font-size: 0.94rem;
-    line-height: 1.6;
     color: #4f4f4f;
+    flex: 1 1 auto;
 }
 
 .notice-date {
     font-size: 0.84rem;
     color: #7d7d7d;
+    flex-shrink: 0;
 }
 
-/* 이전 공지 기록 영역 */
+/* =========================================================
+    이전 공지 영역
+   ========================================================= */
 .sidebar-notice-history {
-    flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -308,8 +383,7 @@ a {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    overflow-y: auto;
-    padding-right: 4px;
+    padding-right: 0;
 }
 
 .notice-history-item {
@@ -317,6 +391,9 @@ a {
 }
 
 .notice-history-card {
+    height: var(--sidebar-notice-history-card-height);
+    min-height: var(--sidebar-notice-history-card-height);
+    max-height: var(--sidebar-notice-history-card-height);
     padding: 12px 13px;
     border: 1px solid #ecefe9;
     border-radius: 16px;
@@ -324,33 +401,64 @@ a {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    overflow: hidden;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* hover 시 살짝 떠오르는 카드 효과 */
-.notice-history-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
+.notice-history-card.is-clickable {
+    cursor: pointer;
 }
 
-.notice-history-card strong {
+.notice-history-card:hover,
+.notice-history-card:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
+    outline: none;
+}
+
+.notice-history-card .notice-title {
     font-size: 0.94rem;
     font-weight: 700;
     color: #2f2f2f;
 }
 
-.notice-history-card p {
+.notice-history-card .notice-content {
     font-size: 0.88rem;
-    line-height: 1.5;
     color: #666;
+    flex: 1 1 auto;
 }
 
-.notice-history-card span {
+.notice-history-card .notice-date {
     font-size: 0.8rem;
     color: #8b8b8b;
 }
 
-/* 사이드바 제목 */
+.notice-history-card.empty-card {
+    cursor: default;
+}
+
+.notice-history-card.empty-card:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* =========================================================
+    공지사항 하단 버튼
+   ========================================================= */
+.sidebar-notice-footer {
+    margin-top: 4px;
+}
+
+.sidebar-notice-manage-link {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* =========================================================
+    사이드바 제목
+   ========================================================= */
 .sidebar-title {
     font-size: 1.2rem;
     font-weight: 700;
@@ -359,7 +467,6 @@ a {
     padding: 0 12px;
 }
 
-/* 사이드바 메뉴 */
 .sidebar-menu {
     list-style: none;
     display: flex;
@@ -367,7 +474,6 @@ a {
     gap: 10px;
 }
 
-/* 메뉴 링크 */
 .sidebar-item a {
     display: flex;
     align-items: center;
@@ -380,18 +486,15 @@ a {
     transition: 0.2s ease;
 }
 
-/* 활성 메뉴 */
 .sidebar-item.active a {
     background: var(--point);
     color: #fff;
 }
 
-/* 비활성 메뉴 hover */
 .sidebar-item:not(.active) a:hover {
     background: #f4f6f1;
 }
 
-/* 로그아웃 버튼 */
 .logout-btn {
     width: 100%;
     height: 56px;
@@ -421,14 +524,12 @@ a {
     margin-bottom: 12px;
 }
 
-/* 가게 요약 */
 .store-summary {
     display: flex;
     align-items: center;
     gap: 16px;
 }
 
-/* 평점 원형 */
 .rating-badge {
     width: 74px;
     height: 74px;
@@ -479,7 +580,6 @@ a {
     box-shadow: var(--shadow);
 }
 
-/* 좌우 카드 그리드 */
 .content-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.3fr) 310px;
@@ -511,7 +611,6 @@ a {
     flex-shrink: 0;
 }
 
-/* 다이아 뱃지 */
 .diamond-badge {
     width: 100px;
     height: 100px;
@@ -595,7 +694,9 @@ a {
 }
 
 .bottom-row {
-    margin-bottom: 22px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
 }
 
 .menu-type-box,
@@ -607,32 +708,56 @@ a {
     display: flex;
     align-items: center;
     padding: 0 20px;
-    font-size: 1.15rem;
     font-weight: 700;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .menu-type-box {
-    min-width: 160px;
-    gap: 10px;
+    flex: 0 0 60%;
+    max-width: 60%;
+    min-width: 0;
+    gap: 12px;
+    justify-content: flex-start;
+    font-size: clamp(1.05rem, 1.5vw, 1.4rem);
+    text-align: left;
 }
 
 .menu-count-box {
-    flex: 1;
+    flex: 0 0 40%;
+    max-width: 40%;
+    min-width: 0;
+    justify-content: flex-start;
+    font-size: clamp(1rem, 1.3vw, 1.3rem);
+    text-align: left;
+}
+
+.menu-type-box .emoji {
+    font-size: clamp(1.2rem, 1.8vw, 1.8rem);
+    line-height: 1;
+}
+
+.menu-type-box p,
+.menu-type-box span,
+.menu-count-box p,
+.menu-count-box span {
+    font-size: inherit;
+    margin: 0;
 }
 
 .menu-count-box strong {
-    font-size: 1.7rem;
+    font-size: clamp(1.3rem, 2.2vw, 2.1rem);
     margin-left: 8px;
+    line-height: 1;
 }
 
-/* 버튼 정렬 */
 .action-buttons {
     display: flex;
     justify-content: center;
     gap: 14px;
 }
 
-/* 채워진 버튼 공통 */
 .fill-btn {
     min-width: 150px;
     height: 52px;
@@ -675,7 +800,6 @@ a {
     padding: 18px 18px 52px;
 }
 
-/* 차트 배경 격자 */
 .chart-grid {
     position: absolute;
     inset: 18px 18px 52px 18px;
@@ -686,7 +810,6 @@ a {
     border-radius: 12px;
 }
 
-/* svg 차트 */
 .chart-svg {
     position: absolute;
     inset: 18px 18px 52px 18px;
@@ -694,19 +817,16 @@ a {
     height: calc(100% - 70px);
 }
 
-/* 선 그래프 선 */
 .chart-svg polyline {
     stroke: #8ea778;
 }
 
-/* 데이터 점 */
 .chart-dots circle {
     fill: #ffffff;
     stroke: #8ea778;
     stroke-width: 3;
 }
 
-/* X축 요일 라벨 */
 .chart-labels {
     position: absolute;
     left: 18px;
@@ -740,7 +860,6 @@ a {
     font-weight: 800;
 }
 
-/* 원형 화살표 버튼 */
 .circle-arrow {
     width: 34px;
     height: 34px;
@@ -754,12 +873,10 @@ a {
     justify-content: center;
 }
 
-/* 숫자 강조 */
 .stat-number {
     font-size: 2.5rem;
 }
 
-/* 리뷰 카드 */
 .review-card {
     padding: 16px 18px 18px;
     flex: 1;
@@ -834,52 +951,6 @@ a {
 }
 
 /* =========================================================
-    공지사항 카드(현재 HTML에서는 별도 사용 흔적만 존재)
-   ========================================================= */
-.notice-card {
-    padding: 18px 20px 20px;
-    display: flex;
-    flex-direction: column;
-    min-height: 480px;
-}
-
-.notice-body {
-    margin-top: 18px;
-    padding-top: 16px;
-    border-top: 1px solid #ecefe9;
-}
-
-.notice-body h4 {
-    font-size: 1.2rem;
-    font-weight: 800;
-    margin-bottom: 14px;
-}
-
-.notice-body p {
-    font-size: 1.05rem;
-    color: #444;
-    line-height: 1.75;
-}
-
-.notice-manage-btn {
-    width: 100%;
-    margin-top: 20px;
-}
-
-.notice-placeholder {
-    flex: 1;
-    margin: 18px 0;
-    border-radius: 18px;
-    background: linear-gradient(180deg, #f8f9f7 0%, #f2f4f0 100%);
-    border: 1px solid #edf0ea;
-    min-height: 180px;
-}
-
-.notice-query-btn {
-    width: 100%;
-}
-
-/* =========================================================
     반응형
    ========================================================= */
 @media (max-width: 1400px) {
@@ -892,10 +963,6 @@ a {
         flex-direction: column;
         gap: 18px;
         min-height: 402px;
-    }
-
-    .notice-card {
-        min-height: auto;
     }
 }
 
@@ -945,6 +1012,12 @@ a {
         width: 100%;
         height: 150px;
     }
+
+    .menu-type-box,
+    .menu-count-box {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
 }
 
 /* =========================================================
@@ -954,7 +1027,6 @@ body.drawer-open {
     overflow: hidden;
 }
 
-/* 드로어 뒤 반투명 배경 */
 .side-drawer-backdrop {
     position: fixed;
     inset: 0;
@@ -965,7 +1037,6 @@ body.drawer-open {
     z-index: 1100;
 }
 
-/* 드로어 열림 시 배경 활성화 */
 .side-drawer-backdrop.is-open {
     opacity: 1;
     pointer-events: auto;
@@ -987,25 +1058,20 @@ body.drawer-open {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
     overflow: hidden;
     z-index: 1110;
-
-    /* 기본 상태: 화면 바깥에 숨김 */
     transform: translateX(calc(100% + 28px)) scale(0.98);
     opacity: 0;
     pointer-events: none;
-
     transition:
         transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
         opacity 0.2s ease;
 }
 
-/* 열렸을 때 */
 .side-drawer.is-open {
     transform: translateX(0) scale(1);
     opacity: 1;
     pointer-events: auto;
 }
 
-/* 드로어 헤더 */
 .side-drawer__header {
     position: relative;
     padding: 20px 18px 18px;
@@ -1013,7 +1079,6 @@ body.drawer-open {
     border-bottom: 1px solid #d9dfd0;
 }
 
-/* 닫기 버튼 */
 .side-drawer__close {
     position: absolute;
     top: 10px;
@@ -1036,7 +1101,6 @@ body.drawer-open {
     transform: translateY(-1px);
 }
 
-/* 드로어 프로필 영역 */
 .side-drawer__profile {
     display: flex;
     flex-direction: column;
@@ -1046,7 +1110,6 @@ body.drawer-open {
     padding-top: 8px;
 }
 
-/* 아바타 */
 .side-drawer__avatar {
     width: 76px;
     height: 76px;
@@ -1060,14 +1123,12 @@ body.drawer-open {
     box-shadow: inset 0 0 0 4px #ffffff;
 }
 
-/* 이름 */
 .side-drawer__name {
     font-size: 18px;
     font-weight: 800;
     color: #1f1f1f;
 }
 
-/* 드로어 본문 */
 .side-drawer__body {
     height: calc(100% - 140px);
     overflow-y: auto;
@@ -1075,14 +1136,12 @@ body.drawer-open {
     background: #fcfdf9;
 }
 
-/* 메뉴 리스트 */
 .side-drawer__nav {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-/* 드로어 링크 공통 */
 .side-drawer__item,
 .side-drawer__subitem {
     width: 100%;
@@ -1095,7 +1154,6 @@ body.drawer-open {
     transition: all 0.2s ease;
 }
 
-/* 메인 메뉴 */
 .side-drawer__item {
     min-height: 52px;
     border-radius: 16px;
@@ -1113,7 +1171,6 @@ body.drawer-open {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
 }
 
-/* 아이콘 */
 .side-drawer__icon {
     width: 22px;
     display: inline-flex;
@@ -1123,14 +1180,12 @@ body.drawer-open {
     color: #667061;
 }
 
-/* 구분선 */
 .side-drawer__divider {
     height: 1px;
     margin: 16px 4px;
     background: #e2e8d9;
 }
 
-/* 기타 제목 */
 .side-drawer__section-title {
     padding: 0 10px;
     margin-bottom: 8px;
@@ -1139,7 +1194,6 @@ body.drawer-open {
     font-weight: 700;
 }
 
-/* 서브 메뉴 */
 .side-drawer__sublist {
     display: flex;
     flex-direction: column;
@@ -1163,7 +1217,9 @@ body.drawer-open {
     color: #1f1f1f;
 }
 
-/* 모바일 대응 */
+/* =========================================================
+    모바일 대응
+   ========================================================= */
 @media (max-width: 768px) {
     .owner-board-page {
         padding: 12px;
@@ -1194,7 +1250,7 @@ body.drawer-open {
 
     .rank-text-area p {
         font-size: 1.3rem;
-    }   
+    }
 }
 
 @media (max-width: 1100px) {

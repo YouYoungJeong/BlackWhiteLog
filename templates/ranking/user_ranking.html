@@ -1,7 +1,7 @@
 <div id="rankingListOverlay" class="hidden-view">
     <div class="ranking-list-header">
         <h3 class="ranking-list-title">🏆 실시간 랭킹</h3>
-        <span class="ranking-list-desc">매주 월요일 초기화</span>
+        <span class="ranking-list-desc"></span>
     </div>
     
     <div class="ranking-list-body">
@@ -143,6 +143,12 @@
                     <span class="mission-reward">+30 pts</span>
                 </li>
             </ul>
+        </div>
+    </div>
+    <div id="loginBlurOverlay" class="login-blur-overlay hidden-view">
+        <div class="blur-content">
+            <p class="blur-message">로그인하고 내 랭킹과 일일 과제를 확인해보세요!</p>
+            <a href="{{ url_for('login.login') }}" class="blur-login-btn">로그인 하러 가기</a>
         </div>
     </div>
 </div>

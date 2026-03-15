@@ -93,38 +93,10 @@
         
         <main class="content-grid">
             <aside class="sidebar">
-                <a href="/ranking" class="activity-summary-link">
-                    <section class="activity-summary-card">
-                        <div class="activity-summary-top">
-                            <strong class="activity-summary-title">내 활동 현황</strong>
 
-                            <div class="activity-summary-progress">
-                                <div class="activity-summary-progress-bar">
-                                    <div class="activity-summary-progress-fill"></div>
-                                </div>
-                                <span class="activity-summary-progress-text">68%</span>
-                            </div>
-                        </div>
-
-                        <div class="activity-summary-stats">
-                            <div class="activity-summary-stat">
-                                <span class="activity-summary-label">방문 도장</span>
-                                <strong class="activity-summary-value">127</strong>
-                            </div>
-
-                            <div class="activity-summary-stat">
-                                <span class="activity-summary-label">내 랭킹</span>
-                                <strong class="activity-summary-value">#42</strong>
-                            </div>
-
-                            <div class="activity-summary-stat">
-                                <span class="activity-summary-label">최근 획득 배지</span>
-                                <strong class="activity-summary-badge">첫 방문 마스터</strong>
-                            </div>
-                        </div>
-                    </section>
-                </a>
-
+                {% if user_email %}
+                    {% include 'ranking/ranking_summary.html' %}
+                {% endif %}
 
                 <div class="sidebar-head">
                     <div class="sidebar-top-row">
@@ -340,7 +312,12 @@
 
     <script>
         window.__INITIAL_STATE__ = {
-            apiUrl: "{{ url_for('api_restaurants') }}"
+            apiUrl: "{{ url_for('api_restaurants') }}",
+            favoritesApiUrl: "{{ url_for('api_favorites') }}",
+            favoriteToggleBaseUrl: "/api/favorites",
+            loginUrl: "{{ url_for('login.login') }}",
+            isLoggedIn: {{ 'true' if user_id else 'false' }},
+            userId: {{ user_id if user_id else 'null' }}
         };
     </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
