@@ -1,6 +1,14 @@
 # user_ranking_db.py
 from db import get_connection
 
+TIER_THRESHOLDS = {
+    'BRONZE': 0,
+    'SILVER': 500,
+    'GOLD': 1500,
+    'PLATINUM': 3000,
+    'DIAMOND': 6000
+}
+
 def get_all_user_rankings():
     """전체 유저 랭킹 리스트 (점수순)"""
     conn = get_connection()
@@ -101,5 +109,47 @@ def get_ranking_summary(user_id):
     except Exception as e:
         print(f"❌ DB Error (get_ranking_summary): {e}")
         return None
+    finally:
+        conn.close()
+
+def check_and_update_tier(user_id):
+    """
+    유저의 현재 점수를 확인하고, 기준점을 넘었으면 티어를 승급(DB 업데이트)시키는 함수
+    (나중에 점수가 부여되는 액션이 발생할 때마다 호출할 예정입니다.)
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. 유저의 현재 점수와 티어 확인
+            cursor.execute("SELECT point, tier FROM users WHERE user_id = %s", (user_id,))
+            user_info = cursor.fetchone()
+            if not user_info:
+                return False
+
+            current_point = user_info['point'] or 0
+            current_tier = user_info['tier'] or 'BRONZE'
+
+            # 2. 점수에 따른 새로운 랭크(티어) 계산
+            new_tier = 'BRONZE'
+            if current_point >= TIER_THRESHOLDS['DIAMOND']:
+                new_tier = 'DIAMOND'
+            elif current_point >= TIER_THRESHOLDS['PLATINUM']:
+                new_tier = 'PLATINUM'
+            elif current_point >= TIER_THRESHOLDS['GOLD']:
+                new_tier = 'GOLD'
+            elif current_point >= TIER_THRESHOLDS['SILVER']:
+                new_tier = 'SILVER'
+
+            # 3. 만약 새로 달성한 티어가 기존 티어와 다르면 DB 업데이트
+            if new_tier != current_tier:
+                cursor.execute("UPDATE users SET tier = %s WHERE user_id = %s", (new_tier, user_id))
+                conn.commit()
+                return True # 승급이 발생했음을 반환 (나중에 축하 알림창 띄우기 용도)
+            
+            return False # 승급하지 않음
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ DB Error (check_and_update_tier): {e}")
+        return False
     finally:
         conn.close()
