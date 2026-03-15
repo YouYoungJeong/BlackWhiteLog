@@ -7,7 +7,6 @@ transformer = Transformer.from_crs("EPSG:5174", "EPSG:4326", always_xy=True)
 
 # CSV 읽기
 df = pd.read_csv("gangnam_2.csv")
-
 # 좌표 변환
 lon, lat = transformer.transform(df["좌표정보(X)"].values, df["좌표정보(Y)"].values)
 

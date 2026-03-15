@@ -595,7 +595,9 @@ a {
 }
 
 .bottom-row {
-    margin-bottom: 22px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
 }
 
 .menu-type-box,
@@ -607,23 +609,58 @@ a {
     display: flex;
     align-items: center;
     padding: 0 20px;
-    font-size: 1.15rem;
     font-weight: 700;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
+/* 변경내용
+   info-edit-card 안에서 60% 비율 사용 */
 .menu-type-box {
-    min-width: 160px;
-    gap: 10px;
+    flex: 0 0 60%;
+    max-width: 60%;
+    min-width: 0;
+    gap: 12px;
+    justify-content: center;
+    font-size: clamp(1.05rem, 1.5vw, 1.4rem);
 }
 
+/* 변경내용
+   info-edit-card 안에서 40% 비율 사용 */
 .menu-count-box {
-    flex: 1;
+    flex: 0 0 40%;
+    max-width: 40%;
+    min-width: 0;
+    justify-content: center;
+    font-size: clamp(1rem, 1.3vw, 1.3rem);
 }
 
-.menu-count-box strong {
-    font-size: 1.7rem;
-    margin-left: 8px;
+/* 변경내용
+   아이콘 크기 확대 */
+.menu-type-box .emoji {
+    font-size: clamp(1.2rem, 1.8vw, 1.8rem);
+    line-height: 1;
 }
+
+/* 변경내용
+   내부 글자 크기 확대 */
+.menu-type-box p,
+.menu-type-box span,
+.menu-count-box p,
+.menu-count-box span {
+    font-size: inherit;
+    margin: 0;
+}
+
+/* 변경내용
+   숫자 강조 크기 확대 */
+.menu-count-box strong {
+    font-size: clamp(1.3rem, 2.2vw, 2.1rem);
+    margin-left: 8px;
+    line-height: 1;
+}
+
 
 /* 버튼 정렬 */
 .action-buttons {

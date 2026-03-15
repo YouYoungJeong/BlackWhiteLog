@@ -241,16 +241,27 @@
                             </div>
 
                             <!-- 하단 행 : 카테고리 / 메뉴 수 -->
-                            <div class="info-row bottom-row">
-                                <div class="menu-type-box">
-                                    <span class="emoji">🥟</span>
-                                    <span>중식</span>
-                                </div>
+                            {% if restaurant_menu_list %}
+                                {% for restaurant in restaurant_menu_list %}
+                                <div class="info-row bottom-row">
+                                    <div class="menu-type-box">
+                                        <span class="emoji">🥟</span>
+                                        <span><p>{{ restaurant.name }}</p></span>
+                                    </div>
 
-                                <div class="menu-count-box">
-                                    메뉴 종류 갯수 <strong>{{total_menu_count}}</strong>
+                                    <div class="menu-count-box">
+                                        <p>등록된 메뉴 수: {{ restaurant.cnt }}</p>
+                                    </div>
                                 </div>
-                            </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="info-row bottom-row">
+                                    <div class="menu-type-box">
+                                        <span class="emoji">🥟</span>
+                                        <span><p>등록된 식당이 없습니다.</p></span>
+                                    </div>
+                                </div>
+                            {% endif %}
 
                             <!-- CTA 버튼 : 메뉴 관리 페이지 이동 -->
                             <div class="action-buttons">

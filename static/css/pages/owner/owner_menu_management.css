@@ -8,6 +8,7 @@
     --color-sage-dark: #6f8164;
     --color-sage-light: #edf3e8;
     --color-gray-btn: #f4f5f1;
+    --color-danger: #c55a5a;
     --radius-lg: 22px;
     --radius-md: 16px;
     --shadow-card: 0 10px 30px rgba(17, 17, 17, 0.06);
@@ -57,7 +58,6 @@
     color: var(--color-black);
 }
 
- /* 업로드/수정 결과 메시지 스타일 추가 */
 .form-message-list {
     margin: 0 0 18px;
     display: flex;
@@ -73,6 +73,18 @@
     background: #f7faf4;
     color: var(--color-black);
     font-weight: 600;
+}
+
+.form-message-item.is-error {
+    border-color: #e4b6b6;
+    background: #fff5f5;
+    color: #8a3434;
+}
+
+.form-message-item.is-success {
+    border-color: #c9dbc0;
+    background: #f4faef;
+    color: #456039;
 }
 
 /* =========================
@@ -99,7 +111,6 @@
     gap: 12px;
 }
 
-/* - 이미지 업로드 미리보기 박스 크기 유지 및 등록/수정 시 동일한 영역에서 이미지 확인 가능하도록 스타일 유지 */
 .preview-image-wrap {
     width: 160px;
     height: 136px;
@@ -123,12 +134,10 @@
     display: block;
 }
 
- /* 실제 file input은 숨기고 label 버튼으로 클릭 */
 .image-file-input {
     display: none;
 }
 
-/* - 선택된 파일명, DB 저장 경로 확인용 텍스트가 길어져도 깨지지 않도록 처리 */
 .image-guide-text {
     margin: 0;
     font-size: 0.92rem;
@@ -231,7 +240,8 @@ select:focus {
 .outline-btn,
 .menu-edit-btn,
 .menu-delete-btn,
-.pagination-btn {
+.pagination-btn,
+.confirm-bubble-btn {
     height: 46px;
     border-radius: 10px;
     border: 1px solid transparent;
@@ -332,13 +342,30 @@ a.ghost-btn {
     margin-top: 0;
 }
 
+.registered-menu-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.registered-menu-card-header .section-title {
+    margin-bottom: 0;
+}
+
+.registered-menu-count {
+    margin: 0;
+    color: #666666;
+    font-weight: 700;
+}
+
 .registered-menu-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-/* - 등록된 메뉴에도 restaurant_images.image_url 또는 thumb_url 기반 이미지가 출력될 수 있게 썸네일 영역 유지 */
 .registered-menu-item {
     display: grid;
     grid-template-columns: 90px 1fr auto;
@@ -367,6 +394,12 @@ a.ghost-btn {
     display: block;
 }
 
+.registered-menu-thumb-empty {
+    width: 100%;
+    height: 100%;
+    background: #f1f1ec;
+}
+
 .registered-menu-info {
     min-width: 0;
 }
@@ -385,18 +418,11 @@ a.ghost-btn {
 }
 
 .registered-menu-category,
-.registered-menu-status {
-    margin: 4px 0 0;
-    color: #666666;
-    font-size: 0.95rem;
-}
-
- /* 원본 파일명 출력 스타일 추가 */
-/* - original_name 또는 stored_name 확인용 문구가 출력될 때 줄바꿈 유지 */
+.registered-menu-status,
 .registered-menu-file {
     margin: 4px 0 0;
     color: #666666;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     word-break: break-all;
 }
 
@@ -405,11 +431,7 @@ a.ghost-btn {
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-}
-
-.registered-menu-actions form {
-    margin: 0;
-    display: inline-flex;
+    position: relative;
 }
 
 .menu-edit-btn,
@@ -436,6 +458,76 @@ a.ghost-btn {
 .menu-delete-btn:hover {
     border-color: #bfc8b6;
     background: #f3f4ef;
+}
+
+.action-bubble-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.confirm-bubble {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 20;
+    min-width: 210px;
+    background: #ffffff;
+    border: 1px solid var(--color-line);
+    border-radius: 14px;
+    box-shadow: 0 12px 24px rgba(17, 17, 17, 0.12);
+    padding: 14px;
+}
+
+.confirm-bubble::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    right: 18px;
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border-left: 1px solid var(--color-line);
+    border-top: 1px solid var(--color-line);
+    transform: rotate(45deg);
+}
+
+.confirm-bubble-text {
+    margin: 0 0 12px;
+    font-size: 0.94rem;
+    font-weight: 700;
+    color: var(--color-black);
+    line-height: 1.45;
+}
+
+.confirm-bubble-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.confirm-bubble-btn {
+    min-width: 64px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 10px;
+}
+
+.confirm-bubble-btn.is-yes {
+    background: var(--color-sage);
+    border-color: var(--color-sage);
+    color: #ffffff;
+}
+
+.confirm-bubble-btn.is-no {
+    background: #ffffff;
+    border-color: var(--color-line);
+    color: #555555;
+}
+
+.confirm-bubble-btn.is-delete {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: #ffffff;
 }
 
 /* =========================
@@ -518,7 +610,6 @@ a.ghost-btn {
         grid-template-columns: 1fr;
     }
 
-    /* - 모바일에서도 업로드 미리보기와 등록된 메뉴 이미지가 잘리지 않도록 세로 배치 대응 */
     .preview-image-wrap {
         width: 100%;
         height: 220px;
@@ -541,5 +632,154 @@ a.ghost-btn {
 
     .registered-menu-actions {
         width: 100%;
+    }
+
+    .registered-menu-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .confirm-bubble {
+        left: 0;
+        right: auto;
+    }
+
+    .confirm-bubble::before {
+        left: 18px;
+        right: auto;
+    }
+}
+
+/* =========================
+   가게 선택 토글
+   ========================= */
+.restaurant-toggle-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.restaurant-toggle-item {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.restaurant-toggle-item input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.restaurant-toggle-item span {
+    min-width: 120px;
+    height: 46px;
+    padding: 0 18px;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    background: var(--color-white);
+    color: var(--color-black);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.96rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.restaurant-toggle-item span:hover {
+    background: var(--color-sage-light);
+    border-color: var(--color-sage);
+}
+
+.restaurant-toggle-item input[type="radio"]:checked + span {
+    background: var(--color-sage);
+    border-color: var(--color-sage);
+    color: var(--color-white);
+    box-shadow: 0 6px 14px rgba(152, 173, 138, 0.22);
+}
+
+.restaurant-toggle-item input[type="radio"]:focus + span {
+    box-shadow: 0 0 0 4px rgba(152, 173, 138, 0.15);
+}
+
+/* =========================
+   확인 말풍선
+   - 이전 CSS 클래스명 유지하면서
+     새 JS 클래스명도 같이 대응
+   ========================= */
+.confirm-bubble__text {
+    margin: 0 0 12px;
+    font-size: 0.94rem;
+    font-weight: 700;
+    color: var(--color-black);
+    line-height: 1.45;
+}
+
+.confirm-bubble__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.confirm-bubble__btn {
+    min-width: 64px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.confirm-bubble__btn.yes-btn {
+    background: var(--color-sage);
+    border-color: var(--color-sage);
+    color: #ffffff;
+}
+
+.confirm-bubble__btn.yes-btn:hover {
+    background: var(--color-sage-dark);
+    border-color: var(--color-sage-dark);
+}
+
+.confirm-bubble__btn.no-btn {
+    background: #ffffff;
+    border-color: var(--color-line);
+    color: #555555;
+}
+
+.confirm-bubble__btn.no-btn:hover {
+    background: #f3f4ef;
+    border-color: #bfc8b6;
+}
+
+/* =========================
+   반응형
+   ========================= */
+@media (max-width: 860px) {
+    .restaurant-toggle-group {
+        gap: 8px;
+    }
+
+    .restaurant-toggle-item {
+        flex: 1 1 calc(50% - 4px);
+    }
+
+    .restaurant-toggle-item span {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 560px) {
+    .restaurant-toggle-item {
+        flex: 1 1 100%;
     }
 }
