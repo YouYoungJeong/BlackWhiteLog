@@ -411,6 +411,7 @@ def update_notice(
 # 전달받는 값
 # - restaurant_id: 식당 번호
 # - notice_id: 공지 번호
+
 def delete_notice(restaurant_id, notice_id):
     conn = get_connection()
     try:

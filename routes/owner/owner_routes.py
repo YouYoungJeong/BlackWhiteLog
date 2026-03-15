@@ -15,18 +15,79 @@ def register_owner_routes(app):
         session_owner_id = session.get("owner_id")
 
         if not session_owner_id:
-            session_owner_id = 1 # 임시 오너값
+            session_owner_id = 1
 
-        # 수정: 메뉴 개수 조회 함수가 cnt와 restaurant_name을 같이 반환하므로 분리해서 받도록 변경
         restaurant_menu_list = owner_db.get_menu_count_by_owner(session_owner_id)
 
-        return render_template(
-        "owner/owner_board.html",
-        restaurant_menu_list=restaurant_menu_list,
-        session_user_id=session_user_id,
-        session_owner_id=session_owner_id
-    )
+        try:
+            db_sidebar_restaurant_list = owner_notice_db.get_restaurant_list_by_owner(session_owner_id)
 
+            if db_sidebar_restaurant_list:
+                sidebar_selected_restaurant_id = db_sidebar_restaurant_list[0]["restaurant_id"]
+                sidebar_selected_restaurant_name = db_sidebar_restaurant_list[0]["name"]
+            else:
+                sidebar_selected_restaurant_id = None
+                sidebar_selected_restaurant_name = ""
+                db_sidebar_restaurant_list = []
+
+            db_sidebar_notice_current = None
+            db_sidebar_notice_history_list = []
+
+            if sidebar_selected_restaurant_id:
+                db_sidebar_notice_current = owner_notice_db.get_notice_list_by_restaurant(
+                    sidebar_selected_restaurant_id,
+                    limit=1,
+                    offset=0
+                )
+
+            sidebar_notice_current = None
+            if db_sidebar_notice_current:
+                for db_notice in db_sidebar_notice_current:
+                    if int(db_notice["is_pinned"]) == 1:
+                        sidebar_notice_current = {
+                            "notice_id": db_notice["notice_id"],
+                            "restaurant_id": db_notice["restaurant_id"],
+                            "notice_title": db_notice["notice_title"],
+                            "notice_content": db_notice["notice_content"],
+                            "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+                        }
+                        break
+
+            if sidebar_selected_restaurant_id:
+                db_notice_list = owner_notice_db.get_notice_list_by_restaurant(
+                    sidebar_selected_restaurant_id
+                )
+
+                for db_notice in db_notice_list:
+                    if int(db_notice["is_pinned"]) == 0:
+                        db_sidebar_notice_history_list.append({
+                            "notice_id": db_notice["notice_id"],
+                            "restaurant_id": db_notice["restaurant_id"],
+                            "notice_title": db_notice["notice_title"],
+                            "notice_content": db_notice["notice_content"],
+                            "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+                        })
+
+                db_sidebar_notice_history_list = db_sidebar_notice_history_list[:3]
+
+        except Exception:
+            db_sidebar_restaurant_list = []
+            sidebar_selected_restaurant_id = None
+            sidebar_selected_restaurant_name = ""
+            sidebar_notice_current = None
+            db_sidebar_notice_history_list = []
+
+        return render_template(
+            "owner/owner_board.html",
+            restaurant_menu_list=restaurant_menu_list,
+            session_user_id=session_user_id,
+            session_owner_id=session_owner_id,
+            sidebar_restaurant_list=db_sidebar_restaurant_list,
+            sidebar_selected_restaurant_id=sidebar_selected_restaurant_id,
+            sidebar_selected_restaurant_name=sidebar_selected_restaurant_name,
+            sidebar_notice_current=sidebar_notice_current,
+            sidebar_notice_history_list=db_sidebar_notice_history_list
+        )
 
 # --------------------------------------------------------------------------------------
 # 오너 메뉴 관리 페이지

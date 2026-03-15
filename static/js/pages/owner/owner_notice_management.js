@@ -7,11 +7,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // 3. 이미지 미리보기는 기본 공백 상태이고, 파일 선택 시에만 표시된다.
     // 4. 수정 클릭 시 상세 조회 후 폼에 값을 다시 채운다.
     // 5. 삭제 클릭 시 DB 삭제 후 목록을 다시 렌더링한다.
+    // 6. 오너보드 공지 카드를 클릭해 이동한 경우 query string 의 restaurant_id, focus_notice_id 를 읽어
+    //    해당 페이지의 noticeList 내부 카드 위치로 스크롤하고 시각적으로 포커스한다.
     // ==================================================================================
 
-    // -------------------------------------------------------------------------
-    // 공지사항 등록/수정 폼 관련 요소
-    // -------------------------------------------------------------------------
     const noticeForm = document.getElementById("noticeForm");
     const restaurantSelect = document.getElementById("restaurant-id");
     const noticeIdInput = document.getElementById("notice-id");
@@ -22,34 +21,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentPageInput = document.getElementById("current-page");
     const removeImageInput = document.getElementById("remove-image");
 
-    // -------------------------------------------------------------------------
-    // 공지사항 목록/페이징 관련 요소
-    // -------------------------------------------------------------------------
     const noticeList = document.getElementById("noticeList");
     const totalNoticeCount = document.getElementById("totalNoticeCount");
     const pageStatus = document.getElementById("pageStatus");
     const prevPageBtn = document.getElementById("prevPageBtn");
     const nextPageBtn = document.getElementById("nextPageBtn");
 
-    // -------------------------------------------------------------------------
-    // 폼 제어 버튼 / 이미지 미리보기 요소
-    // -------------------------------------------------------------------------
     const resetFormBtn = document.getElementById("resetFormBtn");
     const removeImageBtn = document.getElementById("removeImageBtn");
     const noticeImagePreview = document.getElementById("noticeImagePreview");
 
-    // -------------------------------------------------------------------------
-    // 현재 페이지 / 전체 페이지 초기값
-    // - 서버에서 렌더링한 초기 payload 값을 우선 사용한다.
-    // -------------------------------------------------------------------------
     let currentPage = Number(window.ownerNoticeInitialData?.initial_payload?.current_page || 1);
     let totalPages = Number(window.ownerNoticeInitialData?.initial_payload?.total_pages || 1);
 
-    // -------------------------------------------------------------------------
-    // 이미지 미리보기 처리
-    // - src 값이 있으면 이미지 표시
-    // - 없으면 빈 공백 상태(hidden)로 처리
-    // -------------------------------------------------------------------------
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const focusNoticeId = urlSearchParams.get("focus_notice_id");
+    const queryRestaurantId = urlSearchParams.get("restaurant_id");
+
     function setImagePreview(src) {
         if (src) {
             noticeImagePreview.src = src;
@@ -60,14 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // 폼 초기화
-    // - 선택된 식당은 유지
-    // - notice_id 초기화로 신규 등록 모드 전환
-    // - 이미지 삭제 여부 기본값 N
-    // - 현재 페이지 유지
-    // - 이미지 미리보기 비우기
-    // -------------------------------------------------------------------------
     function resetForm() {
         const selectedRestaurantId = restaurantSelect.value;
 
@@ -79,10 +59,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setImagePreview("");
     }
 
-    // -------------------------------------------------------------------------
-    // 페이징 UI 렌더링
-    // - current_page / total_pages / 이전/다음 버튼 상태 갱신
-    // -------------------------------------------------------------------------
     function renderPagination(payload) {
         currentPage = Number(payload.current_page || 1);
         totalPages = Number(payload.total_pages || 1);
@@ -94,10 +70,6 @@ document.addEventListener("DOMContentLoaded", () => {
         nextPageBtn.disabled = !payload.has_next;
     }
 
-    // -------------------------------------------------------------------------
-    // XSS 방지를 위한 HTML 이스케이프 처리
-    // - 목록 렌더링 시 사용자 입력값을 그대로 넣지 않도록 변환
-    // -------------------------------------------------------------------------
     function escapeHtml(value) {
         return String(value || "")
             .replaceAll("&", "&amp;")
@@ -107,11 +79,34 @@ document.addEventListener("DOMContentLoaded", () => {
             .replaceAll("'", "&#39;");
     }
 
-    // -------------------------------------------------------------------------
-    // 공지 목록 렌더링
-    // - 공지 목록이 없으면 empty-state 출력
-    // - 있으면 카드 목록 HTML 생성
-    // -------------------------------------------------------------------------
+    function focusNoticeCard(noticeId) {
+        if (!noticeId) {
+            return;
+        }
+
+        const targetCard = noticeList.querySelector(`[data-notice-id="${noticeId}"]`);
+
+        if (!targetCard) {
+            return;
+        }
+
+        targetCard.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+
+        targetCard.setAttribute("tabindex", "-1");
+        targetCard.focus({ preventScroll: true });
+
+        targetCard.style.outline = "3px solid #9caf7f";
+        targetCard.style.boxShadow = "0 0 0 6px rgba(156, 175, 127, 0.18)";
+
+        window.setTimeout(() => {
+            targetCard.style.outline = "";
+            targetCard.style.boxShadow = "";
+        }, 2200);
+    }
+
     function renderNoticeList(payload) {
         totalNoticeCount.textContent = payload.total_notice_count || 0;
 
@@ -166,12 +161,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }).join("");
 
         renderPagination(payload);
+
+        if (focusNoticeId) {
+            focusNoticeCard(focusNoticeId);
+        }
     }
 
-    // -------------------------------------------------------------------------
-    // 공지 목록 비동기 조회
-    // - 선택된 식당 + 페이지 기준으로 목록 API 호출
-    // -------------------------------------------------------------------------
     async function loadNoticeList(page = 1) {
         const restaurantId = restaurantSelect.value;
 
@@ -186,11 +181,6 @@ document.addEventListener("DOMContentLoaded", () => {
         renderNoticeList(result);
     }
 
-    // -------------------------------------------------------------------------
-    // 공지 상세 조회
-    // - 수정 버튼 클릭 시 해당 공지 1건의 데이터를 받아와 폼에 채운다.
-    // - 기존 이미지가 있으면 미리보기 표시
-    // -------------------------------------------------------------------------
     async function loadNoticeDetail(noticeId) {
         const restaurantId = restaurantSelect.value;
 
@@ -217,12 +207,6 @@ document.addEventListener("DOMContentLoaded", () => {
         window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    // -------------------------------------------------------------------------
-    // 공지 저장
-    // - 신규 등록: client_notice_id 없음
-    // - 수정 저장: client_notice_id 있음
-    // - 이미지 파일이 있으면 FormData 에 함께 담아 전송
-    // -------------------------------------------------------------------------
     async function saveNotice(event) {
         event.preventDefault();
 
@@ -256,11 +240,6 @@ document.addEventListener("DOMContentLoaded", () => {
         resetForm();
     }
 
-    // -------------------------------------------------------------------------
-    // 공지 삭제
-    // - 현재 선택된 식당 / 현재 페이지 정보를 함께 전달
-    // - 삭제 후 목록을 다시 렌더링
-    // -------------------------------------------------------------------------
     async function deleteNotice(noticeId) {
         const formData = new FormData();
         formData.append("client_restaurant_id", restaurantSelect.value);
@@ -283,10 +262,6 @@ document.addEventListener("DOMContentLoaded", () => {
         resetForm();
     }
 
-    // -------------------------------------------------------------------------
-    // 식당 변경 이벤트
-    // - 식당이 바뀌면 페이지를 1로 초기화하고 목록 재조회
-    // -------------------------------------------------------------------------
     restaurantSelect.addEventListener("change", async () => {
         currentPage = 1;
         currentPageInput.value = "1";
@@ -294,11 +269,6 @@ document.addEventListener("DOMContentLoaded", () => {
         await loadNoticeList(1);
     });
 
-    // -------------------------------------------------------------------------
-    // 파일 선택 시 미리보기 처리
-    // - 선택한 파일을 object URL 로 미리보기 표시
-    // - 이미지 삭제 여부를 N 으로 되돌림
-    // -------------------------------------------------------------------------
     noticeFileInput.addEventListener("change", () => {
         const file = noticeFileInput.files[0];
 
@@ -312,49 +282,28 @@ document.addEventListener("DOMContentLoaded", () => {
         removeImageInput.value = "N";
     });
 
-    // -------------------------------------------------------------------------
-    // 이미지 제거 버튼
-    // - 파일 input 비우기
-    // - 서버에 기존 이미지 삭제 의도를 전달하기 위해 Y 저장
-    // - 미리보기 제거
-    // -------------------------------------------------------------------------
     removeImageBtn.addEventListener("click", () => {
         noticeFileInput.value = "";
         removeImageInput.value = "Y";
         setImagePreview("");
     });
 
-    // -------------------------------------------------------------------------
-    // 취소 버튼
-    // - 현재 식당/페이지는 유지하면서 폼만 초기화
-    // -------------------------------------------------------------------------
     resetFormBtn.addEventListener("click", () => {
         resetForm();
     });
 
-    // -------------------------------------------------------------------------
-    // 이전 페이지 버튼
-    // -------------------------------------------------------------------------
     prevPageBtn.addEventListener("click", async () => {
         if (currentPage > 1) {
             await loadNoticeList(currentPage - 1);
         }
     });
 
-    // -------------------------------------------------------------------------
-    // 다음 페이지 버튼
-    // -------------------------------------------------------------------------
     nextPageBtn.addEventListener("click", async () => {
         if (currentPage < totalPages) {
             await loadNoticeList(currentPage + 1);
         }
     });
 
-    // -------------------------------------------------------------------------
-    // 목록 내 수정/삭제 버튼 이벤트 위임
-    // - 수정: 상세 조회 후 폼 채우기
-    // - 삭제: 확인창 후 삭제 API 호출
-    // -------------------------------------------------------------------------
     noticeList.addEventListener("click", async (event) => {
         const editBtn = event.target.closest(".notice-edit-btn");
         const deleteBtn = event.target.closest(".notice-delete-btn");
@@ -375,18 +324,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // -------------------------------------------------------------------------
-    // 폼 submit 이벤트 연결
-    // -------------------------------------------------------------------------
     noticeForm.addEventListener("submit", saveNotice);
 
-    // -------------------------------------------------------------------------
-    // 최초 페이지 진입 시 서버가 내려준 초기 payload 기준으로 페이징 상태 표시
-    // -------------------------------------------------------------------------
+    if (queryRestaurantId && restaurantSelect) {
+        restaurantSelect.value = queryRestaurantId;
+    }
+
     renderPagination(window.ownerNoticeInitialData?.initial_payload || {
         current_page: 1,
         total_pages: 1,
         has_prev: false,
         has_next: false
     });
+
+    if (focusNoticeId) {
+        focusNoticeCard(focusNoticeId);
+    }
 });

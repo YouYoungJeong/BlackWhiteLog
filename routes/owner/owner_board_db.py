@@ -1,11 +1,8 @@
 import os
-import uuid
 import pymysql
 from dotenv import load_dotenv
-from werkzeug.utils import secure_filename
-from PIL import Image  
-load_dotenv()
 
+load_dotenv()
 
 
 def get_connection():
@@ -20,6 +17,103 @@ def get_connection():
         autocommit=False
     )
 
-#====================================================================================
-# owner_board_management.html
-#-------------------------------------------------------------------------------------
+
+# ====================================================================================
+# owner_board.html
+# ------------------------------------------------------------------------------------
+# 오너보드 공지사항 DB 처리 요약
+# ------------------------------------------------------------------------------------
+# 1. 오너가 여러 식당을 가질 수 있으므로 restaurant_id 기준으로 사이드 공지 카드를 조회한다.
+# 2. 현재 공지 카드는 is_pinned = 1 인 공지 중 updated_at 이 가장 최근인 1건을 조회한다.
+# 3. 이전 공지 카드는 is_pinned = 0 인 공지 중 updated_at 최신순 3건만 조회한다.
+# 4. 날짜 출력은 보드 카드에서 바로 쓰기 쉽게 문자열로 가공한다.
+# ====================================================================================
+
+
+# 전달받는 값
+# - owner_id: 오너 번호
+# 반환값
+# - 해당 오너가 가진 식당 목록
+def get_restaurant_list_by_owner(owner_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT
+                    restaurant_id,
+                    name,
+                    status
+                FROM restaurants
+                WHERE owner_id = %s
+                ORDER BY restaurant_id ASC
+            """
+            cursor.execute(sql, (owner_id,))
+            return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+# 전달받는 값
+# - restaurant_id: 식당 번호
+# 반환값
+# - 현재 고정 공지 1건
+def get_sidebar_current_notice_by_restaurant(restaurant_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT
+                    notice_id,
+                    owner_id,
+                    restaurant_id,
+                    user_id,
+                    notice_url,
+                    thumb_url,
+                    notice_title,
+                    notice_content,
+                    is_pinned,
+                    created_at,
+                    updated_at
+                FROM owner_notices
+                WHERE restaurant_id = %s
+                AND is_pinned = 1
+                ORDER BY updated_at DESC, notice_id DESC
+                LIMIT 1
+            """
+            cursor.execute(sql, (restaurant_id,))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+# 전달받는 값
+# - restaurant_id: 식당 번호
+# 반환값
+# - 이전 공지 3건
+def get_sidebar_history_notice_list_by_restaurant(restaurant_id, limit=3):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT
+                    notice_id,
+                    owner_id,
+                    restaurant_id,
+                    user_id,
+                    notice_url,
+                    thumb_url,
+                    notice_title,
+                    notice_content,
+                    is_pinned,
+                    created_at,
+                    updated_at
+                FROM owner_notices
+                WHERE restaurant_id = %s
+                AND not is_pinned = 1
+                ORDER BY updated_at DESC, notice_id DESC
+                LIMIT %s
+            """
+            cursor.execute(sql, (restaurant_id, limit))
+            return cursor.fetchall()
+    finally:
+        conn.close()
