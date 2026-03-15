@@ -199,7 +199,7 @@ async function loadRankingData() {
                             <strong>${u.nickname} ${meBadge}</strong>
                             <span class="rank-tier">💍 ${u.tier}</span>
                         </div>
-                        <div class="rank-pts">${(u.point || 0).toLocaleString()} <span>pts</span></div>
+                        <div class="rank-pts">${tInfo.displayPoint.toLocaleString()} <span>pts</span></div>
                     </div>
                 `;
             }).join('');
