@@ -3,27 +3,34 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>흑백로그 | 리뷰관리</title>
+    <title>흑백로그 | 리뷰 관리</title>
 
-    <!-- 공통 레이아웃 모듈 CSS -->
+    <!-- 공통 레이아웃 CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_layout_common.css') }}">
 
-    <!-- 공통 드로어 모듈 CSS -->
+    <!-- 공통 드로어 CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_drawer.css') }}">
 
-    <!-- 리뷰관리 페이지 전용 CSS -->
+    <!-- 리뷰 관리 전용 CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_review_management.css') }}">
 
-    <!-- 공통 드로어 모듈 JS -->
+    <!-- 공통 드로어 JS -->
     <script defer src="{{ url_for('static', filename='js/pages/owner/owner_drawer.js') }}"></script>
 
-    <!-- 리뷰관리 페이지 전용 JS -->
+    <!-- 리뷰 관리 전용 JS -->
     <script defer src="{{ url_for('static', filename='js/pages/owner/owner_review_management.js') }}"></script>
 </head>
 <body>
-    <div class="owner-board-page">
+    <div
+        class="owner-board-page"
+        id="ownerReviewPage"
+        data-restaurant-id="{{ selected_restaurant_id }}"
+        data-tab="{{ initial_payload.tab_status }}"
+        data-sort="{{ initial_payload.sort_type }}"
+        data-page="{{ initial_payload.current_page }}"
+    >
 
-        <!-- 공통 헤더 영역 시작 : owner_layout_common.css 기준 -->
+        <!-- 헤더 영역 -->
         <header class="top-header">
             <div class="header-left">
                 <a href="{{ url_for('owner_board') }}" class="brand-wrap" aria-label="흑백로그 오너 대시보드로 이동">
@@ -36,14 +43,13 @@
             </div>
 
             <div class="header-right">
-                <span class="today-date">2026.03.12</span>
+                <span class="today-date">{{ "2026.03.15" }}</span>
 
                 <div class="store-profile">
-                    <span class="store-name">수원비빔밥집</span>
+                    <span class="store-name">{{ selected_restaurant_name }}</span>
                     <div class="profile-circle" aria-hidden="true">👨‍🍳</div>
                 </div>
 
-                <!-- 공통 드로어 열기 버튼 : owner_drawer.js가 menuBtn id를 사용 -->
                 <button
                     id="menuBtn"
                     class="menu-toggle"
@@ -56,165 +62,228 @@
                 </button>
             </div>
         </header>
-        <!-- 공통 헤더 영역 끝 -->
 
-        <!-- 리뷰관리 페이지 전용 메인 콘텐츠 -->
+        <!-- 메인 영역 -->
         <main class="review-page">
+            <!-- 페이지 제목 -->
             <section class="page-title-card card">
                 <div class="page-title-left">
                     <span class="page-chip">리뷰 관리</span>
                     <h2>고객 리뷰를 확인하고 답변을 관리해보세요</h2>
-                    <p>미답변 리뷰 우선 확인, 신고 처리, 답변 등록까지 한 화면에서 관리할 수 있습니다.</p>
+                    <p>전체 리뷰, 미답변, 답변완료, 숨김리뷰를 한 화면에서 관리할 수 있습니다.</p>
                 </div>
             </section>
 
-            <section class="review-summary-grid">
+            <!-- 가게 선택 -->
+            <section class="review-filter-card card">
+                <div class="filter-top review-restaurant-top">
+                    <div class="restaurant-select-wrap">
+                        <label for="reviewRestaurantSelect" class="restaurant-select-label">가게 선택</label>
+                        <select id="reviewRestaurantSelect" class="restaurant-select">
+                            {% for restaurant in restaurant_list %}
+                            <option
+                                value="{{ restaurant.restaurant_id }}"
+                                {% if restaurant.restaurant_id == selected_restaurant_id %}selected{% endif %}
+                            >
+                                {{ restaurant.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 요약 카드 -->
+            <section class="review-summary-grid" id="reviewSummaryGrid">
                 <article class="summary-card card active">
                     <span class="summary-label">전체 리뷰</span>
-                    <strong class="summary-value">128건</strong>
+                    <strong class="summary-value">{{ summary_data.total_review_count }}건</strong>
                 </article>
 
                 <article class="summary-card card">
                     <span class="summary-label">미답변</span>
-                    <strong class="summary-value">14건</strong>
+                    <strong class="summary-value">{{ summary_data.pending_review_count }}건</strong>
                 </article>
 
                 <article class="summary-card card">
                     <span class="summary-label">답변완료</span>
-                    <strong class="summary-value">102건</strong>
+                    <strong class="summary-value">{{ summary_data.done_review_count }}건</strong>
                 </article>
 
                 <article class="summary-card card warning">
-                    <span class="summary-label">신고리뷰</span>
-                    <strong class="summary-value">12건</strong>
+                    <span class="summary-label">숨김리뷰</span>
+                    <strong class="summary-value">{{ summary_data.hidden_review_count }}건</strong>
                 </article>
             </section>
 
+            <!-- 탭 필터 -->
             <section class="review-filter-card card">
                 <div class="filter-top">
-                    <div class="tab-group">
-                        <button class="tab-btn active" type="button">전체</button>
-                        <button class="tab-btn" type="button">미답변</button>
-                        <button class="tab-btn" type="button">답변완료</button>
-                        <button class="tab-btn" type="button">신고리뷰</button>
-                    </div>
+                    <div class="tab-group" id="reviewTabGroup">
+                        <button
+                            class="tab-btn {% if initial_payload.tab_status == 'all' %}active{% endif %}"
+                            type="button"
+                            data-tab="all"
+                        >
+                            전체 리뷰
+                        </button>
 
-                    <div class="search-box">
-                        <input type="text" placeholder="검색어 입력" />
-                        <button type="button">🔍</button>
+                        <button
+                            class="tab-btn {% if initial_payload.tab_status == 'pending' %}active{% endif %}"
+                            type="button"
+                            data-tab="pending"
+                        >
+                            미답변 리뷰
+                        </button>
+
+                        <button
+                            class="tab-btn {% if initial_payload.tab_status == 'done' %}active{% endif %}"
+                            type="button"
+                            data-tab="done"
+                        >
+                            답변완료 리뷰
+                        </button>
+
+                        <button
+                            class="tab-btn {% if initial_payload.tab_status == 'hidden' %}active{% endif %}"
+                            type="button"
+                            data-tab="hidden"
+                        >
+                            숨김리뷰
+                        </button>
                     </div>
                 </div>
             </section>
 
-            <div class="filter-bottom">
-                <button class="filter-chip" type="button">최신순 ▼</button>
-                <button class="filter-chip" type="button">별점순 ▼</button>
-                <button class="filter-chip" type="button">기간선택 ▼</button>
+            <!-- 정렬 필터 -->
+            <div class="filter-bottom" id="reviewSortGroup">
+                <button
+                    class="filter-chip {% if initial_payload.sort_type == 'latest' %}active{% endif %}"
+                    type="button"
+                    data-sort="latest"
+                >
+                    최신순
+                </button>
+
+                <button
+                    class="filter-chip {% if initial_payload.sort_type == 'rating' %}active{% endif %}"
+                    type="button"
+                    data-sort="rating"
+                >
+                    별점높은순
+                </button>
             </div>
 
+            <!-- 리뷰 목록 -->
             <section class="review-board card">
                 <div class="review-table-wrap">
                     <table class="review-table">
                         <thead>
                             <tr>
-                                <th>번호</th>
+                                <th>날짜</th>
                                 <th>작성자</th>
                                 <th>리뷰내용</th>
                                 <th>별점</th>
-                                <th>작성일</th>
                                 <th>상태</th>
                             </tr>
                         </thead>
 
-                        <tbody>
-                            <tr class="is-selected">
-                                <td>101</td>
-                                <td>user01</td>
-                                <td>음식이 깔끔하고 맛있어요</td>
-                                <td>★★★★★</td>
-                                <td>2026-03-12</td>
-                                <td>
-                                    <span class="state-badge pending">미답변</span>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td>100</td>
-                                <td>user22</td>
-                                <td>양은 적지만 맛있었습니다</td>
-                                <td>★★★★☆</td>
-                                <td>2026-03-11</td>
-                                <td>
-                                    <span class="state-badge done">답변완료</span>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td>99</td>
-                                <td>user77</td>
-                                <td>서비스가 친절했어요</td>
-                                <td>★★★★★</td>
-                                <td>2026-03-11</td>
-                                <td>
-                                    <span class="state-badge done">답변완료</span>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td>98</td>
-                                <td>user09</td>
-                                <td>음식이 늦게 나왔어요</td>
-                                <td>★★☆☆☆</td>
-                                <td>2026-03-10</td>
-                                <td>
-                                    <span class="state-badge pending">미답변</span>
-                                </td>
-                            </tr>
+                        <tbody id="reviewTableBody">
+                            {% if initial_payload.review_list %}
+                                {% for review in initial_payload.review_list %}
+                                <tr
+                                    class="{% if review.review_id == initial_payload.selected_review_id %}is-selected{% endif %}"
+                                    data-review-id="{{ review.review_id }}"
+                                >
+                                    <td>{{ review.updated_at }}</td>
+                                    <td>{{ review.nickname }}</td>
+                                    <td class="review-content-cell" title="{{ review.content }}">{{ review.content_preview }}</td>
+                                    <td>{{ review.rating_text }}</td>
+                                    <td>
+                                        {% if review.is_visible == 0 %}
+                                            <span class="state-badge hidden">숨김</span>
+                                        {% elif review.is_active == 1 %}
+                                            <span class="state-badge done">답변완료</span>
+                                        {% else %}
+                                            <span class="state-badge pending">미답변</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6">조회된 리뷰가 없습니다.</td>
+                                </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
 
-                <div class="pagination">
-                    <button type="button">&lt;</button>
-                    <button type="button" class="active">1</button>
-                    <button type="button">2</button>
-                    <button type="button">3</button>
-                    <button type="button">4</button>
-                    <button type="button">5</button>
-                    <button type="button">&gt;</button>
+                <div class="pagination" id="reviewPagination">
+                    {% if initial_payload.has_prev %}
+                    <button type="button" data-page="{{ initial_payload.current_page - 1 }}">&lt;</button>
+                    {% endif %}
+
+                    {% for page_num in range(1, initial_payload.total_pages + 1) %}
+                    <button
+                        type="button"
+                        data-page="{{ page_num }}"
+                        class="{% if page_num == initial_payload.current_page %}active{% endif %}"
+                    >
+                        {{ page_num }}
+                    </button>
+                    {% endfor %}
+
+                    {% if initial_payload.has_next %}
+                    <button type="button" data-page="{{ initial_payload.current_page + 1 }}">&gt;</button>
+                    {% endif %}
                 </div>
             </section>
 
-            <section class="review-detail-card card">
+            <!-- 리뷰 상세 -->
+            <section class="review-detail-card card" id="reviewDetailCard">
+                {% if detail_review %}
                 <div class="detail-meta">
-                    <span><strong>작성자</strong> : user01</span>
-                    <span><strong>별점</strong> : ★★★★★</span>
-                    <span><strong>작성일</strong> : 2026-03-12</span>
-                    <span><strong>상태</strong> : 미답변</span>
+                    <span><strong>작성자</strong> : {{ detail_review.nickname }}</span>
+                    <span><strong>별점</strong> : {{ detail_review.rating_text }}</span>
+                    <span><strong>작성일</strong> : {{ detail_review.created_at }}</span>
+                    <span><strong>상태</strong> : {{ detail_review.review_status_text }}</span>
                 </div>
 
                 <div class="detail-content">
                     <div class="detail-row">
-                        <strong>리뷰</strong>
-                        <p>음식이 깔끔하고 맛있어요. 다음에도 방문하고 싶습니다.</p>
+                        <strong>리뷰 내용</strong>
+                        <p>{{ detail_review.content }}</p>
                     </div>
 
                     <div class="detail-row answer-row">
-                        <strong>답변</strong>
-                        <textarea placeholder="고객에게 남길 답변을 입력해주세요."></textarea>
+                        <strong>사장님 답변</strong>
+                        <textarea
+                            id="reviewReplyTextarea"
+                            placeholder="고객에게 남길 답변을 입력해주세요."
+                            data-review-id="{{ detail_review.review_id }}"
+                        >{{ detail_review.reply_content }}</textarea>
                     </div>
                 </div>
 
                 <div class="detail-actions">
-                    <button class="fill-btn" type="button">등록</button>
-                    <button class="ghost-btn" type="button">수정</button>
-                    <button class="ghost-btn" type="button">삭제</button>
-                    <button class="ghost-btn warning" type="button">신고처리</button>
+                    <button class="fill-btn" type="button" id="replySaveBtn">답변 등록</button>
+                    <button class="ghost-btn" type="button" id="replyUpdateBtn">답변 수정</button>
+                    <button class="ghost-btn" type="button" id="replyDeleteBtn">답변 삭제</button>
+                    <button class="ghost-btn warning" type="button" id="replyHideBtn">숨김 처리</button>
                 </div>
+                {% else %}
+                <div class="detail-content">
+                    <div class="detail-row">
+                        <strong>리뷰 상세</strong>
+                        <p>선택된 리뷰가 없습니다.</p>
+                    </div>
+                </div>
+                {% endif %}
             </section>
         </main>
 
-        <!-- 공통 푸터 영역 시작 : owner_layout_common.css 기준 -->
+        <!-- 푸터 -->
         <footer class="site-footer">
             <div class="footer-inner">
                 <div class="footer-brand">
@@ -224,20 +293,12 @@
 
                 <div class="footer-info">
                     <p>© 2026 흑백로그. All rights reserved.</p>
-                    <p>
-                        본 사이트의 상호, 이미지, 리뷰 및 기타 콘텐츠는 각 권리자에게 권리가 있을 수 있으며,
-                        서비스 내 데이터는 업데이트 시점에 따라 실제 정보와 차이가 있을 수 있습니다.
-                    </p>
-                    <p>
-                        지도 및 위치 기반 서비스는 제휴 API 정책 및 각 제공사의 이용약관을 따릅니다.
-                    </p>
                 </div>
             </div>
         </footer>
-        <!-- 공통 푸터 영역 끝 -->
     </div>
 
-    <!-- 공통 드로어 영역 시작 : owner_drawer.css / owner_drawer.js 기준 -->
+    <!-- 드로어 -->
     <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
 
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
@@ -265,34 +326,8 @@
                     <span class="side-drawer__icon">⌂</span>
                     <span>대시보드</span>
                 </a>
-
-                <a href="{{ url_for('owner_menu_management') }}" class="side-drawer__item">
-                    <span class="side-drawer__icon">▣</span>
-                    <span>메뉴 관리</span>
-                </a>
-
-                <a href="{{ url_for('owner_review_management') }}" class="side-drawer__item">
-                    <span class="side-drawer__icon">✎</span>
-                    <span>리뷰 관리</span>
-                </a>
-
-                <a href="{{ url_for('owner_notice_management') }}" class="side-drawer__item">
-                    <span class="side-drawer__icon">📢</span>
-                    <span>공지사항 관리</span>
-                </a>
             </nav>
-
-            <div class="side-drawer__divider"></div>
-
-            <div class="side-drawer__section-title">기타</div>
-
-            <div class="side-drawer__sublist">
-                <a href="#" class="side-drawer__subitem">설정</a>
-                <a href="#" class="side-drawer__subitem">고객센터</a>
-                <a href="#" class="side-drawer__subitem">이용약관</a>
-            </div>
         </div>
     </aside>
-    <!-- 공통 드로어 영역 끝 -->
 </body>
 </html>

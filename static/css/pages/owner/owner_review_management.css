@@ -474,3 +474,40 @@ body {
         width: 100%;
     }
 }
+
+.review-restaurant-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.restaurant-select-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.restaurant-select-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #444;
+}
+
+.restaurant-select {
+    min-width: 220px;
+    height: 42px;
+    padding: 0 14px;
+    border: 1px solid #d9d9d9;
+    border-radius: 12px;
+    background: #fff;
+    font-size: 14px;
+}
+
+.review-content-cell {
+    max-width: 280px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
