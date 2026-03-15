@@ -1,6 +1,8 @@
 from flask import render_template, request, jsonify, session
 import routes.owner.owner_menu_db as owner_db
+import routes.owner.owner_notices_db as owner_notice_db
 import math
+
 
 
 def register_owner_routes(app):
@@ -199,7 +201,8 @@ def register_owner_routes(app):
     def owner_menu_management_api_save():
         session_user_id = session.get("user_id")
         session_owner_id = session.get("owner_id")
-
+        print("request.form =", request.form)
+        print("request.files =", request.files)
         if not session_owner_id:
             # 임시 오너값
             session_owner_id = 1
@@ -326,9 +329,300 @@ def register_owner_routes(app):
 # -------------------------------------------------------------------------------------
 # 오너 공지 관리 페이지
 # -------------------------------------------------------------------------------------
-    @app.route("/owner/notice_management", endpoint="owner_notice_management")
+    # 공지사항 목록 payload 생성
+    # - restaurant_id 기준으로 공지 목록/페이지/개수를 공통 계산한다.
+    # - SPA 응답용 JSON 구성 중복을 줄이기 위해 분리한다.
+    def build_notice_list_payload(restaurant_id, page=1, per_page=5):
+        total_notice_count = owner_notice_db.get_notice_count_by_restaurant(restaurant_id)
+        total_pages = math.ceil(total_notice_count / per_page) if total_notice_count > 0 else 1
+
+        if page < 1:
+            page = 1
+
+        if page > total_pages:
+            page = total_pages
+
+        offset = (page - 1) * per_page
+
+        db_notice_list = owner_notice_db.get_notice_list_by_restaurant(
+            restaurant_id=restaurant_id,
+            limit=per_page,
+            offset=offset
+        )
+
+        notice_list = []
+        for db_notice in db_notice_list:
+            notice_list.append({
+                "notice_id": db_notice["notice_id"],
+                "owner_id": db_notice["owner_id"],
+                "restaurant_id": db_notice["restaurant_id"],
+                "user_id": db_notice["user_id"],
+                "notice_url": db_notice["notice_url"],
+                "thumb_url": db_notice["thumb_url"],
+                "notice_title": db_notice["notice_title"],
+                "notice_content": db_notice["notice_content"],
+                "is_pinned": int(db_notice["is_pinned"]) if db_notice["is_pinned"] is not None else 0,
+                "created_at": db_notice["created_at"].strftime("%Y-%m-%d") if db_notice["created_at"] else "",
+                "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+            })
+
+        return {
+            "notice_list": notice_list,
+            "current_page": page,
+            "total_pages": total_pages,
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "total_notice_count": total_notice_count
+        }
+
+    # 공지사항 화면에서 선택된 식당 공통 처리
+    def get_selected_notice_restaurant_id(session_owner_id, client_restaurant_id=None):
+        restaurant_list = owner_notice_db.get_restaurant_list_by_owner(session_owner_id)
+
+        if not restaurant_list:
+            raise ValueError("등록된 가게가 없습니다.")
+
+        restaurant_id_list = [row["restaurant_id"] for row in restaurant_list]
+
+        if client_restaurant_id is not None:
+            try:
+                selected_restaurant_id = int(client_restaurant_id)
+            except (TypeError, ValueError):
+                selected_restaurant_id = restaurant_id_list[0]
+
+            if selected_restaurant_id not in restaurant_id_list:
+                selected_restaurant_id = restaurant_id_list[0]
+        else:
+            selected_restaurant_id = restaurant_id_list[0]
+
+        return selected_restaurant_id, restaurant_list
+
+    @app.route("/owner/notice_management", methods=["GET"], endpoint="owner_notice_management")
     def owner_notice_management():
-        return render_template("owner/owner_notice_management.html")
+        session_user_id = session.get("user_id")
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        selected_restaurant_id, restaurant_list = get_selected_notice_restaurant_id(session_owner_id)
+
+        initial_payload = build_notice_list_payload(
+            restaurant_id=selected_restaurant_id,
+            page=1,
+            per_page=5
+        )
+
+        return render_template(
+            "owner/owner_notice_management.html",
+            restaurant_list=restaurant_list,
+            selected_restaurant_id=selected_restaurant_id,
+            initial_payload=initial_payload,
+            session_user_id=session_user_id,
+            session_owner_id=session_owner_id
+        )
+
+    @app.route("/owner/notice_management/api/list", methods=["GET"], endpoint="owner_notice_management_api_list")
+    def owner_notice_management_api_list():
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+        page = request.args.get("page", default=1, type=int)
+
+        try:
+            selected_restaurant_id, restaurant_list = get_selected_notice_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            payload = build_notice_list_payload(
+                restaurant_id=selected_restaurant_id,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "공지사항 목록 조회 완료",
+                "restaurant_id": selected_restaurant_id,
+                "restaurant_list": restaurant_list,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+    @app.route("/owner/notice_management/api/detail/<int:notice_id>", methods=["GET"], endpoint="owner_notice_management_api_detail")
+    def owner_notice_management_api_detail(notice_id):
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.args.get("restaurant_id", type=int)
+
+        try:
+            selected_restaurant_id, _ = get_selected_notice_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            db_notice = owner_notice_db.get_notice_detail_by_id(selected_restaurant_id, notice_id)
+
+            if not db_notice:
+                return jsonify({
+                    "success": False,
+                    "message": "공지사항 정보를 찾을 수 없습니다."
+                }), 404
+
+            return jsonify({
+                "success": True,
+                "message": "공지사항 상세 조회 완료",
+                "notice_id": db_notice["notice_id"],
+                "owner_id": db_notice["owner_id"],
+                "restaurant_id": db_notice["restaurant_id"],
+                "user_id": db_notice["user_id"],
+                "notice_url": db_notice["notice_url"],
+                "thumb_url": db_notice["thumb_url"],
+                "notice_title": db_notice["notice_title"],
+                "notice_content": db_notice["notice_content"],
+                "is_pinned": int(db_notice["is_pinned"]) if db_notice["is_pinned"] is not None else 0,
+                "created_at": db_notice["created_at"].strftime("%Y-%m-%d") if db_notice["created_at"] else "",
+                "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+    @app.route("/owner/notice_management/api/save", methods=["POST"], endpoint="owner_notice_management_api_save")
+    def owner_notice_management_api_save():
+        session_user_id = session.get("user_id")
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_notice_id = request.form.get("client_notice_id", "").strip()
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_notice_title = request.form.get("client_notice_title", "").strip()
+        client_notice_content = request.form.get("client_notice_content", "").strip()
+        client_is_pinned = request.form.get("client_is_pinned", "").strip()
+        client_remove_image = request.form.get("client_remove_image", "").strip()
+        client_page = request.form.get("client_page", default="1").strip()
+        client_notice_image = request.files.get("client_notice_image")
+
+        if not client_notice_title or not client_notice_content:
+            return jsonify({
+                "success": False,
+                "message": "공지사항 제목과 내용은 필수입니다."
+            }), 400
+
+        if client_notice_image and client_notice_image.filename and not owner_notice_db.allowed_file(client_notice_image.filename):
+            return jsonify({
+                "success": False,
+                "message": "허용 확장자: jpg, jpeg, png, gif, webp"
+            }), 400
+
+        try:
+            restaurant_id, _ = get_selected_notice_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            is_pinned = 1 if client_is_pinned == "Y" else 0
+
+            if client_notice_id:
+                owner_notice_db.update_notice(
+                    restaurant_id=restaurant_id,
+                    notice_id=int(client_notice_id),
+                    notice_title=client_notice_title,
+                    notice_content=client_notice_content,
+                    is_pinned=is_pinned,
+                    image_file=client_notice_image,
+                    remove_image=True if client_remove_image == "Y" else False
+                )
+                saved_notice_id = int(client_notice_id)
+                action_message = "공지사항이 수정되었습니다."
+            else:
+                saved_notice_id = owner_notice_db.insert_notice(
+                    owner_id=session_owner_id,
+                    restaurant_id=restaurant_id,
+                    user_id=session_user_id,
+                    notice_title=client_notice_title,
+                    notice_content=client_notice_content,
+                    is_pinned=is_pinned,
+                    image_file=client_notice_image
+                )
+                action_message = "공지사항이 등록되었습니다."
+
+            page = int(client_page) if str(client_page).isdigit() else 1
+            payload = build_notice_list_payload(
+                restaurant_id=restaurant_id,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": action_message,
+                "notice_id": saved_notice_id,
+                "restaurant_id": restaurant_id,
+                "session_user_id": session_user_id,
+                "session_owner_id": session_owner_id,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+    @app.route("/owner/notice_management/api/delete/<int:notice_id>", methods=["POST"], endpoint="owner_notice_management_api_delete")
+    def owner_notice_management_api_delete(notice_id):
+        session_owner_id = session.get("owner_id")
+
+        if not session_owner_id:
+            session_owner_id = 1
+
+        client_restaurant_id = request.form.get("client_restaurant_id", "").strip()
+        client_page = request.form.get("client_page", default="1").strip()
+
+        try:
+            restaurant_id, _ = get_selected_notice_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
+
+            owner_notice_db.delete_notice(restaurant_id, notice_id)
+
+            page = int(client_page) if str(client_page).isdigit() else 1
+            payload = build_notice_list_payload(
+                restaurant_id=restaurant_id,
+                page=page,
+                per_page=5
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "공지사항이 삭제되었습니다.",
+                "notice_id": notice_id,
+                "restaurant_id": restaurant_id,
+                **payload
+            })
+        except Exception as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+
 
 
 # ------------------------------------------------------------------------------------
