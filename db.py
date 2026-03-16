@@ -2,6 +2,7 @@ import os
 import pymysql
 from dotenv import load_dotenv
 
+
 # 비밀번호 해시 생성 / 비밀번호 검사용
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -378,3 +379,24 @@ def toggle_favorite_restaurant(user_id, restaurant_id):
 
     add_favorite_restaurant(user_id, restaurant_id)
     return True
+
+# 판매자 페이지를 이동하는 조건문.
+def get_owner_by_user_id(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    sql = """
+        SELECT owner_id
+        FROM owners
+        WHERE user_id = %s
+        LIMIT 1
+    """
+    cursor.execute(sql, (user_id,))
+    row = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if row:
+        return row["owner_id"]
+    return None

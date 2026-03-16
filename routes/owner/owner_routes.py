@@ -1,4 +1,4 @@
-from flask import render_template, request, jsonify, session
+from flask import render_template, request, jsonify, session, redirect, url_for
 import routes.owner.owner_menu_db as owner_db
 import routes.owner.owner_notices_db as owner_notice_db
 import routes.owner.owner_board_db as owner_board_db
@@ -7,22 +7,41 @@ import math
 
 
 def register_owner_routes(app):
-# -------------------------------------------------------------------------------------
-# 오너 보드 페이지
-# -------------------------------------------------------------------------------------
+    # -------------------------------------------------------------------------------------
+    # 오너 보드 페이지
+    # -------------------------------------------------------------------------------------
     @app.route("/owner/board", endpoint="owner_board")
     def owner_board():
+        # -------------------------------------------------------------------------
+        # 로그인 세션에서 현재 사용자 / 오너 정보 조회
+        # - user_id: 로그인한 사용자
+        # - owner_id: owners 테이블에서 조회 후 세션에 저장된 판매자 번호
+        # -------------------------------------------------------------------------
         session_user_id = session.get("user_id")
         session_owner_id = session.get("owner_id")
 
-        if not session_owner_id:
-            session_owner_id = 1
+        # -------------------------------------------------------------------------
+        # 판매자 세션이 없으면 보드 진입 불가
+        # - 일반 사용자이거나
+        # - owner_id 세션이 아직 저장되지 않은 상태
+        # -------------------------------------------------------------------------
+        if not session_user_id or not session_owner_id:
+            return redirect(url_for("index"))
 
+        # -------------------------------------------------------------------------
+        # 현재 로그인한 owner_id 기준으로 메뉴 수 요약 조회
+        # -------------------------------------------------------------------------
         restaurant_menu_list = owner_db.get_menu_count_by_owner(session_owner_id)
 
         try:
-            db_sidebar_restaurant_list = owner_notice_db.get_restaurant_list_by_owner(session_owner_id)
+            # ---------------------------------------------------------------------
+            # 현재 로그인한 owner_id 기준으로 가게 목록 조회
+            # ---------------------------------------------------------------------
+            db_sidebar_restaurant_list = owner_board_db.get_restaurant_list_by_owner(session_owner_id)
 
+            # ---------------------------------------------------------------------
+            # 첫 번째 가게를 기본 선택값으로 사용
+            # ---------------------------------------------------------------------
             if db_sidebar_restaurant_list:
                 sidebar_selected_restaurant_id = db_sidebar_restaurant_list[0]["restaurant_id"]
                 sidebar_selected_restaurant_name = db_sidebar_restaurant_list[0]["name"]
@@ -31,9 +50,19 @@ def register_owner_routes(app):
                 sidebar_selected_restaurant_name = ""
                 db_sidebar_restaurant_list = []
 
+            # ---------------------------------------------------------------------
+            # 공지 / 리뷰 카드 기본값
+            # ---------------------------------------------------------------------
             sidebar_notice_current = None
             db_sidebar_notice_history_list = []
+            board_review_data = {
+                "march_review_count": 0,
+                "review_list": []
+            }
 
+            # ---------------------------------------------------------------------
+            # 가게가 존재할 때만 공지 / 리뷰 데이터 조회
+            # ---------------------------------------------------------------------
             if sidebar_selected_restaurant_id:
                 db_current_notice = owner_board_db.get_sidebar_current_notice_by_restaurant(
                     sidebar_selected_restaurant_id
@@ -62,12 +91,23 @@ def register_owner_routes(app):
                         "updated_at": db_notice["updated_at"].strftime("%Y-%m-%d") if db_notice["updated_at"] else ""
                     })
 
-        except Exception:
+                board_review_data = owner_review_db.get_board_review_summary_by_restaurant(
+                    sidebar_selected_restaurant_id,
+                    limit=3
+                )
+
+        except Exception as error:
+            print("owner_board error =", error)
+
             db_sidebar_restaurant_list = []
             sidebar_selected_restaurant_id = None
             sidebar_selected_restaurant_name = ""
             sidebar_notice_current = None
             db_sidebar_notice_history_list = []
+            board_review_data = {
+                "march_review_count": 0,
+                "review_list": []
+            }
 
         return render_template(
             "owner/owner_board.html",
@@ -78,33 +118,30 @@ def register_owner_routes(app):
             sidebar_selected_restaurant_id=sidebar_selected_restaurant_id,
             sidebar_selected_restaurant_name=sidebar_selected_restaurant_name,
             sidebar_notice_current=sidebar_notice_current,
-            sidebar_notice_history_list=db_sidebar_notice_history_list
+            sidebar_notice_history_list=db_sidebar_notice_history_list,
+            board_review_data=board_review_data
         )
 
+    # -------------------------------------------------------------------------
+    # 보드 공지사항 SPA API
+    # -------------------------------------------------------------------------
     @app.route("/owner/board/api/notice_summary", methods=["GET"], endpoint="owner_board_api_notice_summary")
     def owner_board_api_notice_summary():
-        session_owner_id = session.get("owner_id")
+        session_user_id, session_owner_id = require_owner_session()
 
-        if not session_owner_id:
-            session_owner_id = 1
+        if not session_user_id or not session_owner_id:
+            return jsonify({
+                "success": False,
+                "message": "로그인이 필요합니다."
+            }), 401
 
         client_restaurant_id = request.args.get("restaurant_id", type=int)
 
         try:
-            restaurant_list = owner_notice_db.get_restaurant_list_by_owner(session_owner_id)
-
-            if not restaurant_list:
-                return jsonify({
-                    "success": False,
-                    "message": "등록된 가게가 없습니다."
-                }), 404
-
-            restaurant_id_list = [row["restaurant_id"] for row in restaurant_list]
-
-            if client_restaurant_id in restaurant_id_list:
-                selected_restaurant_id = client_restaurant_id
-            else:
-                selected_restaurant_id = restaurant_id_list[0]
+            selected_restaurant_id, restaurant_list = get_selected_restaurant_id(
+                session_owner_id,
+                client_restaurant_id
+            )
 
             current_notice = None
             history_notice_list = []
@@ -140,6 +177,7 @@ def register_owner_routes(app):
                 "success": True,
                 "message": "사이드바 공지사항 조회 완료",
                 "restaurant_id": selected_restaurant_id,
+                "restaurant_list": restaurant_list,
                 "current_notice": current_notice,
                 "history_notice_list": history_notice_list
             })
@@ -149,7 +187,6 @@ def register_owner_routes(app):
                 "success": False,
                 "message": str(error)
             }), 500
-
 # --------------------------------------------------------------------------------------
 # 오너 메뉴 관리 페이지
 # --------------------------------------------------------------------------------------
@@ -223,9 +260,6 @@ def register_owner_routes(app):
     def owner_menu_management():
         session_user_id = session.get("user_id")
         session_owner_id = session.get("owner_id")
-
-        if not session_owner_id:
-            session_owner_id = 1
 
         db_owner = owner_db.get_owner_info(session_owner_id)
         db_categories = owner_db.get_menu_categories()

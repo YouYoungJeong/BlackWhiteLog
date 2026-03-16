@@ -1,6 +1,7 @@
 import os
 import pymysql
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -28,7 +29,6 @@ def get_connection():
 # 3. 이전 공지 카드는 is_pinned = 0 인 공지 중 updated_at 최신순 3건만 조회한다.
 # 4. 날짜 출력은 보드 카드에서 바로 쓰기 쉽게 문자열로 가공한다.
 # ====================================================================================
-
 
 # 전달받는 값
 # - owner_id: 오너 번호
@@ -76,7 +76,7 @@ def get_sidebar_current_notice_by_restaurant(restaurant_id):
                     updated_at
                 FROM owner_notices
                 WHERE restaurant_id = %s
-                AND is_pinned = 1
+                  AND is_pinned = 1
                 ORDER BY updated_at DESC, notice_id DESC
                 LIMIT 1
             """
@@ -109,7 +109,7 @@ def get_sidebar_history_notice_list_by_restaurant(restaurant_id, limit=3):
                     updated_at
                 FROM owner_notices
                 WHERE restaurant_id = %s
-                AND not is_pinned = 1
+                  AND is_pinned = 0
                 ORDER BY updated_at DESC, notice_id DESC
                 LIMIT %s
             """
@@ -117,3 +117,52 @@ def get_sidebar_history_notice_list_by_restaurant(restaurant_id, limit=3):
             return cursor.fetchall()
     finally:
         conn.close()
+
+
+# 전달받는 값
+# - restaurant_id: 식당 번호
+# 반환값
+# - 최근 10일 방문자 차트 데이터
+def get_visit_chart_by_restaurant(restaurant_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT
+                    DATE(visited_at) AS visit_date,
+                    COUNT(*) AS visit_count
+                FROM visits
+                WHERE restaurant_id = %s
+                  AND visited_at >= DATE_SUB(CURDATE(), INTERVAL 9 DAY)
+                  AND visited_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+                GROUP BY DATE(visited_at)
+                ORDER BY visit_date ASC
+            """
+            cursor.execute(sql, (restaurant_id,))
+            db_rows = cursor.fetchall()
+    finally:
+        conn.close()
+
+    db_map = {}
+    for row in db_rows:
+        visit_date = row["visit_date"]
+        if hasattr(visit_date, "strftime"):
+            visit_date = visit_date.strftime("%Y-%m-%d")
+        db_map[visit_date] = int(row["visit_count"])
+
+    today = datetime.now().date()
+    weekday_names = ["월", "화", "수", "목", "금", "토", "일"]
+
+    chart_list = []
+    for diff in range(9, -1, -1):
+        target_date = today - timedelta(days=diff)
+        target_date_str = target_date.strftime("%Y-%m-%d")
+
+        chart_list.append({
+            "date": target_date_str,
+            "label": target_date.strftime("%m/%d"),
+            "weekday": weekday_names[target_date.weekday()],
+            "visit_count": db_map.get(target_date_str, 0)
+        })
+
+    return chart_list
