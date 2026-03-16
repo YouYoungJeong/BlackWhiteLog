@@ -192,3 +192,58 @@ document.addEventListener("DOMContentLoaded", () => {
         moveToNoticeManagement(restaurantId, noticeId);
     });
 });
+
+let visitChartInstance = null;
+
+async function loadVisitChart(restaurantId) {
+    const response = await fetch(`/owner/board/api/visit_chart?restaurant_id=${restaurantId}`);
+    const data = await response.json();
+
+    if (!data.success) return;
+
+    const labels = data.chart_data.map(item => `${item.label}(${item.weekday})`);
+    const values = data.chart_data.map(item => item.visit_count);
+
+    const canvas = document.getElementById("visitChart");
+    if (!canvas) return;
+
+    if (visitChartInstance) {
+        visitChartInstance.destroy();
+    }
+
+    visitChartInstance = new Chart(canvas, {
+        type: "line",
+        data: {
+            labels,
+            datasets: [{
+                label: "방문자 수",
+                data: values,
+                borderColor: "#2f6fed",
+                backgroundColor: "rgba(47,111,237,0.12)",
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0,
+                        stepSize: 1
+                    }
+                },
+                x: {
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 0,
+                        minRotation: 0
+                    }
+                }
+            }
+        }
+    });
+}

@@ -1,3 +1,5 @@
+# routes/owner/owner_review_db.py
+
 import os
 import uuid
 import pymysql
@@ -173,10 +175,7 @@ def get_review_summary_by_restaurant(db_restaurant_id):
     }
 
 
-# ------------------------------------------------------------------------------------
-# 추가: 오너보드 mini-stat-card 용 3월 리뷰 개수 조회
-# - reviews.created_at 기준으로 3월 데이터만 count(*)
-# ------------------------------------------------------------------------------------
+# - 추가: 오너보드 mini-stat-card에서 3월 리뷰 수만 count(*) 조회
 def get_march_review_count_by_restaurant(db_restaurant_id):
     db_conn = get_connection()
     db_cursor = db_conn.cursor()
@@ -203,10 +202,8 @@ def get_march_review_count_by_restaurant(db_restaurant_id):
     return int(db_row["march_review_count"] or 0)
 
 
-# ------------------------------------------------------------------------------------
-# 추가: 오너보드 review-card 용 미리보기 목록 5개
-# - users.profile_image_url, users.nickname, reviews.rating, reviews.content
-# ------------------------------------------------------------------------------------
+# - 추가: 오너보드 review-card에서 restaurant_id 기준 리뷰 5개 미리보기 조회
+# - users.profile_image_url, users.nickname, reviews.rating, reviews.content 사용
 def get_board_review_list_by_restaurant(db_restaurant_id, limit=5):
     db_conn = get_connection()
     db_cursor = db_conn.cursor()
@@ -218,6 +215,7 @@ def get_board_review_list_by_restaurant(db_restaurant_id, limit=5):
             rv.content,
             rv.created_at,
             rv.updated_at,
+            vs.restaurant_id,
             us.user_id,
             us.nickname,
             us.profile_image_url
@@ -240,30 +238,38 @@ def get_board_review_list_by_restaurant(db_restaurant_id, limit=5):
     return db_review_list
 
 
-# ------------------------------------------------------------------------------------
-# 추가: 보드용 리뷰 카드 데이터 1회 조합
-# ------------------------------------------------------------------------------------
+# - 추가: 오너보드 리뷰 카드용 데이터 조합
 def get_board_review_summary_by_restaurant(db_restaurant_id, limit=5):
     db_review_list = get_board_review_list_by_restaurant(db_restaurant_id, limit=limit)
 
     review_list = []
     for db_review in db_review_list:
+        db_review_id = int(db_review["review_id"])
+
         review_list.append({
-            "review_id": db_review["review_id"],
+            "review_id": db_review_id,
+            "restaurant_id": int(db_review["restaurant_id"]),
             "nickname": db_review["nickname"] or "",
             "profile_image_url": db_review["profile_image_url"] or "",
             "rating": int(db_review["rating"]) if db_review["rating"] is not None else 0,
             "rating_text": "★" * int(db_review["rating"] or 0) + "☆" * (5 - int(db_review["rating"] or 0)),
             "content": db_review["content"] or "",
             "created_at": db_review["created_at"].strftime("%Y-%m-%d") if db_review["created_at"] else "",
-            "updated_at": db_review["updated_at"].strftime("%Y-%m-%d") if db_review["updated_at"] else ""
+            "updated_at": db_review["updated_at"].strftime("%Y-%m-%d") if db_review["updated_at"] else "",
+            "review_page": get_review_page_by_review_id(
+                db_restaurant_id=db_restaurant_id,
+                db_review_id=db_review_id,
+                client_tab_status="all",
+                client_sort_type="latest",
+                client_search_keyword="",
+                per_page=5
+            )
         })
 
     return {
         "march_review_count": get_march_review_count_by_restaurant(db_restaurant_id),
         "review_list": review_list
     }
-
 
 # ====================================================================================
 # 리뷰 목록 조건
@@ -410,10 +416,7 @@ def get_review_list_by_restaurant(
     return db_review_list
 
 
-# ------------------------------------------------------------------------------------
-# 추가: 특정 review_id 가 현재 정렬 기준에서 몇 페이지인지 계산
-# - 보드에서 클릭 후 리뷰관리 페이지에서 해당 리뷰가 보이는 페이지로 이동시키기 위함
-# ------------------------------------------------------------------------------------
+# - 추가: 오너보드 review-card 클릭 시 리뷰관리페이지에서 해당 리뷰가 있는 페이지 계산
 def get_review_page_by_review_id(
     db_restaurant_id,
     db_review_id,
@@ -607,7 +610,8 @@ def delete_owner_reply(db_review_id):
         sql = """
             UPDATE review_owner_replies
             SET reply_content = '',
-                is_active = 0
+                is_active = 0,
+                is_visible = 1
             WHERE review_id = %s
         """
         db_cursor.execute(sql, (db_review_id,))
