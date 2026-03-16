@@ -166,17 +166,17 @@ async function loadRankingData() {
         ]);
 
         const users = await listRes.json();
-        // 수정/추가된 부분 1: 로그인 여부 확인 및 블러 오버레이 제어
+        // 수정/추가된 부분 : 로그인 여부 확인 및 블러 오버레이 제어
         let me = null;
         const blurOverlay = document.getElementById('loginBlurOverlay');
-        const dashboardOverlay = document.getElementById('rankingDashboardOverlay'); // 🌟 대시보드 추가
+        const dashboardOverlay = document.getElementById('rankingDashboardOverlay'); // 대시보드 추가
         
         if (meRes.status === 401) {
             if (blurOverlay) blurOverlay.classList.remove('hidden-view');
-            if (dashboardOverlay) dashboardOverlay.style.overflow = 'hidden'; // 🌟 비로그인 시 스크롤 잠금!
+            if (dashboardOverlay) dashboardOverlay.style.overflow = 'hidden'; // 비로그인 시 스크롤 잠금!
         } else {
             if (blurOverlay) blurOverlay.classList.add('hidden-view');
-            if (dashboardOverlay) dashboardOverlay.style.overflow = 'auto'; // 🌟 로그인 시 스크롤 해제!
+            if (dashboardOverlay) dashboardOverlay.style.overflow = 'auto'; // 로그인 시 스크롤 해제!
             me = await meRes.json();
         }
 
@@ -189,11 +189,11 @@ async function loadRankingData() {
                 else if (i === 1) rankClass = "silver";
                 else if (i > 2) rankClass = "";
 
-                // 수정된 부분 2: me 객체가 있을 때(로그인)만 내 랭킹인지 비교
+                // 수정된 부분 : me 객체가 있을 때(로그인)만 내 랭킹인지 비교
                 const isMe = me ? (u.user_id === me.user_id) : false; 
                 const highlightClass = isMe ? "my-rank-highlight" : (i < 3 ? "top-rank" : "");
                 const meBadge = isMe ? `<span class="me-badge">ME</span>` : "";
-                // 수정: DB의 u.tier 대신 계산된 티어 정보(tInfo.korName)를 사용합니다.
+                // 수정 : DB의 u.tier 대신 계산된 티어 정보(tInfo.korName)를 사용합니다.
                 const tInfo = calculateTierInfo(u.point);
 
                 return `
@@ -203,7 +203,7 @@ async function loadRankingData() {
                             <strong>${u.nickname} ${meBadge}</strong>
                             <span class="rank-tier">💍 ${u.tier}</span>
                         </div>
-                        <div class="rank-pts">${tInfo.displayPoint.toLocaleString()} <span>pts</span></div>
+                        <div class="rank-pts">${(u.point || 0).toLocaleString()} <span>pts</span></div>
                     </div>
                 `;
             }).join('');
