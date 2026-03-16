@@ -194,7 +194,21 @@ async function handleVisitReceiptSubmit(event) {
 
         showVisitMessage(result.message || "등록완료!", "success");
 
-        await refreshRestaurantDataAfterVisit();
+        // 영수증 등록 성공 시 랭킹 & 요약 데이터 백그라운드 갱신 
+        if (typeof loadRankingData === 'function') loadRankingData();
+        if (typeof loadRankingSummary === 'function') loadRankingSummary();
+
+        // 화면 전체를 새로고침하던 await refreshRestaurantDataAfterVisit(); 를 지우고,
+        // 왼쪽 리스트에서 방금 도장 찍은 식당의 '방문' 숫자만 +1 올려줍니다.
+        const card = document.querySelector(`.restaurant-card[data-id="${result.restaurant_id}"]`);
+        if (card) {
+            card.querySelectorAll('.stat-pill').forEach(pill => {
+                if (pill.innerText.includes('방문')) {
+                    const count = parseInt(pill.innerText.replace(/[^0-9]/g, '')) || 0;
+                    pill.innerText = `방문 ${count + 1}`;
+                }
+            });
+        }
 
         setTimeout(() => {
             closeVisitReceiptModal();

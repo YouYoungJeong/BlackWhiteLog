@@ -104,3 +104,23 @@ def create_visit_with_menus(user_id, restaurant_id, purchase_date, items):
 
     finally:
         conn.close()
+
+def exists_visit_same_day(user_id, restaurant_id, purchase_date):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    sql = """
+        SELECT visit_id
+        FROM visits
+        WHERE user_id = %s
+          AND restaurant_id = %s
+          AND DATE(visited_at) = %s
+        LIMIT 1
+    """
+    cursor.execute(sql, (user_id, restaurant_id, purchase_date))
+    row = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return row is not None

@@ -14,6 +14,7 @@ from .visit_db import (
     create_visit_with_menus,
     find_menu_by_name,
     find_restaurant_id_by_store_name,
+    exists_visit_same_day,
 )
 
 load_dotenv()
@@ -159,6 +160,16 @@ def register_visit_by_receipt():
                 "message": "등록할 수 있는 음식점을 찾지 못했습니다.",
                 "analysis": payload
             }), 404
+        # 같은 날 같은 음식점 도장 중복 검사
+        if exists_visit_same_day(
+            user_id=user_id,
+            restaurant_id=restaurant["restaurant_id"],
+            purchase_date=payload["purchase_date"]
+        ):
+            return jsonify({
+                "success": False,
+                "message": "같은 날 같은 음식점에는 도장을 한 번만 찍을 수 있습니다."
+            }), 409
 
         resolved_items = []
         unmatched_items = []
@@ -189,6 +200,14 @@ def register_visit_by_receipt():
             purchase_date=payload["purchase_date"],
             items=resolved_items
         )
+        
+        # 영수증 도장 찍히자마자 즉시 30점 지급 & 티어 검사
+        try:
+            from routes.ranking.user_ranking_db import process_mission, check_and_update_tier
+            if process_mission(user_id, 'DAILY_VISIT', 30, is_weekly=False):
+                check_and_update_tier(user_id)
+        except Exception as e:
+            print(f"방문 점수 즉시 지급 오류: {e}")
 
         return jsonify({
             "success": True,
