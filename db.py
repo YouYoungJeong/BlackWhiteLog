@@ -351,11 +351,6 @@ def add_favorite_restaurant(user_id, restaurant_id):
         with conn.cursor() as cursor:
             cursor.execute(sql, (user_id, restaurant_id))
         conn.commit()
-
-        # 즐겨찾기 추가 성공 시, 일일 즐겨찾기 미션 20점 지급 시도!
-        from routes.ranking.user_ranking_db import process_mission
-        process_mission(user_id, 'DAILY_FAVORITE', 20, is_weekly=False)
-        
     finally:
         conn.close()
 

@@ -132,6 +132,9 @@ async function loadRankingSummary() {
         const gaugeFill = document.getElementById('summaryGaugeFill');
         if (gaugeFill) gaugeFill.style.width = tInfo.percent + "%";
 
+        const progressText = document.querySelector('.activity-summary-progress-text');
+        if (progressText) progressText.innerText = Math.floor(tInfo.percent) + "%";
+
         const visitCount = document.getElementById('summaryVisitCount');
         if (visitCount) visitCount.innerText = `${data.visit_count || 0}회`;
 
@@ -467,7 +470,6 @@ window.checkDailyAttendance = async function() {
         const result = await response.json();
         
         if (result.success) {
-            alert(result.message);
             loadRankingData(); 
             if (typeof loadRankingSummary === 'function') loadRankingSummary();
         } else {
@@ -478,3 +480,7 @@ window.checkDailyAttendance = async function() {
         alert("출석체크 중 오류가 발생했습니다.");
     }
 };
+
+// 다른 파일에서 이 함수 부르도록
+window.loadRankingData = loadRankingData;
+window.loadRankingSummary = loadRankingSummary;
