@@ -86,8 +86,13 @@ def get_restaurant_reviews(restaurant_id):
         
 def save_restaurant_review(restaurant_id, user_id, rating, content, image_urls=None):
     """
-    [명세서 준수] visits는 필수 외래키만, reviews는 created_at 포함하여 저장
+    visits는 필수 외래키만, reviews는 created_at 포함하여 저장
     """
+
+    from db import get_connection
+    # 티어 업데이트 함수를 안에서 임포트 (순환 참조 방지)
+    from routes.ranking.user_ranking_db import check_and_update_tier
+
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
@@ -117,9 +122,19 @@ def save_restaurant_review(restaurant_id, user_id, rating, content, image_urls=N
                 for idx, url in enumerate(image_urls):
                     # 명세서에 따라 원본 이미지 경로(image_url)와 출력 순서(sort_order) 저장
                     cursor.execute(image_sql, (review_id, url, idx + 1))
-                    
+
             conn.commit()
-            return True
+
+        # [변경] 미션 처리 (일일 리뷰 달성 50점) - 여기서 중복을 걸러냅니다!
+        from routes.ranking.user_ranking_db import process_mission, check_and_update_tier 
+        
+        # 하루 첫 리뷰 50점 지급 시도
+        process_mission(user_id, 'DAILY_REVIEW', 50, is_weekly=False)
+
+        # 티어 검사 실행
+        check_and_update_tier(user_id)
+        return True
+    
     except Exception as e:
         conn.rollback()
         return False

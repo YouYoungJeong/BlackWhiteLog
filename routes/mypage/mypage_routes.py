@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from functools import wraps
 
-from .mypage_db import fetch_my_reviews, fetch_my_favorites, fetch_my_visits, fetch_my_achievements
+from .mypage_db import fetch_my_reviews, fetch_my_favorites, fetch_my_visits, fetch_my_achievements, delete_my_favorite
 from routes.login.login_db import update_user_nickname, find_user_by_nickname
 
 mypage_bp = Blueprint("mypage", __name__)
@@ -67,12 +67,30 @@ def mypage_reviews():
     return render_template("mypage/mypage_reviews.html", reviews=reviews, user_nickname=session.get("user_nickname"))
 
 
+# ==================================================
+# 내 즐겨찾기 목록 삭제 실행
+# ==================================================
 @mypage_bp.route("/mypage/favorites")
 @login_required
 def mypage_favorites():
     user_id = session["user_id"]
     favorites = fetch_my_favorites(user_id)
     return render_template("mypage/mypage_favorites.html", favorites=favorites, user_nickname=session.get("user_nickname"))
+
+
+@mypage_bp.route("/favorites/delete", methods=["POST"])
+@login_required
+def delete_favorite():
+    user_id = session["user_id"]
+    favorite_id = request.form.get("favorite_id", type=int)
+
+    if not favorite_id:
+        flash("잘못된 요청입니다.")
+        return redirect(url_for("mypage.mypage_favorites"))
+
+    delete_my_favorite(user_id, favorite_id)
+    flash("즐겨찾기가 삭제되었습니다.")
+    return redirect(url_for("mypage.mypage_favorites"))
 
 
 @mypage_bp.route("/mypage/visits")

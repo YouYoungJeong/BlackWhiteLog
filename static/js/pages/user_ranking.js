@@ -166,13 +166,14 @@ async function loadRankingData() {
         // 수정/추가된 부분 1: 로그인 여부 확인 및 블러 오버레이 제어
         let me = null;
         const blurOverlay = document.getElementById('loginBlurOverlay');
+        const dashboardOverlay = document.getElementById('rankingDashboardOverlay'); // 🌟 대시보드 추가
         
         if (meRes.status === 401) {
-            // 비로그인 시: 블러 오버레이 켜기
             if (blurOverlay) blurOverlay.classList.remove('hidden-view');
+            if (dashboardOverlay) dashboardOverlay.style.overflow = 'hidden'; // 🌟 비로그인 시 스크롤 잠금!
         } else {
-            // 로그인 시: 블러 오버레이 끄고 내 데이터 파싱
             if (blurOverlay) blurOverlay.classList.add('hidden-view');
+            if (dashboardOverlay) dashboardOverlay.style.overflow = 'auto'; // 🌟 로그인 시 스크롤 해제!
             me = await meRes.json();
         }
 
@@ -313,6 +314,51 @@ async function loadRankingData() {
                 }
             }
             equippedSlotsContainer.innerHTML = slotsHtml;
+        }
+
+
+        // 일일/주간 도전 과제 동적 렌더링
+        if (me.missions_data) {
+            const d = me.missions_data.daily;
+            const w = me.missions_data.weekly;
+            
+            // 일일 과제 그리기
+            const dailyHtml = [
+                { name: "일일 출석 완료", ...d.attendance },
+                { name: "새로운 리뷰 작성", ...d.review },
+                { name: "식당 즐겨찾기 추가", ...d.favorite }
+            ].map(m => {
+                const isCompleted = m.count >= m.target;
+                return `
+                    <li class="${isCompleted ? 'completed' : ''}">
+                        <span class="check-icon">${isCompleted ? '✔️' : ''}</span>
+                        <span class="mission-text">${m.name} ${m.count}/${m.target}</span>
+                        <span class="mission-reward">+${m.reward} pts</span>
+                    </li>
+                `;
+            }).join('');
+            
+            // 주간 과제 그리기
+            const weeklyHtml = [
+                { name: "주간 출석 완료", ...w.attendance },
+                { name: "주간 리뷰 작성", ...w.review },
+                { name: "식당 즐겨찾기 추가", ...w.favorite }
+            ].map(m => {
+                const isCompleted = m.count >= m.target;
+                return `
+                    <li class="${isCompleted ? 'completed' : ''}">
+                        <span class="check-icon">${isCompleted ? '✔️' : ''}</span>
+                        <span class="mission-text">${m.name} ${m.count}/${m.target}</span>
+                        <span class="mission-reward">+${m.reward} pts</span>
+                    </li>
+                `;
+            }).join('');
+            
+            const dailyList = document.querySelector('.mission-card-day .mission-list');
+            if (dailyList) dailyList.innerHTML = dailyHtml;
+            
+            const weeklyList = document.querySelector('.mission-card-week .mission-list');
+            if (weeklyList) weeklyList.innerHTML = weeklyHtml;
         }
 
         // 렌더링이 완료된 후, 동적으로 생성된 요소들에 대해 교체(Swap) 이벤트를 연결합니다.

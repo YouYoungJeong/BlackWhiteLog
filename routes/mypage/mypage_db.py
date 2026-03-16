@@ -21,22 +21,6 @@ _dummy_my_reviews = [
     },
 ]
 
-_dummy_my_favorites = [
-    {
-        "favorite_id": 1,
-        "restaurant_name": "혜성초밥",
-        "category": "일식",
-        "region": "수원",
-        "created_at": "2026-03-13 14:20:00",
-    },
-    {
-        "favorite_id": 2,
-        "restaurant_name": "한강분식",
-        "category": "분식",
-        "region": "서울",
-        "created_at": "2026-03-11 10:00:00",
-    },
-]
 
 _dummy_my_visits = [
     {
@@ -71,19 +55,62 @@ _dummy_my_achievements = [
     },
 ]
 
+# ==================================================
+# 내 즐겨찾기 목록 조회 (디비 연결)
+# ==================================================
+from db import get_connection
+
+def fetch_my_favorites(user_id):
+    sql = """
+        SELECT
+            uf.favorite_id,
+            uf.restaurant_id,
+            r.name AS restaurant_name,
+            COALESCE(rc.restaurant_category_name, '카테고리 없음') AS category,
+            COALESCE(r.region_sigungu, '지역 정보 없음') AS region,
+            DATE_FORMAT(uf.created_at, '%%Y-%%m-%%d %%H:%%i:%%s') AS created_at
+        FROM user_favorites uf
+        INNER JOIN restaurants r
+            ON uf.restaurant_id = r.restaurant_id
+        LEFT JOIN restaurant_categories rc
+            ON r.restaurant_category_id = rc.restaurant_category_id
+        WHERE uf.user_id = %s
+        ORDER BY uf.created_at DESC
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (user_id,))
+            return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+# ==================================================
+# 내 즐겨찾기 목록 삭제 (디비 연결)
+# ==================================================
+def delete_my_favorite(user_id, favorite_id):
+    sql = """
+        DELETE FROM user_favorites
+        WHERE favorite_id = %s AND user_id = %s
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (favorite_id, user_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 
 # =========================
 # 내 리뷰 목록 조회
 # =========================
 def fetch_my_reviews(user_id):
     return _dummy_my_reviews
-
-
-# =========================
-# 내 즐겨찾기 목록 조회
-# =========================
-def fetch_my_favorites(user_id):
-    return _dummy_my_favorites
 
 
 # =========================
