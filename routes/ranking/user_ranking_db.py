@@ -146,7 +146,7 @@ def check_and_update_tier(user_id):
             if new_tier != current_tier:
                 cursor.execute("UPDATE users SET tier = %s WHERE user_id = %s", (new_tier, user_id))
                 conn.commit()
-                return True # 승급이 발생했음을 반환 (나중에 축하 알림창 띄우기 용도)
+                return True # 승급이 발생했음을 반환 
             
             return False # 승급하지 않음
     except Exception as e:

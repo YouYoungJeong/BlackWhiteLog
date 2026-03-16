@@ -345,7 +345,7 @@ async function openDetailPanel(restaurantId, targetTab) {
                 let reviewHtml = '<ul style="list-style: none; padding: 0; margin: 0; margin-top: 10px;">';
                 
                 reviews.forEach(r => {
-                    const dateStr = new Date(r.created_at).toLocaleDateString('ko-KR');
+                    const dateStr = r.created_at;
                     const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
                     const userImgStyle = r.user_image ? `background-image: url('${r.user_image}');` : `background-color: #ddd;`;
                     const reviewImageHtml = r.review_image ? `<img src="${r.review_image}" alt="리뷰 이미지" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 12px;">` : '';

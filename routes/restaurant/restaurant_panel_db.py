@@ -102,12 +102,13 @@ def get_restaurant_menus(restaurant_id, user_id=None):
 def get_restaurant_reviews(restaurant_id):
     """특정 음식점의 리뷰(댓글) 목록을 가져오는 함수"""
     # reviews, visits, users, review_image 4개 테이블 조인
+    # 자바스크립트가 시간 오해하지 못하게 텍스트로 가져옴
     sql = """
         SELECT 
             r.review_id, 
             r.rating, 
             r.content, 
-            r.created_at,
+            DATE_FORMAT(r.created_at, '%%Y. %%m. %%d.') AS created_at,
             u.nickname, 
             u.profile_image_url AS user_image,
             v.user_id,
