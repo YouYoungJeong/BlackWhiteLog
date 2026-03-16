@@ -18,7 +18,8 @@ def api_restaurant_detail(restaurant_id):
 @restaurant_panel_bp.route("/api/restaurants/<int:restaurant_id>/menus")
 def api_restaurant_menus(restaurant_id):
     """특정 음식점의 메뉴 목록 반환 API"""
-    menus = get_restaurant_menus(restaurant_id)
+    user_id = session.get("user_id")
+    menus = get_restaurant_menus(restaurant_id, user_id=user_id)
     return jsonify(menus)
 
 @restaurant_panel_bp.route("/api/restaurants/<int:restaurant_id>/reviews")

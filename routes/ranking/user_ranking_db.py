@@ -1,5 +1,7 @@
 # user_ranking_db.py
 from db import get_connection
+import datetime
+import pymysql
 
 TIER_THRESHOLDS = {
     'BRONZE': 0,
@@ -151,5 +153,125 @@ def check_and_update_tier(user_id):
         conn.rollback()
         print(f"❌ DB Error (check_and_update_tier): {e}")
         return False
+    finally:
+        conn.close()
+
+def process_mission(user_id, mission_type, points, is_weekly=False):
+    """
+    미션 달성 여부를 확인하고, 오늘(또는 이번 주) 처음 달성했다면 점수를 지급합니다.
+    """
+    
+    now = datetime.datetime.now()
+    
+    if is_weekly:
+        # ISO 달력 기준으로 '2026-W12' 형태로 주간 키 생성 (월요일 기준 갱신)
+        year, week, _ = now.isocalendar()
+        mission_key = f"{year}-W{week:02d}"
+    else:
+        # 일일 미션은 '2026-03-16' 형태로 생성
+        mission_key = now.strftime("%Y-%m-%d")
+        
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # SELECT로 미리 확인 PK 증발 차단
+            check_sql = "SELECT 1 FROM user_missions WHERE user_id=%s AND mission_type=%s AND mission_key=%s"
+            cursor.execute(check_sql, (user_id, mission_type, mission_key))
+            if cursor.fetchone():
+                return False # 이미 달성했으면 번호표 안 뽑고 조용히 종료
+            
+            # 미션 테이블에 Insert 시도 (UNIQUE 제약조건 덕분에 이미 받았으면 여기서 예외 발생!)
+            insert_sql = """
+                INSERT INTO user_missions (user_id, mission_type, mission_key, created_at)
+                VALUES (%s, %s, %s, NOW())
+            """
+            cursor.execute(insert_sql, (user_id, mission_type, mission_key))
+            
+            # Insert가 무사히 통과되었다면 = 오늘 처음 달성한 것! -> 점수 지급
+            update_sql = "UPDATE users SET point = point + %s WHERE user_id = %s"
+            cursor.execute(update_sql, (points, user_id))
+            
+            conn.commit()
+            return True # 보상 지급 완료!
+            
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Mission Error: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_user_missions_status(user_id):
+    from db import get_connection
+    from routes.ranking.user_ranking_db import process_mission
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # --- 일일 통계 체크 ---
+            # 일일 출석 횟수 (직접 출석체크 버튼을 눌렀는지 user_missions 확인)
+            cursor.execute("SELECT COUNT(*) as cnt FROM user_missions WHERE user_id=%s AND mission_type='DAILY_ATTENDANCE' AND DATE(created_at) = CURDATE()", (user_id,))
+            daily_attendance = cursor.fetchone()['cnt']
+            
+            # 영수증 도장(Visit) 횟수 (visits 테이블 확인)
+            cursor.execute("""
+                SELECT COUNT(DISTINCT v.visit_id) as cnt 
+                FROM visits v
+                JOIN visit_menus vm ON v.visit_id = vm.visit_id
+                WHERE v.user_id=%s AND DATE(vm.created_at) = CURDATE()
+            """, (user_id,))
+            daily_visits = cursor.fetchone()['cnt']
+            
+            # 리뷰 횟수 (오늘 작성한 리뷰)
+            cursor.execute("""
+                SELECT COUNT(*) as cnt FROM reviews r 
+                JOIN visits v ON r.visit_id = v.visit_id 
+                WHERE v.user_id=%s AND DATE(r.created_at) = CURDATE()
+            """, (user_id,))
+            daily_reviews = cursor.fetchone()['cnt']
+            
+            # --- 주간 통계 체크 ---
+            cursor.execute("SELECT COUNT(*) as cnt FROM user_missions WHERE user_id=%s AND mission_type='DAILY_ATTENDANCE' AND YEARWEEK(created_at, 1) = YEARWEEK(NOW(), 1)", (user_id,))
+            weekly_attendance = cursor.fetchone()['cnt']
+            
+            cursor.execute("""
+                SELECT COUNT(DISTINCT v.visit_id) as cnt 
+                FROM visits v
+                JOIN visit_menus vm ON v.visit_id = vm.visit_id
+                WHERE v.user_id=%s AND YEARWEEK(vm.created_at, 1) = YEARWEEK(NOW(), 1)
+            """, (user_id,))
+            weekly_visits = cursor.fetchone()['cnt']
+            
+            cursor.execute("""
+                SELECT COUNT(*) as cnt FROM reviews r 
+                JOIN visits v ON r.visit_id = v.visit_id 
+                WHERE v.user_id=%s AND YEARWEEK(r.created_at, 1) = YEARWEEK(NOW(), 1)
+            """, (user_id,))
+            weekly_reviews = cursor.fetchone()['cnt']
+            
+            # 일일 보상 조건 달성 시 자동 지급 (랭킹 탭을 여는 순간 못 받은 30점을 챙겨줍니다!)
+            if daily_visits >= 1: 
+                process_mission(user_id, 'DAILY_VISIT', 30, is_weekly=False)
+
+            # 주간 보상 조건 달성 시 자동 지급 검사
+            if weekly_attendance >= 5: process_mission(user_id, 'WEEKLY_ATTENDANCE', 100, is_weekly=True)
+            if weekly_visits >= 5: process_mission(user_id, 'WEEKLY_VISIT', 50, is_weekly=True)
+            if weekly_reviews >= 5: process_mission(user_id, 'WEEKLY_REVIEW', 20, is_weekly=True)
+
+            # 프론트엔드로 보낼 JSON (즐겨찾기 제거, visit 추가)
+            return {
+                "daily": {
+                    "attendance": {"count": daily_attendance, "target": 1, "reward": 10},
+                    "visit": {"count": min(daily_visits, 1), "target": 1, "reward": 30},
+                    "review": {"count": min(daily_reviews, 1), "target": 1, "reward": 50}
+                },
+                "weekly": {
+                    "attendance": {"count": min(weekly_attendance, 5), "target": 5, "reward": 100},
+                    "visit": {"count": min(weekly_visits, 5), "target": 5, "reward": 50},
+                    "review": {"count": min(weekly_reviews, 5), "target": 5, "reward": 20}
+                }
+            }
+    except Exception as e:
+        print(f"❌ Mission Status Error: {e}")
+        return None
     finally:
         conn.close()
