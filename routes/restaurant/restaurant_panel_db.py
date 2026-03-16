@@ -32,26 +32,36 @@ def get_restaurant_detail(restaurant_id, user_id=None):
                 return None
 
             row["is_favorite"] = False
-            row["has_visited"] = False # 방문 여부 기본값
-            row["has_reviewed_latest_visit"] = False # 리뷰 작성 여부
+            row["has_visited"] = False
+            row["has_reviewed_latest_visit"] = False
             
             if user_id:
                 row["is_favorite"] = is_favorite_restaurant(user_id, restaurant_id)
-                # 최근 방문 도장 기록 찾기
-                cursor.execute("SELECT visit_id FROM visits WHERE user_id=%s AND restaurant_id=%s ORDER BY visited_at DESC LIMIT 1", (user_id, restaurant_id))
+
+                cursor.execute(
+                    "SELECT visit_id FROM visits WHERE user_id=%s AND restaurant_id=%s ORDER BY visited_at DESC LIMIT 1",
+                    (user_id, restaurant_id)
+                )
                 visit_row = cursor.fetchone()
+
                 if visit_row:
                     row["has_visited"] = True
-                    latest_visit_id = visit_row['visit_id']
-                    
-                # 그 최근 도장으로 이미 리뷰를 작성했는지 검사
-                    cursor.execute("SELECT 1 FROM reviews WHERE visit_id=%s LIMIT 1", (latest_visit_id,))
+                    latest_visit_id = visit_row["visit_id"]
+
+                    cursor.execute("""
+                        SELECT 1
+                        FROM reviews
+                        WHERE visit_id = %s
+                          AND COALESCE(status, 'ACTIVE') = 'ACTIVE'
+                        LIMIT 1
+                    """, (latest_visit_id,))
                     if cursor.fetchone():
                         row["has_reviewed_latest_visit"] = True
                     
             return row
     finally:
         conn.close()
+
 
 def get_restaurant_menus(restaurant_id, user_id=None):
     """특정 음식점의 메뉴 목록 + 현재 유저가 먹은 메뉴 여부를 가져오는 함수"""

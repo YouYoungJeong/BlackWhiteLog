@@ -455,7 +455,9 @@ def update_admin_review_status(review_id, new_status):
     try:
         with conn.cursor() as cursor:
             cursor.execute(sql, (new_status, review_id))
-            return cursor.rowcount > 0
+            updated = cursor.rowcount > 0
+        conn.commit()
+        return updated
     finally:
         conn.close()
 
@@ -468,10 +470,23 @@ def hide_admin_review(review_id):
 
 
 # =========================
-# 관리자 리뷰 관리 - 리뷰 삭제(소프트 삭제)
+# 관리자 리뷰 관리 - 리뷰 삭제(실제 삭제)
 # =========================
 def soft_delete_admin_review(review_id):
-    return update_admin_review_status(review_id, "DELETED")
+    sql = """
+        DELETE FROM reviews
+        WHERE review_id = %s
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (review_id,))
+            deleted = cursor.rowcount > 0
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
 
 
 # =========================
