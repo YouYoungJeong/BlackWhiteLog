@@ -130,16 +130,17 @@ tabButtons.forEach(btn => {
 });
 
 // 패널 열기 및 AJAX 정보 호출 함수 
-async function openDetailPanel(restaurantId) {
+async function openDetailPanel(restaurantId, targetTab) {
     const currentUserId = window.__INITIAL_STATE__?.userId ?? null;
     const detailPanel = document.getElementById("restaurantDetailPanel");
     detailPanel.classList.remove("hidden");
 
-    // 추가: 나중에 리ㄴ뷰 저장할 때 쓰기 위해 ID를 저장해둡니다.
+    // 추가: 나중에 리뷰 저장할 때 쓰기 위해 ID를 저장해둡니다.
     detailPanel.setAttribute("data-id", restaurantId);
-    // 식당에 방문 했는지
-    // '정보' 탭을 강제로 클릭하여 활성화
-    document.querySelector('.tab-btn[data-tab="info"]').click();
+
+    // 매개변수로 받은 탭을 클릭해 줍니다.
+    const tabBtn = document.querySelector(`.tab-btn[data-tab="${targetTab}"]`);
+    if (tabBtn) tabBtn.click();
 
     const infoTab = document.getElementById("tab-info");
     infoTab.innerHTML = "<p>가게 정보를 불러오는 중...</p>";
@@ -392,8 +393,26 @@ async function executeDelete(review_id, restaurantId) {
         const result = await res.json();
 
         if (result.success) {
-            // 말풍선에서 누른 거라, 삭제 성공 알림조차 생략하고 스르륵 리스트만 갱신하면 더 고급스럽습니다.
-            openDetailPanel(restaurantId); // 목록 갱신
+            // 삭제했으니 다시 리뷰를 쓸 수 있도록 차단 해제!
+            const detailPanel = document.getElementById("restaurantDetailPanel");
+            if (detailPanel) {
+                detailPanel.setAttribute("data-has-reviewed", "false"); 
+            }
+
+            // 깜빡임 없이 'review' 탭을 유지하며 리스트만 스르륵 갱신
+            openDetailPanel(restaurantId, "review"); 
+            
+            // 메인 화면의 식당 카드에서 '리뷰' 숫자만 -1 부드럽게 감소
+            const card = document.querySelector(`.restaurant-card[data-id="${restaurantId}"]`);
+            if (card) {
+                card.querySelectorAll('.stat-pill').forEach(pill => {
+                    if (pill.innerText.includes('리뷰')) {
+                        const count = parseInt(pill.innerText.replace(/[^0-9]/g, '')) || 0;
+                        // 혹시라도 0 밑으로 내려가지 않게 방어 (Math.max)
+                        pill.innerText = `리뷰 ${Math.max(0, count - 1)}`;
+                    }
+                });
+            }
         } else {
             alert(result.message || "삭제 권한이 없습니다.");
         }
@@ -631,7 +650,27 @@ document.getElementById("submitReviewBtn").addEventListener("click", async () =>
 
         if (result.success) {
             resetReviewForm(); // 폼 초기화
-            openDetailPanel(restaurantId); // 리뷰 목록 새로고침하여 방금 쓴 글 확인
+            // 방금 리뷰를 성공적으로 썼으니, 즉시 별점 클릭 차단 속성 활성화
+            detailPanel.setAttribute("data-has-reviewed", "true"); 
+            
+            openDetailPanel(restaurantId, "review"); // 리뷰 목록 새로고침하여 방금 쓴 글 확인
+            
+            // 화면 전체를 깜빡이게 하던 fetchRestaurants()를 지우고,
+            // 왼쪽 리스트에서 해당 식당 카드를 찾아 '리뷰' 글자 안의 숫자만 +1 올려줍니다.
+            const card = document.querySelector(`.restaurant-card[data-id="${restaurantId}"]`);
+            if (card) {
+                card.querySelectorAll('.stat-pill').forEach(pill => {
+                    if (pill.innerText.includes('리뷰')) {
+                        const count = parseInt(pill.innerText.replace(/[^0-9]/g, '')) || 0;
+                        pill.innerText = `리뷰 ${count + 1}`;
+                    }
+                });
+            }
+            
+            // 랭킹 탭 & 요약 카드 즉시 업데이트 (리뷰 작성 50점 실시간 반영)
+            if (typeof loadRankingData === 'function') loadRankingData();
+            if (typeof loadRankingSummary === 'function') loadRankingSummary();
+
         } else {
             alert("등록 실패: " + result.message);
         }
