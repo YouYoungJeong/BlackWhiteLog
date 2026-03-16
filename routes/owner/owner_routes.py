@@ -1,4 +1,4 @@
-from flask import render_template, request, jsonify, session, redirect, url_for
+from flask import render_template, request, jsonify, session, redirect, url_for, flash
 import routes.owner.owner_menu_db as owner_db
 import routes.owner.owner_notices_db as owner_notice_db
 import routes.owner.owner_board_db as owner_board_db
