@@ -1,0 +1,462 @@
+@charset "UTF-8";
+
+/* =========================
+   메뉴관리 페이지 전용 토큰
+   - 공통 헤더/푸터/드로어 스타일은 owner_layout_common.css / owner_drawer.css에서 관리
+   ========================= */
+:root {
+    --color-black: #111111;
+    --color-text: #222222;
+    --color-white: #ffffff;
+    --color-bg: #f5f5f2;
+    --color-line: #d8ddd2;
+    --color-line-soft: #e8ece3;
+    --color-sage: #98ad8a;
+    --color-sage-dark: #7f9672;
+    --color-sage-light: #edf3e8;
+    --color-gray-btn: #f3f4f2;
+    --shadow-card: 0 8px 24px rgba(17, 17, 17, 0.06);
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 10px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Pretendard", "Noto Sans KR", sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+body {
+    min-height: 100vh;
+}
+
+img {
+    display: block;
+    max-width: 100%;
+}
+
+/* =========================
+   페이지 레이아웃
+   ========================= */
+.owner-menu-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    width: min(100%, 760px);
+    margin: 0 auto;
+    padding: 0 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* =========================
+   공통 카드
+   ========================= */
+.menu-form-card,
+.registered-menu-card {
+    background: var(--color-white);
+    border: 1px solid var(--color-line-soft);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 28px 26px;
+}
+
+.section-title {
+    margin: 0 0 24px;
+    font-size: 1.95rem;
+    font-weight: 800;
+    color: var(--color-black);
+    letter-spacing: -0.03em;
+}
+
+.sub-title {
+    margin: 0 0 18px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-black);
+}
+
+/* =========================
+   메뉴 등록 폼
+   ========================= */
+.menu-upload-section,
+.menu-detail-section,
+.menu-option-section {
+    padding-top: 18px;
+    border-top: 1px solid var(--color-line-soft);
+}
+
+.menu-detail-section,
+.menu-option-section {
+    margin-top: 16px;
+}
+
+.upload-form-grid {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 18px;
+    align-items: start;
+}
+
+.image-upload-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.preview-image-wrap {
+    width: 160px;
+    height: 136px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    background: #f0f0ec;
+}
+
+.preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.menu-input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.form-row {
+    width: 100%;
+}
+
+.form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-row label,
+.field-group label {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-black);
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    width: 100%;
+    height: 48px;
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    padding: 0 14px;
+    background: var(--color-white);
+    color: var(--color-text);
+    outline: none;
+    font: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    border-color: var(--color-sage);
+    box-shadow: 0 0 0 4px rgba(152, 173, 138, 0.15);
+}
+
+.price-input-wrap {
+    position: relative;
+}
+
+.price-input-wrap input {
+    padding-right: 44px;
+}
+
+.price-unit {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666666;
+    font-weight: 700;
+}
+
+.horizontal-row {
+    display: grid;
+    grid-template-columns: 330px 1fr;
+    gap: 18px;
+    align-items: end;
+}
+
+.field-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.field-group label {
+    white-space: nowrap;
+}
+
+.category-group select,
+.description-group input {
+    min-width: 0;
+}
+
+/* =========================
+   버튼
+   - 공통 헤더 버튼은 owner_layout_common.css 사용
+   ========================= */
+.point-btn,
+.sub-btn,
+.ghost-btn,
+.outline-btn,
+.menu-edit-btn,
+.menu-delete-btn {
+    height: 46px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    padding: 0 18px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.point-btn {
+    background: var(--color-sage);
+    border-color: var(--color-sage);
+    color: var(--color-white);
+}
+
+.point-btn:hover {
+    background: var(--color-sage-dark);
+    border-color: var(--color-sage-dark);
+}
+
+.sub-btn,
+.ghost-btn {
+    background: var(--color-gray-btn);
+    border-color: var(--color-line);
+    color: var(--color-black);
+}
+
+.sub-btn:hover,
+.ghost-btn:hover {
+    background: #ebeee8;
+    border-color: #cbd3c2;
+}
+
+.outline-btn {
+    background: var(--color-white);
+    border-color: var(--color-line);
+    color: var(--color-black);
+}
+
+.outline-btn:hover {
+    background: var(--color-sage-light);
+    border-color: var(--color-sage);
+}
+
+.upload-btn {
+    width: 100%;
+}
+
+.option-group-wrap {
+    margin-bottom: 18px;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex-wrap: wrap;
+}
+
+.check-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-black);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.check-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-sage-dark);
+}
+
+.action-btn-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-line-soft);
+    flex-wrap: wrap;
+}
+
+/* =========================
+   등록된 메뉴 카드
+   ========================= */
+.registered-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.registered-menu-item {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid var(--color-line-soft);
+    border-radius: var(--radius-md);
+    background: #fbfcfa;
+}
+
+.registered-menu-thumb {
+    width: 90px;
+    height: 90px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f1f1ec;
+    border: 1px solid var(--color-line);
+}
+
+.registered-menu-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.registered-menu-info {
+    min-width: 0;
+}
+
+.registered-menu-name {
+    margin: 0 0 6px;
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: var(--color-black);
+}
+
+.registered-menu-price {
+    margin: 0;
+    color: #666666;
+    font-weight: 700;
+}
+
+.registered-menu-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.menu-edit-btn,
+.menu-delete-btn {
+    min-width: 84px;
+}
+
+.menu-edit-btn {
+    border: 1px solid var(--color-sage);
+    background: var(--color-sage-light);
+    color: var(--color-sage-dark);
+}
+
+.menu-edit-btn:hover {
+    background: #dfe9d6;
+}
+
+.menu-delete-btn {
+    border: 1px solid var(--color-line);
+    background: var(--color-white);
+    color: #555555;
+}
+
+.menu-delete-btn:hover {
+    border-color: #bfc8b6;
+    background: #f3f4ef;
+}
+
+/* =========================
+   반응형
+   ========================= */
+@media (max-width: 860px) {
+    .main-content {
+        width: min(100%, calc(100% - 20px));
+        padding: 0 0 28px;
+    }
+
+    .menu-form-card,
+    .registered-menu-card {
+        padding: 22px 18px;
+    }
+
+    .upload-form-grid,
+    .horizontal-row,
+    .registered-menu-item {
+        grid-template-columns: 1fr;
+    }
+
+    .preview-image-wrap {
+        width: 100%;
+        height: 220px;
+    }
+
+    .field-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .action-btn-row {
+        flex-direction: column;
+    }
+
+    .point-btn,
+    .sub-btn,
+    .ghost-btn {
+        width: 100%;
+    }
+
+    .registered-menu-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .section-title {
+        font-size: 1.6rem;
+    }
+
+    .checkbox-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .registered-menu-actions {
+        flex-direction: column;
+    }
+
+    .menu-edit-btn,
+    .menu-delete-btn {
+        width: 100%;
+    }
+}
