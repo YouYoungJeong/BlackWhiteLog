@@ -156,6 +156,7 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, user_id=None,
             FROM reviews rv
             INNER JOIN visits v
                 ON rv.visit_id = v.visit_id
+            WHERE COALESCE(rv.status, 'ACTIVE') = 'ACTIVE'
             GROUP BY v.restaurant_id
         ) rv
             ON r.restaurant_id = rv.restaurant_id
@@ -280,6 +281,7 @@ def fetch_favorite_restaurants(user_id, region=None, category_id=None):
             FROM reviews rv
             INNER JOIN visits v
                 ON rv.visit_id = v.visit_id
+            WHERE COALESCE(rv.status, 'ACTIVE') = 'ACTIVE'
             GROUP BY v.restaurant_id
         ) rv
             ON r.restaurant_id = rv.restaurant_id
