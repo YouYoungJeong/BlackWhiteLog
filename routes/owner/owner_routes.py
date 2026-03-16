@@ -51,7 +51,7 @@ def register_owner_routes(app):
                 db_sidebar_restaurant_list = []
 
             # ---------------------------------------------------------------------
-            # 공지 / 리뷰 카드 기본값
+            # 공지 / 리뷰 / 방문자 차트 기본값
             # ---------------------------------------------------------------------
             sidebar_notice_current = None
             db_sidebar_notice_history_list = []
@@ -59,6 +59,8 @@ def register_owner_routes(app):
                 "march_review_count": 0,
                 "review_list": []
             }
+            visit_chart_data = []
+
 
             # ---------------------------------------------------------------------
             # 가게가 존재할 때만 공지 / 리뷰 데이터 조회
@@ -95,7 +97,16 @@ def register_owner_routes(app):
                     sidebar_selected_restaurant_id,
                     limit=3
                 )
+                # -----------------------------------------------------------------
+                # 방문자 수 차트 데이터 조회
+                # - 최근 10일
+                # - 하루가 지나면 자동으로 1칸씩 밀리는 구조
+                # -----------------------------------------------------------------
+                visit_chart_data = owner_board_db.get_visit_chart_by_restaurant(
+                    sidebar_selected_restaurant_id
+                )
 
+                
         except Exception as error:
             print("owner_board error =", error)
 
@@ -108,7 +119,7 @@ def register_owner_routes(app):
                 "march_review_count": 0,
                 "review_list": []
             }
-
+            visit_chart_data = []
         return render_template(
             "owner/owner_board.html",
             restaurant_menu_list=restaurant_menu_list,
@@ -119,7 +130,8 @@ def register_owner_routes(app):
             sidebar_selected_restaurant_name=sidebar_selected_restaurant_name,
             sidebar_notice_current=sidebar_notice_current,
             sidebar_notice_history_list=db_sidebar_notice_history_list,
-            board_review_data=board_review_data
+            board_review_data=board_review_data,
+            visit_chart_data=visit_chart_data
         )
 
     # -------------------------------------------------------------------------

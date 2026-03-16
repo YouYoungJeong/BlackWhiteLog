@@ -323,52 +323,100 @@
                             </div>
                         </div>
 
-                        <!-- 방문자 수 통계 카드 -->
-                        <div class="chart-card card">
-                            <div class="card-header">
-                                <h3>방문자 수 통계</h3>
-                            </div>
+<!-- 방문자 수 통계 카드 -->
+<div class="chart-card card">
+    <div class="card-header">
+        <h3>방문자 수 통계</h3>
+    </div>
 
-                            <!-- 차트 영역 -->
-                            <div class="chart-area">
-                                <!-- 배경 격자 -->
-                                <div class="chart-grid"></div>
+    <!-- 차트 영역 -->
+    <div class="chart-area">
+        {% set raw_max = 0 %}
+        {% if visit_chart_data %}
+            {% set raw_max = visit_chart_data | map(attribute='visit_count') | max %}
+        {% endif %}
 
-                                <!-- SVG 라인 차트 -->
-                                <svg class="chart-svg" viewBox="0 0 900 220" preserveAspectRatio="none">
-                                    <polyline
-                                        fill="none"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="4"
-                                        points="20,170 120,175 220,155 320,120 420,145 520,105 620,92 720,112 820,118 880,130"
-                                    />
-                                    <g class="chart-dots">
-                                        <circle cx="20" cy="170" r="6"></circle>
-                                        <circle cx="120" cy="175" r="6"></circle>
-                                        <circle cx="220" cy="155" r="6"></circle>
-                                        <circle cx="320" cy="120" r="6"></circle>
-                                        <circle cx="420" cy="145" r="6"></circle>
-                                        <circle cx="520" cy="105" r="6"></circle>
-                                        <circle cx="620" cy="92" r="6"></circle>
-                                        <circle cx="720" cy="112" r="6"></circle>
-                                        <circle cx="820" cy="118" r="6"></circle>
-                                        <circle cx="880" cy="130" r="6"></circle>
-                                    </g>
-                                </svg>
+        <!-- 최대값을 5단위로 올림 -->
+        {% if raw_max <= 0 %}
+            {% set y_max = 5 %}
+        {% elif raw_max <= 5 %}
+            {% set y_max = 5 %}
+        {% elif raw_max <= 10 %}
+            {% set y_max = 10 %}
+        {% elif raw_max <= 15 %}
+            {% set y_max = 15 %}
+        {% elif raw_max <= 20 %}
+            {% set y_max = 20 %}
+        {% elif raw_max <= 25 %}
+            {% set y_max = 25 %}
+        {% elif raw_max <= 30 %}
+            {% set y_max = 30 %}
+        {% else %}
+            {% set y_max = raw_max %}
+        {% endif %}
 
-                                <!-- X축 라벨 -->
-                                <div class="chart-labels">
-                                    <span>일</span>
-                                    <span>월</span>
-                                    <span>화</span>
-                                    <span>수</span>
-                                    <span>목</span>
-                                    <span>금</span>
-                                    <span>토</span>
-                                    <span>일</span>
-                                    <span>월</span>
-                                    <span>화</span>
+
+    <div class="chart-top-row">
+        <!-- Y축 숫자 -->
+        <div class="chart-y-axis">
+            <span>{{ y_max }}</span>
+            <span>{{ ((y_max / 4) * 3) | round | int }}</span>
+            <span>{{ ((y_max / 4) * 2) | round | int }}</span>
+            <span>{{ ((y_max / 4) * 1) | round | int }}</span>
+            <span>0</span>
+        </div>
+        <!-- 차트 본체 -->
+        <div class="chart-main">
+            <div class="chart-grid"></div>
+
+            <svg class="chart-svg" viewBox="0 0 900 220" preserveAspectRatio="none">
+                {% if visit_chart_data %}
+                    {% set ns = namespace(points='') %}
+                    {% for item in visit_chart_data %}
+                        {% set x = 20 + (loop.index0 * 95) %}
+                        {% set y = 180 - ((item.visit_count / y_max) * 120) %}
+                        {% set ns.points = ns.points + x|string + ',' + y|string + ' ' %}
+                    {% endfor %}
+
+                    <polyline
+                        fill="none"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="4"
+                        points="{{ ns.points.strip() }}"
+                    />
+
+                    <g class="chart-dots">
+                        {% for item in visit_chart_data %}
+                            {% set x = 20 + (loop.index0 * 95) %}
+                            {% set y = 180 - ((item.visit_count / y_max) * 120) %}
+                            <circle cx="{{ x }}" cy="{{ y }}" r="6"></circle>
+                        {% endfor %}
+                    </g>
+                {% endif %}
+            </svg>
+        </div>
+    </div>
+
+                <!-- X축 라벨 : 그리드선 밖 -->
+                                    <div class="chart-labels">
+                                        {% if visit_chart_data %}
+                                            {% for item in visit_chart_data %}
+                                                <span>{{ item.weekday }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span>-</span>
+                                            <span>-</span>
+                                            <span>-</span>
+                                            <span>-</span>
+                                            <span>-</span>
+                                            <span>-</span>
+                                            <span>-</span>
+                                            <span>-</span>
+                                            <span>-</span>
+                                            <span>-</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
