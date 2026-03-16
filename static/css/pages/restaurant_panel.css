@@ -242,3 +242,123 @@
 .user-thumb { width: 32px; height: 32px; border-radius: 50%; background-size: cover; }
 .review-rating-stars { color: #ffb300; margin-bottom: 8px; }
 .review-text-content { line-height: 1.6; color: var(--text); white-space: pre-wrap; }
+
+
+/* =========================
+   리뷰 삭제 버튼 & 말풍선 UI
+========================= */
+/* 감싸는 영역 */
+.review-action-wrap {
+    position: relative;
+    display: inline-block;
+}
+
+/* 삭제 버튼 (쓰레기통 아이콘 + 텍스트) */
+.btn-review-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--subtext);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-review-delete:hover {
+    background: #ffebee; /* 연한 빨간 배경 */
+    color: #e53935;      /* 빨간 글씨 */
+    border-color: #ffcdd2;
+}
+
+.btn-review-delete svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+}
+
+/* 삭제 확인 말풍선 (기본 숨김) */
+.delete-confirm-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 180px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: var(--shadow);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-5px);
+    transition: all 0.2s ease;
+}
+
+/* 말풍선 보이기 클래스 */
+.delete-confirm-popover.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* 말풍선 위쪽 뾰족한 꼬리 */
+.delete-confirm-popover::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 20px;
+    width: 10px;
+    height: 10px;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    border-left: 1px solid var(--line);
+    transform: rotate(45deg);
+}
+
+/* 말풍선 안의 글씨와 버튼 */
+.delete-confirm-popover p {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    color: var(--text);
+    text-align: center;
+    font-weight: bold;
+}
+
+.popover-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.popover-actions button {
+    flex: 1;
+    padding: 8px 0;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    transition: all 0.2s ease;
+}
+
+.btn-popover-cancel {
+    background: var(--chip);
+    color: var(--subtext);
+}
+.btn-popover-cancel:hover {
+    background: #e2e6db;
+    color: var(--text);
+}
+
+.btn-popover-confirm {
+    background: #e53935;
+    color: white;
+    border-color: #e53935;
+}
+.btn-popover-confirm:hover {
+    background: #c62828;
+}

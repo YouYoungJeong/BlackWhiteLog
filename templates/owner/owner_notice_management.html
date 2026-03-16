@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>흑백로그 | 공지사항 관리</title>
+
+    <!-- 공통 레이아웃 모듈 CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_layout_common.css') }}" />
+
+    <!-- 공통 드로어 모듈 CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_drawer.css') }}" />
+
+    <!-- 공지사항 페이지 전용 CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_notice_management.css') }}" />
+
+    <!-- 공통 드로어 모듈 JS -->
+    <script defer src="{{ url_for('static', filename='js/pages/owner/owner_drawer.js') }}"></script>
+
+    <!-- 공지사항 페이지 전용 JS -->
+    <script defer src="{{ url_for('static', filename='js/pages/owner/owner_notice_management.js') }}"></script>
+</head>
+<body>
+    <div class="owner-notice-page">
+
+        <!-- 공통 헤더 영역 시작 : owner_layout_common.css 기준 -->
+        <header class="top-header">
+            <div class="header-left">
+                <a href="{{ url_for('owner_board') }}" class="brand-wrap" aria-label="흑백로그 오너 대시보드로 이동">
+                    <img
+                        src="{{ url_for('static', filename='img/main_logo.png') }}"
+                        alt="흑백로그 로고"
+                        class="main-logo"
+                    >
+                </a>
+            </div>
+
+            <div class="header-right">
+                <span class="today-date">2026.03.12</span>
+
+                <div class="store-profile">
+                    <span class="store-name">수원비빔밥집</span>
+                    <div class="profile-circle" aria-hidden="true">👨‍🍳</div>
+                </div>
+
+                <!-- 공통 드로어 열기 버튼 : owner_drawer.js가 menuBtn id를 사용 -->
+                <button
+                    id="menuBtn"
+                    class="menu-toggle"
+                    type="button"
+                    aria-label="메뉴 열기"
+                    aria-controls="sideDrawer"
+                    aria-expanded="false"
+                >
+                    ☰
+                </button>
+            </div>
+        </header>
+        <!-- 공통 헤더 영역 끝 -->
+
+        <!-- 공지사항 페이지 전용 메인 콘텐츠 -->
+        <main class="page-main">
+            <section class="notice-card">
+                <div class="card-header">
+                    <h2>공지사항 작성</h2>
+                    <p>고객에게 전달할 매장 소식을 작성해보세요.</p>
+                </div>
+
+                <form class="notice-form" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="notice-title">제목</label>
+                        <input
+                            type="text"
+                            id="notice-title"
+                            name="notice_title"
+                            placeholder="공지사항 제목을 입력해주세요."
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notice-content">내용</label>
+                        <textarea
+                            id="notice-content"
+                            name="notice_content"
+                            placeholder="운영시간 변경, 이벤트, 품절 안내 등 고객에게 필요한 내용을 작성해주세요."
+                        ></textarea>
+                    </div>
+
+                    <div class="file-grid">
+                        <div class="form-group">
+                            <label for="notice-file-1">첨부파일 1</label>
+                            <div class="file-upload-box">
+                                <input type="file" id="notice-file-1" name="notice_file_1" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="notice-file-2">첨부파일 2</label>
+                            <div class="file-upload-box">
+                                <input type="file" id="notice-file-2" name="notice_file_2" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="notice-option-row">
+                        <label class="toggle-check">
+                            <input type="checkbox" name="notice_pin" />
+                            <span>상단 고정</span>
+                        </label>
+
+                        <label class="toggle-check">
+                            <input type="checkbox" name="notice_visible" checked />
+                            <span>즉시 공개</span>
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-light">취소</button>
+                        <button type="button" class="btn btn-outline">임시저장</button>
+                        <button type="submit" class="btn btn-primary">등록완료</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="notice-list-card">
+                <div class="card-header">
+                    <h2>등록된 공지사항</h2>
+                    <p>최근 작성된 공지사항을 확인할 수 있습니다.</p>
+                </div>
+
+                <div class="notice-list">
+                    <article class="notice-item">
+                        <div class="notice-item-top">
+                            <strong class="notice-badge">고정</strong>
+                            <span class="notice-date">2026.03.12</span>
+                        </div>
+                        <h3>3월 14일 임시 영업시간 변경 안내</h3>
+                        <p>매장 내부 점검으로 인해 오전 11시부터 오후 7시까지 단축 운영됩니다.</p>
+                        <div class="notice-item-actions">
+                            <button type="button" class="text-btn">수정</button>
+                            <button type="button" class="text-btn danger">삭제</button>
+                        </div>
+                    </article>
+
+                    <article class="notice-item">
+                        <div class="notice-item-top">
+                            <span class="notice-date">2026.03.10</span>
+                        </div>
+                        <h3>신메뉴 비빔밥 출시 안내</h3>
+                        <p>신규 메뉴가 추가되었습니다. 매장 방문 시 많은 관심 부탁드립니다.</p>
+                        <div class="notice-item-actions">
+                            <button type="button" class="text-btn">수정</button>
+                            <button type="button" class="text-btn danger">삭제</button>
+                        </div>
+                    </article>
+
+                    <article class="notice-item empty-state">
+                        <div class="empty-icon">📢</div>
+                        <strong>공지사항을 자유롭게 등록할 수 있습니다.</strong>
+                        <p>이벤트, 휴무, 운영시간 변경 등 중요한 내용을 작성해보세요.</p>
+                    </article>
+                </div>
+            </section>
+        </main>
+
+        <!-- 공통 푸터 영역 시작 : owner_layout_common.css 기준 -->
+        <footer class="site-footer">
+            <div class="footer-inner">
+                <div class="footer-brand">
+                    <strong>흑백로그</strong>
+                    <span>Black &amp; White Log</span>
+                </div>
+
+                <div class="footer-info">
+                    <p>© 2026 흑백로그. All rights reserved.</p>
+                    <p>
+                        본 사이트의 상호, 이미지, 리뷰 및 기타 콘텐츠는 각 권리자에게 권리가 있을 수 있으며,
+                        서비스 내 데이터는 업데이트 시점에 따라 실제 정보와 차이가 있을 수 있습니다.
+                    </p>
+                    <p>
+                        지도 및 위치 기반 서비스는 제휴 API 정책 및 각 제공사의 이용약관을 따릅니다.
+                    </p>
+                </div>
+            </div>
+        </footer>
+        <!-- 공통 푸터 영역 끝 -->
+    </div>
+
+    <!-- 공통 드로어 영역 시작 : owner_drawer.css / owner_drawer.js 기준 -->
+    <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
+
+    <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
+        <div class="side-drawer__header">
+            <button
+                type="button"
+                class="side-drawer__close"
+                id="sideDrawerCloseBtn"
+                aria-label="메뉴 닫기"
+            >
+                ×
+            </button>
+
+            <div class="side-drawer__profile">
+                <div class="side-drawer__avatar">
+                    <span>👨‍🍳</span>
+                </div>
+                <strong class="side-drawer__name">사장님</strong>
+            </div>
+        </div>
+
+        <div class="side-drawer__body">
+            <nav class="side-drawer__nav">
+                <a href="{{ url_for('owner_board') }}" class="side-drawer__item">
+                    <span class="side-drawer__icon">⌂</span>
+                    <span>대시보드</span>
+                </a>
+
+                <a href="{{ url_for('owner_menu_management') }}" class="side-drawer__item">
+                    <span class="side-drawer__icon">▣</span>
+                    <span>메뉴 관리</span>
+                </a>
+
+                <a href="{{ url_for('owner_review_management') }}" class="side-drawer__item">
+                    <span class="side-drawer__icon">✎</span>
+                    <span>리뷰 관리</span>
+                </a>
+
+                <a href="{{ url_for('owner_notice_management') }}" class="side-drawer__item">
+                    <span class="side-drawer__icon">📢</span>
+                    <span>공지사항 관리</span>
+                </a>
+            </nav>
+
+            <div class="side-drawer__divider"></div>
+
+            <div class="side-drawer__section-title">기타</div>
+
+            <div class="side-drawer__sublist">
+                <a href="#" class="side-drawer__subitem">설정</a>
+                <a href="#" class="side-drawer__subitem">고객센터</a>
+                <a href="#" class="side-drawer__subitem">이용약관</a>
+            </div>
+        </div>
+    </aside>
+    <!-- 공통 드로어 영역 끝 -->
+</body>
+</html>

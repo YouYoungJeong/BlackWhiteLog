@@ -15,8 +15,11 @@ const state = {
     filteredItems: [],
     suggestionItems: [],
     activeSuggestionIndex: -1,
-    lastKeyword: ""
+    lastKeyword: "",
+    viewMode: "restaurants"
 };
+
+window.state = state;
 
 /* 이종민 수정한 부분 */
 let naverMap = null;
@@ -143,9 +146,19 @@ function showError() {
 function showEmptyList() {
     restaurantList.innerHTML = `
         <div class="empty-box">
-            조건에 맞는 음식점이 없습니다.
+            즐겨찾기에 추가된 음식점이 없습니다.
         </div>
     `;
+}
+
+function showLoginRequiredForFavorites() {
+    restaurantList.innerHTML = `
+        <div class="empty-box">
+            로그인 후 이용해 주세요.<br />
+            <a href="${window.__INITIAL_STATE__.loginUrl}" class="empty-box-login-link">로그인</a>
+        </div>
+    `;
+    mapMarkers.innerHTML = "";
 }
 
 function normalizeText(value) {
@@ -610,6 +623,15 @@ function buildAllItemsQuery() {
     return params.toString();
 }
 
+function buildFavoritesQuery() {
+    const params = new URLSearchParams({
+        region: regionSelect?.value ?? "",
+        category_id: categorySelect?.value ?? ""
+    });
+
+    return params.toString();
+}
+
 /************************************************************
  * 데이터 가져오기
  ************************************************************/
@@ -625,6 +647,7 @@ function buildAllItemsQuery() {
  */
 async function fetchRestaurants() {
     showLoading();
+    state.viewMode = "restaurants";
 
     const filteredUrl = `${window.__INITIAL_STATE__.apiUrl}?${buildFilteredQuery()}`;
     const allUrl = `${window.__INITIAL_STATE__.apiUrl}?${buildAllItemsQuery()}`;
@@ -658,6 +681,41 @@ async function fetchRestaurants() {
     }
 }
 
+async function fetchFavoriteRestaurants() {
+    showLoading();
+    state.viewMode = "favorites";
+
+    const url = `${window.__INITIAL_STATE__.favoritesApiUrl}?${buildFavoritesQuery()}`;
+
+    try {
+        const response = await fetch(url);
+
+        if (response.status === 401) {
+            showLoginRequiredForFavorites();
+            state.items = [];
+            state.filteredItems = [];
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error("즐겨찾기 API 요청 실패");
+        }
+
+        const data = await response.json();
+
+        state.items = Array.isArray(data) ? data : [];
+        state.filteredItems = [...state.items];
+
+        renderRestaurantList(state.items);
+        await renderMapMarkers(state.items);
+    } catch (error) {
+        console.error(error);
+        showError();
+    }
+}
+
+window.fetchFavoriteRestaurants = fetchFavoriteRestaurants;
+
 /************************************************************
  * 추천 모드 전환
  ************************************************************/
@@ -668,6 +726,7 @@ async function fetchRestaurants() {
  */
 function switchToRecommendMode() {
     state.sortBy = "visits";
+    state.viewMode = "restaurants";
 
     sortChips.forEach((chip) => {
         chip.classList.toggle("active", chip.dataset.sort === "visits");
@@ -814,6 +873,44 @@ function createInfoWindowContent(item) {
     `;
 }
 
+/* 핀 색상 */
+function createMarkerIconContent(index) {
+    return `
+        <div style="
+            position: relative;
+            width: 34px;
+            height: 46px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        ">
+            <div style="
+                position: relative;
+                width: 34px;
+                height: 34px;
+                border-radius: 50% 50% 50% 0;
+                transform: rotate(-45deg);
+                background: linear-gradient(135deg, #8faa7a 0%, #6f8d59 100%);
+                border: 2px solid #d7dfb9;
+                box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+            "></div>
+
+            <span style="
+                position: absolute;
+                top: 9px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 13px;
+                font-weight: 800;
+                color: #ffffff;
+                line-height: 1;
+                z-index: 2;
+                pointer-events: none;
+            ">${index + 1}</span>
+        </div>
+    `;
+}
+
 function geocodeAddress(address) {
     return Promise.resolve(null);
 }
@@ -881,14 +978,24 @@ function renderRecommendedResult(item) {
  */
 function focusRestaurantCard(restaurantId) {
     const targetCard = document.querySelector(`.restaurant-card[data-id="${restaurantId}"]`);
-    if (!targetCard) return;
+    const list = document.getElementById("restaurantList");
+    if (!targetCard || !list) return;
 
     setActiveRestaurantCard(restaurantId);
 
-    targetCard.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-    });
+    const listRect = list.getBoundingClientRect();
+    const cardRect = targetCard.getBoundingClientRect();
+
+    const isAbove = cardRect.top < listRect.top;
+    const isBelow = cardRect.bottom > listRect.bottom;
+
+    if (isAbove || isBelow) {
+        const offset = targetCard.offsetTop - list.clientHeight / 2 + targetCard.clientHeight / 2;
+        list.scrollTo({
+            top: offset,
+            behavior: "smooth"
+        });
+    }
 
     targetCard.style.boxShadow =
         "0 0 0 3px rgba(143, 170, 122, 0.25), 0 10px 30px rgba(0, 0, 0, 0.06)";
@@ -1113,7 +1220,7 @@ function pickRandomCategory() {
  * 지도 마커 렌더링
  ************************************************************/
 
-/* 이종민 수정 3월 12일 - DB 위도/경도만 사용해서 지도 마커 표시 */
+/* 민규동 수정 0313 - DB 위도/경도만 사용해서 지도 마커 표시 */
 async function renderMapMarkers(items) {
     if (!naverMap) return;
 
@@ -1127,39 +1234,33 @@ async function renderMapMarkers(items) {
     let hasMarker = false; // 이종민 추가 3월 12일 - 실제 마커 생성 여부 확인
 
     /* 이종민 수정 3월 12일 - 검색 결과 전체를 지도에 표시 */
-    for (const item of items) {
+    items.forEach((item, index) => {
         const position = getLatLngFromItem(item);
 
-        /* 이종민 수정 3월 12일 - DB 위경도가 없으면 마커를 찍지 않음 */
-        if (!position) continue;
+        if (!position) return;
 
         hasMarker = true;
 
         const marker = new naver.maps.Marker({
             position: position,
             map: naverMap,
-            title: item.name || "이름 없음"
+            title: item.name || "이름 없음",
+            icon: {
+                content: createMarkerIconContent(index),
+                size: new naver.maps.Size(34, 46),
+                anchor: new naver.maps.Point(17, 46)
+            }
         });
 
         marker.restaurantId = Number(item.restaurant_id);
-
-        const infoWindow = new naver.maps.InfoWindow({
-            content: createInfoWindowContent(item)
-        });
+        marker.markerIndex = index;
 
         naver.maps.Event.addListener(marker, "click", () => {
-            if (activeInfoWindow) {
-                activeInfoWindow.close();
-            }
 
-            infoWindow.open(naverMap, marker);
-            activeInfoWindow = infoWindow;
+            highlightMarker(item.restaurant_id);
 
-            // 좌측 음식점 카드로 포커스 이동
             focusRestaurantCard(item.restaurant_id);
 
-            // 상세 패널 열기
-            // map-panel 클릭 닫기 이벤트보다 늦게 실행되도록 한 템포 뒤에 호출
             setTimeout(() => {
                 openDetailPanel(item.restaurant_id);
             }, 0);
@@ -1167,7 +1268,7 @@ async function renderMapMarkers(items) {
 
         naverMarkers.push(marker);
         bounds.extend(position);
-    }
+    });
 
     /* 이종민 수정 3월 12일 - bounds.isEmpty() 대신 실제 마커 존재 여부로 판단 */
     /* 이종민 수정 3월 12일 - bounds에 맞춘 뒤 한 단계 더 축소해서 조금 멀리서 보이게 */
@@ -1192,11 +1293,9 @@ function bindMapMarkerEvents() {
             const restaurantId = Number(marker.dataset.id);
             const item = findRestaurantById(restaurantId);
 
-            if (item) {
-                alert(
-                    `${item.name}\n방문 ${toNumber(item.visit_count)} · 리뷰 ${toNumber(item.review_count)} · 평점 ${formatRating(item.avg_rating)}`
-                );
-            }
+            if (!item) return;
+
+            highlightMarker(restaurantId);
         });
     });
 }
@@ -1204,7 +1303,7 @@ function bindMapMarkerEvents() {
 /**
  * 특정 음식점 마커를 강조한다.
  */
-/* 이종민 수정 3월 11일 */
+/* 민규동 수정 3월 13일 */
 function highlightMarker(restaurantId) {
     const targetMarker = naverMarkers.find(
         (marker) => Number(marker.restaurantId) === Number(restaurantId)
@@ -1212,20 +1311,56 @@ function highlightMarker(restaurantId) {
 
     if (!targetMarker || !naverMap) return;
 
-    naverMap.panTo(targetMarker.getPosition());
+    naverMarkers.forEach((marker) => {
+        const isActive = Number(marker.restaurantId) === Number(restaurantId);
 
-    const item = findRestaurantById(restaurantId);
-    if (!item) return;
+        marker.setIcon({
+            content: `
+                <div style="
+                    position: relative;
+                    width: 34px;
+                    height: 46px;
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: center;
+                ">
+                    <div style="
+                        position: relative;
+                        width: 34px;
+                        height: 34px;
+                        border-radius: 50% 50% 50% 0;
+                        transform: rotate(-45deg);
+                        background: linear-gradient(
+                            135deg,
+                            ${isActive ? "#6f8d59" : "#8faa7a"} 0%,
+                            ${isActive ? "#4f6d3e" : "#6f8d59"} 100%
+                        );
+                        border: 2px solid #d7dfb9;
+                        box-shadow: ${isActive
+                            ? "0 10px 24px rgba(111, 141, 89, 0.38)"
+                            : "0 8px 18px rgba(0, 0, 0, 0.18)"};
+                    "></div>
 
-    if (activeInfoWindow) {
-        activeInfoWindow.close();
-    }
-
-    activeInfoWindow = new naver.maps.InfoWindow({
-        content: createInfoWindowContent(item)
+                    <span style="
+                        position: absolute;
+                        top: 9px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        font-size: ${isActive ? 14 : 13}px;
+                        font-weight: 800;
+                        color: #ffffff;
+                        line-height: 1;
+                        z-index: 2;
+                        pointer-events: none;
+                    ">${marker.markerIndex + 1}</span>
+                </div>
+            `,
+            size: new naver.maps.Size(34, 46),
+            anchor: new naver.maps.Point(17, 46)
+        });
     });
 
-    activeInfoWindow.open(naverMap, targetMarker);
+    naverMap.panTo(targetMarker.getPosition());
 }
 
 /************************************************************
@@ -1280,6 +1415,12 @@ function bindSortChipEvents() {
             chip.classList.add("active");
 
             state.sortBy = chip.dataset.sort;
+
+            if (chip.dataset.sort === "latest") {
+                fetchFavoriteRestaurants();
+                return;
+            }
+
             fetchRestaurants();
         });
     });
@@ -1332,11 +1473,23 @@ function bindSearchEvents() {
     }
 
     if (regionSelect) {
-        regionSelect.addEventListener("change", fetchRestaurants);
+        regionSelect.addEventListener("change", () => {
+            if (state.viewMode === "favorites") {
+                fetchFavoriteRestaurants();
+                return;
+            }
+            fetchRestaurants();
+        });
     }
 
     if (categorySelect) {
-        categorySelect.addEventListener("change", fetchRestaurants);
+        categorySelect.addEventListener("change", () => {
+            if (state.viewMode === "favorites") {
+                fetchFavoriteRestaurants();
+                return;
+            }
+            fetchRestaurants();
+        });
     }
 
     document.addEventListener("click", (event) => {

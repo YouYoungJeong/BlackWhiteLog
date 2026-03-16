@@ -1,0 +1,545 @@
+:root {
+    --color-black: #111111;
+    --color-white: #ffffff;
+    --color-text: #333333;
+    --color-line: #d8ddd2;
+    --color-line-soft: #e9ede4;
+    --color-sage: #98ad8a;
+    --color-sage-dark: #6f8164;
+    --color-sage-light: #edf3e8;
+    --color-gray-btn: #f4f5f1;
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --shadow-card: 0 10px 30px rgba(17, 17, 17, 0.06);
+}
+
+.owner-menu-page {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top, rgba(152, 173, 138, 0.08), transparent 28%),
+        linear-gradient(180deg, #f7f8f4 0%, #eff2eb 100%);
+    color: var(--color-text);
+}
+
+.main-content {
+    width: min(1120px, calc(100% - 48px));
+    margin: 0 auto;
+    padding: 24px 0 42px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.menu-form-card,
+.registered-menu-card {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(216, 221, 210, 0.9);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 28px 30px;
+    backdrop-filter: blur(10px);
+}
+
+.section-title {
+    margin: 0 0 22px;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--color-black);
+    letter-spacing: -0.03em;
+}
+
+.sub-title {
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-black);
+}
+
+ /* 업로드/수정 결과 메시지 스타일 추가 */
+.form-message-list {
+    margin: 0 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-message-item {
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    background: #f7faf4;
+    color: var(--color-black);
+    font-weight: 600;
+}
+
+/* =========================
+   메뉴 등록
+   ========================= */
+.menu-upload-section,
+.menu-detail-section,
+.menu-option-section {
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--color-line-soft);
+}
+
+.upload-form-grid {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.image-upload-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* - 이미지 업로드 미리보기 박스 크기 유지 및 등록/수정 시 동일한 영역에서 이미지 확인 가능하도록 스타일 유지 */
+.preview-image-wrap {
+    width: 160px;
+    height: 136px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    background: #f0f0ec;
+    position: relative;
+}
+
+.preview-empty {
+    width: 100%;
+    height: 100%;
+    background: #f0f0ec;
+}
+
+.preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+ /* 실제 file input은 숨기고 label 버튼으로 클릭 */
+.image-file-input {
+    display: none;
+}
+
+/* - 선택된 파일명, DB 저장 경로 확인용 텍스트가 길어져도 깨지지 않도록 처리 */
+.image-guide-text {
+    margin: 0;
+    font-size: 0.92rem;
+    color: #666666;
+    line-height: 1.5;
+    word-break: break-all;
+}
+
+.menu-input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.form-row {
+    width: 100%;
+}
+
+.form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-row label,
+.field-group label {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-black);
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    width: 100%;
+    height: 48px;
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    padding: 0 14px;
+    background: var(--color-white);
+    color: var(--color-text);
+    outline: none;
+    font: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    border-color: var(--color-sage);
+    box-shadow: 0 0 0 4px rgba(152, 173, 138, 0.15);
+}
+
+.price-input-wrap {
+    position: relative;
+}
+
+.price-input-wrap input {
+    padding-right: 44px;
+}
+
+.price-unit {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666666;
+    font-weight: 700;
+}
+
+.horizontal-row {
+    display: grid;
+    grid-template-columns: 330px 1fr;
+    gap: 18px;
+    align-items: end;
+}
+
+.field-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.field-group label {
+    white-space: nowrap;
+}
+
+.category-group select,
+.description-group input {
+    min-width: 0;
+}
+
+/* =========================
+   버튼
+   ========================= */
+.point-btn,
+.sub-btn,
+.ghost-btn,
+.outline-btn,
+.menu-edit-btn,
+.menu-delete-btn,
+.pagination-btn {
+    height: 46px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    padding: 0 18px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.point-btn {
+    background: var(--color-sage);
+    border-color: var(--color-sage);
+    color: var(--color-white);
+}
+
+.point-btn:hover {
+    background: var(--color-sage-dark);
+    border-color: var(--color-sage-dark);
+}
+
+.sub-btn,
+.ghost-btn {
+    background: var(--color-gray-btn);
+    border-color: var(--color-line);
+    color: var(--color-black);
+}
+
+.sub-btn:hover,
+.ghost-btn:hover {
+    background: #ebeee8;
+    border-color: #cbd3c2;
+}
+
+.outline-btn {
+    background: var(--color-white);
+    border-color: var(--color-line);
+    color: var(--color-black);
+}
+
+.outline-btn:hover {
+    background: var(--color-sage-light);
+    border-color: var(--color-sage);
+}
+
+.upload-btn {
+    width: 100%;
+}
+
+.option-group-wrap {
+    margin-bottom: 16px;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex-wrap: wrap;
+}
+
+.check-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-black);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.check-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-sage-dark);
+}
+
+.action-btn-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-line-soft);
+    flex-wrap: wrap;
+}
+
+a.ghost-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+/* =========================
+   등록된 메뉴
+   ========================= */
+.registered-menu-card {
+    margin-top: 0;
+}
+
+.registered-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* - 등록된 메뉴에도 restaurant_images.image_url 또는 thumb_url 기반 이미지가 출력될 수 있게 썸네일 영역 유지 */
+.registered-menu-item {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid var(--color-line-soft);
+    border-radius: var(--radius-md);
+    background: #fbfcfa;
+}
+
+.registered-menu-thumb {
+    width: 90px;
+    height: 90px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f1f1ec;
+    border: 1px solid var(--color-line);
+    flex-shrink: 0;
+}
+
+.registered-menu-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.registered-menu-info {
+    min-width: 0;
+}
+
+.registered-menu-name {
+    margin: 0 0 6px;
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: var(--color-black);
+}
+
+.registered-menu-price {
+    margin: 0;
+    color: #666666;
+    font-weight: 700;
+}
+
+.registered-menu-category,
+.registered-menu-status {
+    margin: 4px 0 0;
+    color: #666666;
+    font-size: 0.95rem;
+}
+
+ /* 원본 파일명 출력 스타일 추가 */
+/* - original_name 또는 stored_name 확인용 문구가 출력될 때 줄바꿈 유지 */
+.registered-menu-file {
+    margin: 4px 0 0;
+    color: #666666;
+    font-size: 0.9rem;
+    word-break: break-all;
+}
+
+.registered-menu-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.registered-menu-actions form {
+    margin: 0;
+    display: inline-flex;
+}
+
+.menu-edit-btn,
+.menu-delete-btn {
+    min-width: 84px;
+}
+
+.menu-edit-btn {
+    border: 1px solid var(--color-sage);
+    background: var(--color-sage-light);
+    color: var(--color-sage-dark);
+}
+
+.menu-edit-btn:hover {
+    background: #dfe9d6;
+}
+
+.menu-delete-btn {
+    border: 1px solid var(--color-line);
+    background: var(--color-white);
+    color: #555555;
+}
+
+.menu-delete-btn:hover {
+    border-color: #bfc8b6;
+    background: #f3f4ef;
+}
+
+/* =========================
+   빈 상태
+   ========================= */
+.empty-menu-message {
+    margin: 0;
+    padding: 28px 16px;
+    border: 1px dashed var(--color-line);
+    border-radius: var(--radius-md);
+    background: #fbfcfa;
+    color: #666666;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* =========================
+   페이지네이션
+   ========================= */
+.pagination-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+}
+
+.pagination-list {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    min-width: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: var(--color-white);
+    border-color: var(--color-line);
+    color: var(--color-black);
+}
+
+.pagination-btn:hover {
+    background: var(--color-sage-light);
+    border-color: var(--color-sage);
+}
+
+.pagination-btn.is-active {
+    background: var(--color-sage);
+    border-color: var(--color-sage);
+    color: var(--color-white);
+}
+
+.pagination-nav {
+    min-width: 72px;
+}
+
+/* =========================
+   반응형
+   ========================= */
+@media (max-width: 860px) {
+    .main-content {
+        width: min(100%, calc(100% - 20px));
+        padding: 0 0 28px;
+        gap: 10px;
+    }
+
+    .menu-form-card,
+    .registered-menu-card {
+        padding: 22px 18px;
+    }
+
+    .upload-form-grid,
+    .horizontal-row,
+    .registered-menu-item {
+        grid-template-columns: 1fr;
+    }
+
+    /* - 모바일에서도 업로드 미리보기와 등록된 메뉴 이미지가 잘리지 않도록 세로 배치 대응 */
+    .preview-image-wrap {
+        width: 100%;
+        height: 220px;
+    }
+
+    .registered-menu-thumb {
+        width: 100%;
+        height: 220px;
+    }
+
+    .field-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .action-btn-row {
+        flex-direction: column;
+    }
+
+    .registered-menu-actions {
+        width: 100%;
+    }
+}

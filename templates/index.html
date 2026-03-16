@@ -11,6 +11,9 @@
     <!--#### 랭크 css 스타일시트-->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/user_ranking.css') }}" />
     <!--#### 랭크 css 스타일시트-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mainrank.css') }}" />
+
+    
 </head>
 <body>
     <script
@@ -68,17 +71,17 @@
             <button class="user-profile-chip" id="profileToggle" type="button">
                 <span class="user-profile-chip__name">{{ user_nickname }}</span>
                 <span class="user-profile-chip__avatar">
-                    <img src="{{ url_for('static', filename='img/profile.png') }}" alt="profile">
+                    <img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="profile">
                 </span>
             </button>
 
             <div class="profile-dropdown" id="profileDropdown">
-                <a href="{{ url_for('mypage') }}" class="profile-dropdown__item">마이페이지</a>
-                <a href="{{ url_for('logout') }}" class="profile-dropdown__item profile-dropdown__item--danger">로그아웃</a>
+                <a href="{{ url_for('mypage.mypage') }}" class="profile-dropdown__item">마이페이지</a>
+                <a href="{{ url_for('login.logout') }}" class="profile-dropdown__item profile-dropdown__item--danger">로그아웃</a>
             </div>
         </div>
     {% else %}
-        <a href="{{ url_for('login') }}" class="ghost-btn login-link">로그인</a>
+        <a href="{{ url_for('login.login') }}" class="ghost-btn login-link">로그인</a>
     {% endif %}
 
     <button class="icon-btn" id="menuBtn" aria-label="메뉴" type="button">☰</button>
@@ -86,8 +89,15 @@
 
         </header>
 
+
+        
         <main class="content-grid">
             <aside class="sidebar">
+
+                {% if user_email %}
+                    {% include 'ranking/ranking_summary.html' %}
+                {% endif %}
+
                 <div class="sidebar-head">
                     <div class="sidebar-top-row">
                         <div class="sort-chip-row">
@@ -186,7 +196,7 @@
                 {% include 'restaurant_panel.html' %}
                 <!--#### 레스토랑 판넬 -->
                 <!--#### 랭킹-->
-                {% include 'user_ranking.html' %}
+                {% include 'ranking/user_ranking.html' %}
                 <!--#### 랭킹-->
                 <div id="mapCanvas" class="map-canvas">
                     <div id="naverMap" class="naver-map"></div>
@@ -220,66 +230,94 @@
     <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
 
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
-        <div class="side-drawer__header">
-            <button
-                type="button"
-                class="side-drawer__close"
-                id="sideDrawerCloseBtn"
-                aria-label="메뉴 닫기"
-            >
-                ×
+    <div class="side-drawer__header">
+        <button
+            type="button"
+            class="side-drawer__close"
+            id="sideDrawerCloseBtn"
+            aria-label="메뉴 닫기"
+        >
+            ×
+        </button>
+
+        {% if user_email %}
+            <a href="{{ url_for('mypage.mypage') }}" class="side-drawer__profile">
+                <div class="side-drawer__avatar">
+                    <span>👤</span>
+                </div>
+                <strong class="side-drawer__name">
+                    {{ user_nickname }}
+                </strong>
+            </a>
+        {% else %}
+            <a href="{{ url_for('login.login') }}" class="side-drawer__profile">
+                <div class="side-drawer__avatar">
+                    <span>👤</span>
+                </div>
+                <strong class="side-drawer__name">
+                    로그인 해주세요
+                </strong>
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="side-drawer__body">
+        <nav class="side-drawer__nav">
+            <button type="button" class="side-drawer__item">
+                <span class="side-drawer__icon">⌂</span>
+                <span>피드</span>
             </button>
 
-        <a href="{{ url_for('mypage') }}" class="side-drawer__profile">
-        <div class="side-drawer__avatar">
-        <span>👤</span>
-        </div>
-        <strong class="side-drawer__name">
-        {{ user_nickname }}
-        </strong>
-        </a>
-    </div>
-        <div class="side-drawer__body">
-            <nav class="side-drawer__nav">
-                <button type="button" class="side-drawer__item">
-                    <span class="side-drawer__icon">⌂</span>
-                    <span>피드</span>
-                </button>
-                <button type="button" class="side-drawer__item">
-                    <span class="side-drawer__icon">▣</span>
-                    <span>게시판</span>
-                </button>
-                <button type="button" class="side-drawer__item">
-                    <span class="side-drawer__icon">🔔</span>
-                    <span>공지사항</span>
-                </button>
-                <button type="button" class="side-drawer__item">
+            <button type="button" class="side-drawer__item">
+                <span class="side-drawer__icon">▣</span>
+                <span>게시판</span>
+            </button>
+
+            <button type="button" class="side-drawer__item">
+                <span class="side-drawer__icon">🔔</span>
+                <span>공지사항</span>
+            </button>
+
+            {% if user_email %}
+                <a href="{{ url_for('login.logout') }}" class="side-drawer__item side-drawer__item--link">
                     <span class="side-drawer__icon">↪</span>
                     <span>로그아웃</span>
-                </button>
-                <button type="button" class="side-drawer__item" id="sellerRegisterBtn"> <!-- 이종민 수정 3월 12일 -->
-                    <span class="side-drawer__icon">🏪</span>
-                    <span>판매자 등록하기</span>
-                </button>
-            </nav>
+                </a>
+            {% else %}
+                <a href="{{ url_for('login.login') }}" class="side-drawer__item side-drawer__item--link">
+                    <span class="side-drawer__icon">→</span>
+                    <span>로그인</span>
+                </a>
+            {% endif %}
 
-            <div class="side-drawer__divider"></div>
+            <button type="button" class="side-drawer__item" id="sellerRegisterBtn">
+                <span class="side-drawer__icon">🏪</span>
+                <span>판매자 등록하기</span>
+            </button>
+        </nav>
 
-            <div class="side-drawer__section-title">기타</div>
+        <div class="side-drawer__divider"></div>
 
-            <div class="side-drawer__sublist">
-                <button type="button" class="side-drawer__subitem">설정</button>
-                <button type="button" class="side-drawer__subitem">고객센터</button>
-                <button type="button" class="side-drawer__subitem">이용약관</button>
-            </div>
+        <div class="side-drawer__section-title">기타</div>
+
+        <div class="side-drawer__sublist">
+            <button type="button" class="side-drawer__subitem">설정</button>
+            <button type="button" class="side-drawer__subitem">고객센터</button>
+            <button type="button" class="side-drawer__subitem">이용약관</button>
         </div>
-    </aside>
+    </div>
+</aside>
 
     
 
     <script>
         window.__INITIAL_STATE__ = {
-            apiUrl: "{{ url_for('api_restaurants') }}"
+            apiUrl: "{{ url_for('api_restaurants') }}",
+            favoritesApiUrl: "{{ url_for('api_favorites') }}",
+            favoriteToggleBaseUrl: "/api/favorites",
+            loginUrl: "{{ url_for('login.login') }}",
+            isLoggedIn: {{ 'true' if user_id else 'false' }},
+            userId: {{ user_id if user_id else 'null' }}
         };
     </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
