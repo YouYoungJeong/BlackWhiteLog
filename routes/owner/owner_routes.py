@@ -23,7 +23,7 @@ def register_owner_routes(app):
     def owner_board():
         session_user_id = session.get("user_id")
         session_owner_id = session.get("owner_id")
-
+        restaurant_id = owner_board_db.get_restaurant_id(session_owner_id)
         restaurant_menu_list = owner_db.get_menu_count_by_owner(session_owner_id)
 
         try:
@@ -37,7 +37,7 @@ def register_owner_routes(app):
                 sidebar_selected_restaurant_name = ""
                 db_sidebar_restaurant_list = []
 
-            sidebar_notice_current = None
+            sidebar_notice_current = Nones
             db_sidebar_notice_history_list = []
 
             # - 추가: 오너 보드 리뷰 카드 기본값

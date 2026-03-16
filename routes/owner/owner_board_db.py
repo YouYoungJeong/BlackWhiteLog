@@ -29,7 +29,19 @@ def get_connection():
 # 3. 이전 공지 카드는 is_pinned = 0 인 공지 중 updated_at 최신순 3건만 조회한다.
 # 4. 날짜 출력은 보드 카드에서 바로 쓰기 쉽게 문자열로 가공한다.
 # ====================================================================================
-
+# 전달받는 값
+# - owner_id: 오너 번호
+# 반환값
+# - restaurant_id
+def get_restaurant_id(owner_id):
+    conn=get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = "select restaurant_id from restaurants where owner_id=%s"
+            cursor.execute(sql, (owner_id,))
+            return cursor.fetchall()
+    finally:
+        conn.close()
 
 # 전달받는 값
 # - owner_id: 오너 번호
