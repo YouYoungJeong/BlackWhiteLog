@@ -54,6 +54,14 @@ def index():
     if user_id:
         owner_id = get_owner_by_user_id(user_id)
         is_owner = owner_id is not None
+
+        if owner_id is not None:
+            session["owner_id"] = owner_id
+        else:
+            session.pop("owner_id", None)
+    else:
+        session.pop("owner_id", None)
+
         
     return render_template(
         "index.html",

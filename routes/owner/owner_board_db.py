@@ -29,19 +29,6 @@ def get_connection():
 # 3. 이전 공지 카드는 is_pinned = 0 인 공지 중 updated_at 최신순 3건만 조회한다.
 # 4. 날짜 출력은 보드 카드에서 바로 쓰기 쉽게 문자열로 가공한다.
 # ====================================================================================
-# 전달받는 값
-# - owner_id: 오너 번호
-# 반환값
-# - restaurant_id
-def get_restaurant_id(owner_id):
-    conn=get_connection()
-    try:
-        with conn.cursor() as cursor:
-            sql = "select restaurant_id from restaurants where owner_id=%s"
-            cursor.execute(sql, (owner_id,))
-            return cursor.fetchall()
-    finally:
-        conn.close()
 
 # 전달받는 값
 # - owner_id: 오너 번호
@@ -89,7 +76,7 @@ def get_sidebar_current_notice_by_restaurant(restaurant_id):
                     updated_at
                 FROM owner_notices
                 WHERE restaurant_id = %s
-                AND is_pinned = 1
+                  AND is_pinned = 1
                 ORDER BY updated_at DESC, notice_id DESC
                 LIMIT 1
             """
@@ -122,7 +109,7 @@ def get_sidebar_history_notice_list_by_restaurant(restaurant_id, limit=3):
                     updated_at
                 FROM owner_notices
                 WHERE restaurant_id = %s
-                AND not is_pinned = 1
+                  AND is_pinned = 0
                 ORDER BY updated_at DESC, notice_id DESC
                 LIMIT %s
             """
@@ -131,32 +118,30 @@ def get_sidebar_history_notice_list_by_restaurant(restaurant_id, limit=3):
     finally:
         conn.close()
 
-        # =================================================
+
 # 전달받는 값
 # - restaurant_id: 식당 번호
 # 반환값
 # - 최근 10일 방문자 차트 데이터
-# =================================================
 def get_visit_chart_by_restaurant(restaurant_id):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    sql = """
-        SELECT
-            DATE(visited_at) AS visit_date,
-            COUNT(*) AS visit_count
-        FROM visits
-        WHERE restaurant_id = %s
-          AND visited_at >= DATE_SUB(CURDATE(), INTERVAL 9 DAY)
-          AND visited_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
-        GROUP BY DATE(visited_at)
-        ORDER BY visit_date ASC
-    """
-    cursor.execute(sql, (restaurant_id,))
-    db_rows = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT
+                    DATE(visited_at) AS visit_date,
+                    COUNT(*) AS visit_count
+                FROM visits
+                WHERE restaurant_id = %s
+                  AND visited_at >= DATE_SUB(CURDATE(), INTERVAL 9 DAY)
+                  AND visited_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+                GROUP BY DATE(visited_at)
+                ORDER BY visit_date ASC
+            """
+            cursor.execute(sql, (restaurant_id,))
+            db_rows = cursor.fetchall()
+    finally:
+        conn.close()
 
     db_map = {}
     for row in db_rows:
