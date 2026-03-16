@@ -324,31 +324,39 @@ async function loadRankingData() {
             
             // 일일 과제 그리기
             const dailyHtml = [
-                { name: "일일 출석 완료", ...d.attendance },
-                { name: "새로운 리뷰 작성", ...d.review },
-                { name: "식당 즐겨찾기 추가", ...d.favorite }
+                { id: "attendance", name: "일일 출석 완료", ...d.attendance },
+                { id: "visit", name: "영수증 도장 찍기", ...d.visit },     // favorite 대신 visit 사용
+                { id: "review", name: "새로운 리뷰 작성", ...d.review }
             ].map(m => {
                 const isCompleted = m.count >= m.target;
+
+                let actionBtn = '';
+                // 출석 과제이면서 아직 완료 안 됐을 때만 출석 버튼 생성
+                if (m.id === "attendance" && !isCompleted) {
+                    actionBtn = `<button onclick="checkDailyAttendance()" style="margin-left: 8px; padding: 2px 8px; font-size: 11px; font-weight: bold; background: #333; color: #fff; border: none; border-radius: 4px; cursor: pointer;">출석하기</button>`;
+                }
+
                 return `
-                    <li class="${isCompleted ? 'completed' : ''}">
-                        <span class="check-icon">${isCompleted ? '✔️' : ''}</span>
-                        <span class="mission-text">${m.name} ${m.count}/${m.target}</span>
+                    <li class="${isCompleted ? 'completed' : ''}" style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <span class="check-icon" style="margin-right: 8px;">${isCompleted ? '✔️' : '⬜'}</span>
+                        <span class="mission-text" style="flex: 1;">${m.name} ${m.count}/${m.target}</span>
                         <span class="mission-reward">+${m.reward} pts</span>
+                        ${actionBtn}
                     </li>
                 `;
             }).join('');
             
-            // 주간 과제 그리기
+            // 주간 과제 그리기 (즐겨찾기 -> 도장 찍기로 변경)
             const weeklyHtml = [
                 { name: "주간 출석 완료", ...w.attendance },
-                { name: "주간 리뷰 작성", ...w.review },
-                { name: "식당 즐겨찾기 추가", ...w.favorite }
+                { name: "주간 도장 찍기", ...w.visit },       // favorite 대신 visit 사용
+                { name: "주간 리뷰 작성", ...w.review }
             ].map(m => {
                 const isCompleted = m.count >= m.target;
                 return `
-                    <li class="${isCompleted ? 'completed' : ''}">
-                        <span class="check-icon">${isCompleted ? '✔️' : ''}</span>
-                        <span class="mission-text">${m.name} ${m.count}/${m.target}</span>
+                    <li class="${isCompleted ? 'completed' : ''}" style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <span class="check-icon" style="margin-right: 8px;">${isCompleted ? '✔️' : '⬜'}</span>
+                        <span class="mission-text" style="flex: 1;">${m.name} ${m.count}/${m.target}</span>
                         <span class="mission-reward">+${m.reward} pts</span>
                     </li>
                 `;
@@ -452,3 +460,21 @@ function bindBadgeSwapEvents() {
         });
     });
 }
+
+window.checkDailyAttendance = async function() {
+    try {
+        const response = await fetch('/api/ranking/attendance', { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            loadRankingData(); 
+            if (typeof loadRankingSummary === 'function') loadRankingSummary();
+        } else {
+            alert(result.message);
+        }
+    } catch (e) {
+        console.error("출석체크 오류:", e);
+        alert("출석체크 중 오류가 발생했습니다.");
+    }
+};

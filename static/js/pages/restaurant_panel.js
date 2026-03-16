@@ -137,7 +137,7 @@ async function openDetailPanel(restaurantId) {
 
     // 추가: 나중에 리ㄴ뷰 저장할 때 쓰기 위해 ID를 저장해둡니다.
     detailPanel.setAttribute("data-id", restaurantId);
-    
+    // 식당에 방문 했는지
     // '정보' 탭을 강제로 클릭하여 활성화
     document.querySelector('.tab-btn[data-tab="info"]').click();
 
@@ -152,6 +152,9 @@ async function openDetailPanel(restaurantId) {
         if (!response.ok) throw new Error("정보를 불러오지 못했습니다.");
         const data = await response.json();
 
+        detailPanel.setAttribute("data-has-visited", data.has_visited ? "true" : "false");
+        // 추가: 식당 패널에 '리뷰 작성 완료' 꼬리표 달기
+        detailPanel.setAttribute("data-has-reviewed", data.has_reviewed_latest_visit ? "true" : "false");
         // 1. 패널 상단 헤더 업데이트
         document.getElementById("detailRestaurantName").innerHTML = `
             <span>${data.name}</span>
@@ -444,17 +447,45 @@ if (starWrap && stars.length > 0) {
     stars.forEach(star => {
         // 1. 마우스 올릴 때 (Hover): 마우스 위치까지 별 채우기
         star.addEventListener("mouseenter", (e) => {
+            // 미방문이면 색칠 안됨
+            if (detailPanel.getAttribute("data-has-visited") !== "true") return;
             updateStars(parseInt(e.target.getAttribute("data-value")));
         });
 
-        // 2. 클릭했을 때 (Click): 점수 확정 & 입력창 열기
+        // 2. 클릭했을 때 (클릭 시 말풍선 띄우기)
         star.addEventListener("click", (e) => {
+            
+            // 팝업 띄우기 도우미 함수
+            const showPopover = (msg) => {
+                let popover = document.getElementById("notVisitedPopover");
+                if (!popover) {
+                    popover = document.createElement("div");
+                    popover.id = "notVisitedPopover";
+                    popover.className = "not-visited-popover";
+                    starWrap.appendChild(popover);
+                }
+                popover.innerText = msg;
+                popover.classList.add("show");
+                setTimeout(() => popover.classList.remove("show"), 2000);
+            };
+
+            // 검사 1: 도장 안 찍었을 때
+            if (detailPanel.getAttribute("data-has-visited") !== "true") {
+                showPopover("방문(도장) 기록이 없습니다!");
+                return; 
+            }
+            
+            // 검사 2: 도장은 있지만 이미 리뷰를 썼을 때 (아예 폼을 안 열어줌)
+            if (detailPanel.getAttribute("data-has-reviewed") === "true") {
+                showPopover("이미 리뷰를 작성하셨습니다!");
+                return;
+            }
+
+            // 리뷰 폼 열어주기
             const clickedValue = parseInt(e.target.getAttribute("data-value"));
-            starWrap.setAttribute("data-current-rating", clickedValue); // 확정 점수 기록
+            starWrap.setAttribute("data-current-rating", clickedValue);
             ratingInput.value = clickedValue;
             updateStars(clickedValue);
-            
-            // 숨겨져 있던 리뷰 입력창 스르륵 등장!
             reviewInputArea.classList.remove("hidden");
         });
     });

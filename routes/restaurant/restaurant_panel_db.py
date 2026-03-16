@@ -32,9 +32,23 @@ def get_restaurant_detail(restaurant_id, user_id=None):
                 return None
 
             row["is_favorite"] = False
+            row["has_visited"] = False # 방문 여부 기본값
+            row["has_reviewed_latest_visit"] = False # 리뷰 작성 여부
+            
             if user_id:
                 row["is_favorite"] = is_favorite_restaurant(user_id, restaurant_id)
-
+                # 최근 방문 도장 기록 찾기
+                cursor.execute("SELECT visit_id FROM visits WHERE user_id=%s AND restaurant_id=%s ORDER BY visited_at DESC LIMIT 1", (user_id, restaurant_id))
+                visit_row = cursor.fetchone()
+                if visit_row:
+                    row["has_visited"] = True
+                    latest_visit_id = visit_row['visit_id']
+                    
+                # 그 최근 도장으로 이미 리뷰를 작성했는지 검사
+                    cursor.execute("SELECT 1 FROM reviews WHERE visit_id=%s LIMIT 1", (latest_visit_id,))
+                    if cursor.fetchone():
+                        row["has_reviewed_latest_visit"] = True
+                    
             return row
     finally:
         conn.close()
@@ -118,49 +132,48 @@ def save_restaurant_review(restaurant_id, user_id, rating, content, image_urls=N
     """
     visits는 필수 외래키만, reviews는 created_at 포함하여 저장
     """
-
     from db import get_connection
     # 티어 업데이트 함수를 안에서 임포트 (순환 참조 방지)
-    from routes.ranking.user_ranking_db import check_and_update_tier
+    from routes.ranking.user_ranking_db import check_and_update_tier, process_mission
 
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # 1. visits 테이블 (visit_date 에러가 났었으므로, 필수 정보만 입력)
-            # 만약 DB에서 자동 생성이 안 된다면 명세서대로 'visit_date'를 다시 확인해야 해!
-            visit_sql = """
-                INSERT INTO visits (user_id, restaurant_id, visited_at)
-                VALUES (%s, %s, NOW())
+            # 이 유저가 영수증으로 찍은 도장(방문 기록)이 있는지 가장 최근 것 찾기
+            check_visit_sql = """
+                SELECT visit_id FROM visits
+                WHERE user_id = %s AND restaurant_id = %s
+                ORDER BY visited_at DESC LIMIT 1
             """
-            cursor.execute(visit_sql, (user_id, restaurant_id))
-            visit_id = cursor.lastrowid 
+            cursor.execute(check_visit_sql, (user_id, restaurant_id))
+            visit_row = cursor.fetchone()
+            
+            if not visit_row:
+                return False # 도장 없으면 리뷰 저장 실패 (어뷰징 차단)
+                
+            visit_id = visit_row['visit_id']
 
-            # 2. reviews 테이블 (명세서의 created_at 컬럼 사용)
+            # 찾은 visit_id에 리뷰를 연결하여 저장
             review_sql = """
                 INSERT INTO reviews (visit_id, rating, content, created_at)
                 VALUES (%s, %s, %s, NOW())
             """
             cursor.execute(review_sql, (visit_id, rating, content))
-            review_id = cursor.lastrowid  # 방금 생성된 리뷰 ID 가져오기
+            review_id = cursor.lastrowid  
             
-            # 3. review_images 테이블 삽입 (이미지가 있을 경우)
+            # 리뷰 이미지 저장
             if image_urls:
                 image_sql = """
                     INSERT INTO review_images (review_id, image_url, sort_order)
                     VALUES (%s, %s, %s)
                 """
                 for idx, url in enumerate(image_urls):
-                    # 명세서에 따라 원본 이미지 경로(image_url)와 출력 순서(sort_order) 저장
                     cursor.execute(image_sql, (review_id, url, idx + 1))
 
             conn.commit()
 
-        # [변경] 미션 처리 (일일 리뷰 달성 50점) - 여기서 중복을 걸러냅니다!
-        from routes.ranking.user_ranking_db import process_mission, check_and_update_tier 
-        
-        # 하루 첫 리뷰 50점 지급 시도
-        process_mission(user_id, 'DAILY_REVIEW', 50, is_weekly=False)
-
+        review_point = 50
+        process_mission(user_id, 'DAILY_REVIEW', review_point, is_weekly=False)
         # 티어 검사 실행
         check_and_update_tier(user_id)
         return True
@@ -203,10 +216,7 @@ def delete_review_transaction(review_id, user_id):
             # 리뷰이미지 아이디 데이터 삭제
             cursor.execute("DELETE FROM review_images WHERE review_id = %s", (review_id,))
             # 리뷰 삭제
-            cursor.execute("DELETE FROM reviews WHERE review_id = %s", (review_id,))
-            # 방문기록 삭제
-            cursor.execute("DELETE FROM visits WHERE visit_id = %s", (visit_id,))
-            
+            cursor.execute("DELETE FROM reviews WHERE review_id = %s", (review_id,))    
             # review_images 테이블 초기화
             cursor.execute("SELECT MAX(review_image_id) AS max_id FROM review_images")
             row_img = cursor.fetchone()
@@ -218,10 +228,6 @@ def delete_review_transaction(review_id, user_id):
             max_rev_id = row_rev['max_id'] if row_rev['max_id'] is not None else 0
             cursor.execute(f"ALTER TABLE reviews AUTO_INCREMENT = {max_rev_id + 1}")
             # visits 테이블 AUTO_INCREMENT 초기화
-            cursor.execute("SELECT MAX(visit_id) AS max_id FROM visits")
-            row_vis = cursor.fetchone()
-            max_vis_id = row_vis['max_id'] if row_vis['max_id'] is not None else 0
-            cursor.execute(f"ALTER TABLE visits AUTO_INCREMENT = {max_vis_id + 1}")
 
             conn.commit()
             
