@@ -189,6 +189,14 @@ def register_visit_by_receipt():
             purchase_date=payload["purchase_date"],
             items=resolved_items
         )
+        
+        # 영수증 도장 찍히자마자 즉시 30점 지급 & 티어 검사
+        try:
+            from routes.ranking.user_ranking_db import process_mission, check_and_update_tier
+            if process_mission(user_id, 'DAILY_VISIT', 30, is_weekly=False):
+                check_and_update_tier(user_id)
+        except Exception as e:
+            print(f"방문 점수 즉시 지급 오류: {e}")
 
         return jsonify({
             "success": True,

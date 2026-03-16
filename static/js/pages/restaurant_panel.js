@@ -54,10 +54,7 @@ async function toggleFavoriteFromDetail(restaurantId) {
             favoriteBtn.classList.toggle("active", isFavorite);
         }
 
-        if (!isFavorite && restaurantDetailPanel) {
-            restaurantDetailPanel.classList.add("hidden");
-        }
-
+        // 즐찾 화면 
         if (window.state) {
             const updateItem = (item) => {
                 if (Number(item.restaurant_id) === Number(restaurantId)) {
@@ -69,8 +66,59 @@ async function toggleFavoriteFromDetail(restaurantId) {
             if (Array.isArray(window.state.filteredItems)) window.state.filteredItems.forEach(updateItem);
             if (Array.isArray(window.state.allItems)) window.state.allItems.forEach(updateItem);
 
-            if (window.state.viewMode === "favorites" && !isFavorite && typeof window.fetchFavoriteRestaurants === "function") {
-                window.fetchFavoriteRestaurants();
+            // 화면 깜빡임 없이, 없던 카드는 만들고 있던 카드는 껐다 켭니다!
+            if (window.state.viewMode === "favorites") {
+                const list = document.getElementById("restaurantList");
+                let card = document.querySelector(`.restaurant-card[data-id="${restaurantId}"]`);
+
+                if (isFavorite) {
+                    // ★ 별을 켰을 때 (등록)
+                    if (!card && list) {
+                        // 화면에 카드가 없으면? 전체 데이터(allItems)에서 이 식당 정보를 가져옵니다.
+                        const item = window.state.allItems.find(i => Number(i.restaurant_id) === Number(restaurantId));
+                        if (item && typeof createRestaurantCardHtml === "function") {
+                            
+                            // "즐겨찾기 없음" 텅 빈 박스가 있다면 지워줍니다.
+                            const emptyBox = list.querySelector('.empty-box');
+                            if (emptyBox) emptyBox.remove();
+
+                            // 카드를 새로 예쁘게 만들어서 리스트 맨 위에(afterbegin) 스윽 끼워 넣습니다.
+                            list.insertAdjacentHTML('afterbegin', createRestaurantCardHtml(item, 0));
+
+                            // 새로 만든 카드에 클릭 이벤트(패널 열기, 지도 포커스)도 달아줍니다.
+                            const newlyAddedCard = list.firstElementChild;
+                            newlyAddedCard.addEventListener("click", () => {
+                                if (typeof setActiveRestaurantCard === "function") setActiveRestaurantCard(item.restaurant_id);
+                                if (typeof highlightMarker === "function") highlightMarker(item.restaurant_id);
+                                openDetailPanel(item.restaurant_id);
+                            });
+
+                            // 내부에 있는 배열(state.items)에도 몰래 추가해서 지도 마커도 찍히게 만듭니다.
+                            if (!window.state.items.find(i => Number(i.restaurant_id) === Number(restaurantId))) {
+                                window.state.items.unshift(item);
+                            }
+                            if (typeof renderMapMarkers === "function") renderMapMarkers(window.state.items);
+                        }
+                    } else if (card) {
+                        // 이미 숨겨져 있던 카드면 다시 짠! 하고 보여줍니다.
+                        card.style.display = ""; 
+                        // 지도 마커도 다시 보여줍니다.
+                        if (typeof naverMarkers !== 'undefined') {
+                            const targetMarker = naverMarkers.find(m => Number(m.restaurantId) === Number(restaurantId));
+                            if (targetMarker && typeof naverMap !== 'undefined') targetMarker.setMap(naverMap);
+                        }
+                    }
+                } else {
+                    // ☆ 별을 껐을 때 (해제)
+                    if (card) card.style.display = "none"; // 카드 숨기기
+                    
+                    if (typeof naverMarkers !== 'undefined') { // 지도 마커 숨기기
+                        const targetMarker = naverMarkers.find(m => Number(m.restaurantId) === Number(restaurantId));
+                        if (targetMarker && typeof naverMap !== 'undefined') {
+                            targetMarker.setMap(null);
+                        }
+                    }
+                }
             }
         }
     } catch (error) {
@@ -130,16 +178,17 @@ tabButtons.forEach(btn => {
 });
 
 // 패널 열기 및 AJAX 정보 호출 함수 
-async function openDetailPanel(restaurantId) {
+async function openDetailPanel(restaurantId, targetTab) {
     const currentUserId = window.__INITIAL_STATE__?.userId ?? null;
     const detailPanel = document.getElementById("restaurantDetailPanel");
     detailPanel.classList.remove("hidden");
 
-    // 추가: 나중에 리ㄴ뷰 저장할 때 쓰기 위해 ID를 저장해둡니다.
+    // 추가: 나중에 리뷰 저장할 때 쓰기 위해 ID를 저장해둡니다.
     detailPanel.setAttribute("data-id", restaurantId);
-    
-    // '정보' 탭을 강제로 클릭하여 활성화
-    document.querySelector('.tab-btn[data-tab="info"]').click();
+
+    // 매개변수로 받은 탭을 클릭해 줍니다.
+    const tabBtn = document.querySelector(`.tab-btn[data-tab="${targetTab}"]`);
+    if (tabBtn) tabBtn.click();
 
     const infoTab = document.getElementById("tab-info");
     infoTab.innerHTML = "<p>가게 정보를 불러오는 중...</p>";
@@ -152,6 +201,9 @@ async function openDetailPanel(restaurantId) {
         if (!response.ok) throw new Error("정보를 불러오지 못했습니다.");
         const data = await response.json();
 
+        detailPanel.setAttribute("data-has-visited", data.has_visited ? "true" : "false");
+        // 추가: 식당 패널에 '리뷰 작성 완료' 꼬리표 달기
+        detailPanel.setAttribute("data-has-reviewed", data.has_reviewed_latest_visit ? "true" : "false");
         // 1. 패널 상단 헤더 업데이트
         document.getElementById("detailRestaurantName").innerHTML = `
             <span>${data.name}</span>
@@ -175,7 +227,7 @@ async function openDetailPanel(restaurantId) {
             </div>
         `;
 
-        // 3. [추가] 메뉴 탭 데이터 렌더링
+        // 메뉴 탭 데이터 렌더링
         const menuTab = document.getElementById("tab-menu");
         menuTab.innerHTML = "<p>메뉴 정보를 불러오는 중...</p>";
         
@@ -270,7 +322,7 @@ async function openDetailPanel(restaurantId) {
             console.error("Menu Fetch Error:", menuError);
         }
 
-        // 4. [수정] 리뷰(댓글) 데이터 렌더링
+        // 리뷰(댓글) 데이터 렌더링
         // 회원님이 만들어두신 'reviewListContainer'를 정확히 타겟팅합니다.
         const reviewContainer = document.getElementById("reviewListContainer");
         reviewContainer.innerHTML = "<p style='padding: 20px 0; text-align: center;'>리뷰를 불러오는 중...</p>";
@@ -369,7 +421,7 @@ async function openDetailPanel(restaurantId) {
 
 // 삭제 실행 함수
 function toggleDeletePopover(review_id) {
-    // 다른 열려있는 말풍선이 있다면 먼저 닫아줍니다 (깔끔한 UI 유지)
+    // 다른 열려있는 말풍선이 있다면 먼저 닫아줍니다
     document.querySelectorAll('.delete-confirm-popover.show').forEach(popover => {
         if (popover.id !== `popover-${review_id}`) {
             popover.classList.remove('show');
@@ -382,15 +434,33 @@ function toggleDeletePopover(review_id) {
     }
 }
 
-// 기존 alert(confirm) 없이 말풍선에서 바로 실행되는 삭제 함수
+// 말풍선에서 바로 실행되는 삭제 함수
 async function executeDelete(review_id, restaurantId) {
     try {
         const res = await fetch(`/api/reviews/${review_id}`, { method: "DELETE" });
         const result = await res.json();
 
         if (result.success) {
-            // 말풍선에서 누른 거라, 삭제 성공 알림조차 생략하고 스르륵 리스트만 갱신하면 더 고급스럽습니다.
-            openDetailPanel(restaurantId); // 목록 갱신
+            // 삭제했으니 다시 리뷰를 쓸 수 있도록 차단 해제
+            const detailPanel = document.getElementById("restaurantDetailPanel");
+            if (detailPanel) {
+                detailPanel.setAttribute("data-has-reviewed", "false"); 
+            }
+
+            // 깜빡임 없이 'review' 탭을 유지하며 리스트만 스르륵 갱신
+            openDetailPanel(restaurantId, "review"); 
+            
+            // 메인 화면의 식당 카드에서 '리뷰' 숫자만 -1 부드럽게 감소
+            const card = document.querySelector(`.restaurant-card[data-id="${restaurantId}"]`);
+            if (card) {
+                card.querySelectorAll('.stat-pill').forEach(pill => {
+                    if (pill.innerText.includes('리뷰')) {
+                        const count = parseInt(pill.innerText.replace(/[^0-9]/g, '')) || 0;
+                        // 0 밑으로 내려가지 않게
+                        pill.innerText = `리뷰 ${Math.max(0, count - 1)}`;
+                    }
+                });
+            }
         } else {
             alert(result.message || "삭제 권한이 없습니다.");
         }
@@ -402,7 +472,7 @@ async function executeDelete(review_id, restaurantId) {
 
 document.addEventListener("click", (event) => {
 
-    // [추가] 말풍선 바깥쪽 아무 곳이나 클릭하면 열려있던 말풍선 닫기
+    // 말풍선 바깥쪽 아무 곳이나 클릭하면 열려있던 말풍선 닫기
     if (!event.target.closest('.review-action-wrap')) {
         document.querySelectorAll('.delete-confirm-popover.show').forEach(p => p.classList.remove('show'));
     }
@@ -444,17 +514,45 @@ if (starWrap && stars.length > 0) {
     stars.forEach(star => {
         // 1. 마우스 올릴 때 (Hover): 마우스 위치까지 별 채우기
         star.addEventListener("mouseenter", (e) => {
+            // 미방문이면 색칠 안됨
+            if (detailPanel.getAttribute("data-has-visited") !== "true") return;
             updateStars(parseInt(e.target.getAttribute("data-value")));
         });
 
-        // 2. 클릭했을 때 (Click): 점수 확정 & 입력창 열기
+        // 2. 클릭했을 때 (클릭 시 말풍선 띄우기)
         star.addEventListener("click", (e) => {
+            
+            // 팝업 띄우기 도우미 함수
+            const showPopover = (msg) => {
+                let popover = document.getElementById("notVisitedPopover");
+                if (!popover) {
+                    popover = document.createElement("div");
+                    popover.id = "notVisitedPopover";
+                    popover.className = "not-visited-popover";
+                    starWrap.appendChild(popover);
+                }
+                popover.innerText = msg;
+                popover.classList.add("show");
+                setTimeout(() => popover.classList.remove("show"), 2000);
+            };
+
+            // 검사 1: 도장 안 찍었을 때
+            if (detailPanel.getAttribute("data-has-visited") !== "true") {
+                showPopover("방문(도장) 기록이 없습니다!");
+                return; 
+            }
+            
+            // 검사 2: 도장은 있지만 이미 리뷰를 썼을 때 (아예 폼을 안 열어줌)
+            if (detailPanel.getAttribute("data-has-reviewed") === "true") {
+                showPopover("이미 리뷰를 작성하셨습니다!");
+                return;
+            }
+
+            // 리뷰 폼 열어주기
             const clickedValue = parseInt(e.target.getAttribute("data-value"));
-            starWrap.setAttribute("data-current-rating", clickedValue); // 확정 점수 기록
+            starWrap.setAttribute("data-current-rating", clickedValue);
             ratingInput.value = clickedValue;
             updateStars(clickedValue);
-            
-            // 숨겨져 있던 리뷰 입력창 스르륵 등장!
             reviewInputArea.classList.remove("hidden");
         });
     });
@@ -600,7 +698,27 @@ document.getElementById("submitReviewBtn").addEventListener("click", async () =>
 
         if (result.success) {
             resetReviewForm(); // 폼 초기화
-            openDetailPanel(restaurantId); // 리뷰 목록 새로고침하여 방금 쓴 글 확인
+            // 방금 리뷰를 성공적으로 썼으니, 즉시 별점 클릭 차단 속성 활성화
+            detailPanel.setAttribute("data-has-reviewed", "true"); 
+            
+            openDetailPanel(restaurantId, "review"); // 리뷰 목록 새로고침하여 방금 쓴 글 확인
+            
+            // 화면 전체를 깜빡이게 하던 fetchRestaurants()를 지우고,
+            // 왼쪽 리스트에서 해당 식당 카드를 찾아 '리뷰' 글자 안의 숫자만 +1 올려줍니다.
+            const card = document.querySelector(`.restaurant-card[data-id="${restaurantId}"]`);
+            if (card) {
+                card.querySelectorAll('.stat-pill').forEach(pill => {
+                    if (pill.innerText.includes('리뷰')) {
+                        const count = parseInt(pill.innerText.replace(/[^0-9]/g, '')) || 0;
+                        pill.innerText = `리뷰 ${count + 1}`;
+                    }
+                });
+            }
+            
+            // 랭킹 탭 & 요약 카드 즉시 업데이트 (리뷰 작성 50점 실시간 반영)
+            if (typeof loadRankingData === 'function') loadRankingData();
+            if (typeof loadRankingSummary === 'function') loadRankingSummary();
+
         } else {
             alert("등록 실패: " + result.message);
         }
