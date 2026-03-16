@@ -124,3 +124,105 @@ body {
     font-weight: 700;
     text-decoration: none;
 }
+
+/* =========================
+비밀번호 재설정 - 인증번호 방식 추가
+========================= */
+
+.input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.side-btn {
+    margin-top: 0;
+    flex-shrink: 0;
+    width: 130px;
+}
+
+.sub-btn {
+    background: #7d8f63;
+}
+
+.code-input-wrap {
+    position: relative;
+    flex: 1;
+}
+
+.code-input-wrap input {
+    padding-right: 72px;
+}
+
+.timer-text {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    font-weight: 700;
+    color: #d35b5b;
+    pointer-events: none;
+}
+
+.inline-message {
+    min-height: 20px;
+    margin-top: -2px;
+    margin-bottom: 4px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.inline-message.success {
+    color: #3b7c3f;
+}
+
+.inline-message.error {
+    color: #c84a4a;
+}
+
+.inline-message.info {
+    color: #687255;
+}
+
+.password-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 18px;
+    border-top: 1px solid #e5ebd8;
+}
+
+.hidden {
+    display: none;
+}
+
+.full-btn {
+    width: 100%;
+}
+
+.find-form input:focus {
+    border-color: #8ea867;
+    box-shadow: 0 0 0 3px rgba(142, 168, 103, 0.12);
+}
+
+.find-btn:hover {
+    opacity: 0.95;
+}
+
+@media (max-width: 560px) {
+    .input-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .side-btn {
+        width: 100%;
+    }
+
+    .bottom-links {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

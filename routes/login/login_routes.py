@@ -1,7 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask_mail import Message
+from extensions import mail
 import os
 import requests
 import secrets
+import random
+import time
 
 from .login_db import (
     verify_user_login,
@@ -12,8 +16,8 @@ from .login_db import (
     withdraw_user,
     find_user_by_nickname,
     find_email_by_nickname,
-    reset_user_password,
     link_social_account,
+    update_user_password_by_email,
 )
 
 login_bp = Blueprint("login", __name__)
@@ -41,8 +45,6 @@ def handle_social_login_or_link(provider, social_id, email, nickname, profile_im
     signup_email = email
     if provider.upper() == "KAKAO":
         signup_email = ""
-
-
 
     session["pending_social_link"] = {
         "provider": provider.upper(),
@@ -358,32 +360,9 @@ def find_id():
     return render_template("login/find_id.html", found_email=found_email)
 
 
-@login_bp.route("/find-password", methods=["GET", "POST"])
+@login_bp.route("/find-password", methods=["GET"])
 def find_password():
-    if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        nickname = request.form.get("nickname", "").strip()
-        new_password = request.form.get("new_password", "").strip()
-        new_password_confirm = request.form.get("new_password_confirm", "").strip()
-
-        if not email or not nickname or not new_password or not new_password_confirm:
-            flash("모든 항목을 입력해주세요.")
-            return redirect(url_for("login.find_password"))
-        if new_password != new_password_confirm:
-            flash("새 비밀번호가 일치하지 않습니다.")
-            return redirect(url_for("login.find_password"))
-        if len(new_password) < 4:
-            flash("비밀번호는 4자 이상 입력해주세요.")
-            return redirect(url_for("login.find_password"))
-
-        success = reset_user_password(email, nickname, new_password)
-        if not success:
-            flash("입력한 정보와 일치하는 회원을 찾을 수 없습니다.")
-            return redirect(url_for("login.find_password"))
-
-        flash("비밀번호가 재설정되었습니다. 다시 로그인해주세요.")
-        return redirect(url_for("login.login"))
-
+    clear_password_reset_session()
     return render_template("login/find_password.html")
 
 
@@ -638,3 +617,198 @@ def withdraw():
     session.clear()
     flash("회원 탈퇴가 완료되었습니다.")
     return redirect(url_for("index"))
+
+
+# =========================
+# 비밀번호 재설정 세션 초기화
+# =========================
+def clear_password_reset_session():
+    session.pop("pw_reset_email", None)
+    session.pop("pw_reset_code", None)
+    session.pop("pw_reset_expire", None)
+    session.pop("pw_reset_verified", None)
+
+
+# =========================
+# 비밀번호 재설정 페이지
+# /password-reset 접근 시 기존 find-password로 연결
+# =========================
+@login_bp.route("/password-reset", methods=["GET"])
+def password_reset_page():
+    return redirect(url_for("login.find_password"))
+
+
+# =========================
+# 인증번호 메일 발송
+# =========================
+@login_bp.route("/password-reset/send-code", methods=["POST"])
+def send_password_reset_code():
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return jsonify({
+            "ok": False,
+            "message": "이메일을 입력해주세요."
+        }), 400
+
+    user = find_user_by_email(email)
+    if not user:
+        return jsonify({
+            "ok": False,
+            "message": "해당 이메일의 회원이 없습니다."
+        }), 404
+
+    code = str(random.randint(100000, 999999))
+    expire_at = int(time.time()) + 180
+
+    session["pw_reset_email"] = email
+    session["pw_reset_code"] = code
+    session["pw_reset_expire"] = expire_at
+    session["pw_reset_verified"] = False
+
+    try:
+        msg = Message(
+            subject="[흑백로그] 비밀번호 재설정 인증번호",
+            recipients=[email],
+            body=f"""안녕하세요.
+
+흑백로그 비밀번호 재설정 인증번호는 [{code}] 입니다.
+
+이 인증번호는 3분 동안만 유효합니다.
+감사합니다.
+"""
+        )
+        mail.send(msg)
+
+        return jsonify({
+            "ok": True,
+            "message": "인증번호를 이메일로 전송했습니다.",
+            "expire_at": expire_at
+        })
+    except Exception as e:
+        clear_password_reset_session()
+        return jsonify({
+            "ok": False,
+            "message": f"메일 전송 실패: {str(e)}"
+        }), 500
+
+
+# =========================
+# 인증번호 확인
+# =========================
+@login_bp.route("/password-reset/verify-code", methods=["POST"])
+def verify_password_reset_code():
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip().lower()
+    code = (data.get("code") or "").strip()
+
+    saved_email = session.get("pw_reset_email")
+    saved_code = session.get("pw_reset_code")
+    expire_at = session.get("pw_reset_expire")
+
+    if not saved_email or not saved_code or not expire_at:
+        return jsonify({
+            "ok": False,
+            "message": "인증정보가 없습니다. 다시 인증번호를 요청해주세요."
+        }), 400
+
+    if int(time.time()) > int(expire_at):
+        clear_password_reset_session()
+        return jsonify({
+            "ok": False,
+            "message": "인증시간이 만료되었습니다. 다시 인증번호를 요청해주세요."
+        }), 400
+
+    if email != saved_email:
+        return jsonify({
+            "ok": False,
+            "message": "인증 요청한 이메일과 일치하지 않습니다."
+        }), 400
+
+    if code != saved_code:
+        return jsonify({
+            "ok": False,
+            "message": "인증번호가 올바르지 않습니다."
+        }), 400
+
+    session["pw_reset_verified"] = True
+
+    return jsonify({
+        "ok": True,
+        "message": "이메일 인증이 완료되었습니다."
+    })
+
+
+# =========================
+# 새 비밀번호로 변경
+# =========================
+@login_bp.route("/password-reset/change", methods=["POST"])
+def change_password_after_email_verify():
+    data = request.get_json() or {}
+
+    email = (data.get("email") or "").strip().lower()
+    new_password = (data.get("new_password") or "").strip()
+    new_password_confirm = (data.get("new_password_confirm") or "").strip()
+
+    saved_email = session.get("pw_reset_email")
+    expire_at = session.get("pw_reset_expire")
+    verified = session.get("pw_reset_verified", False)
+
+    if not saved_email or not expire_at:
+        return jsonify({
+            "ok": False,
+            "message": "인증정보가 없습니다. 처음부터 다시 진행해주세요."
+        }), 400
+
+    if int(time.time()) > int(expire_at):
+        clear_password_reset_session()
+        return jsonify({
+            "ok": False,
+            "message": "인증시간이 만료되었습니다. 다시 진행해주세요."
+        }), 400
+
+    if not verified:
+        return jsonify({
+            "ok": False,
+            "message": "먼저 인증번호 확인을 완료해주세요."
+        }), 400
+
+    if email != saved_email:
+        return jsonify({
+            "ok": False,
+            "message": "인증한 이메일과 일치하지 않습니다."
+        }), 400
+
+    if not new_password or not new_password_confirm:
+        return jsonify({
+            "ok": False,
+            "message": "새 비밀번호와 비밀번호 확인을 입력해주세요."
+        }), 400
+
+    if new_password != new_password_confirm:
+        return jsonify({
+            "ok": False,
+            "message": "새 비밀번호와 비밀번호 확인이 일치하지 않습니다."
+        }), 400
+
+    if len(new_password) < 8:
+        return jsonify({
+            "ok": False,
+            "message": "비밀번호는 8자 이상이어야 합니다."
+        }), 400
+
+    changed = update_user_password_by_email(email, new_password)
+
+    if not changed:
+        return jsonify({
+            "ok": False,
+            "message": "비밀번호 변경에 실패했습니다."
+        }), 500
+
+    clear_password_reset_session()
+
+    return jsonify({
+        "ok": True,
+        "message": "비밀번호가 성공적으로 변경되었습니다."
+    })
