@@ -4,21 +4,22 @@ import requests
 import secrets
 
 from .login_db import (
-    verify_user_login,
-    create_user,
-    find_user_by_email,
-    find_user_by_social,
-    create_social_user_with_form,
-    withdraw_user,
-    find_user_by_nickname,
-    find_email_by_nickname,
-    reset_user_password,
-    link_social_account,
+    verify_user_login,              # 일반 로그인 검증
+    create_user,                    # 일반 회원가입
+    find_user_by_email,             # 이메일로 회원 조회
+    find_user_by_social,            # 소셜 계정으로 회원 조회
+    create_social_user_with_form,   # 소셜 회원가입 처리
+    withdraw_user,                  # 회원 탈퇴 처리
+    find_user_by_nickname,          # 닉네임으로 회원 조회
+    find_email_by_nickname,         # 닉네임으로 이메일 조회
+    reset_user_password,            # 비밀번호 재설정
+    link_social_account,            # 기존 계정에 소셜 계정 연결
 )
 
+# 로그인 관련 Blueprint 생성
 login_bp = Blueprint("login", __name__)
 
-
+# 로그인 성공 시 사용자 정보를 세션에 저장하는 함수
 def login_user_session(user, provider_name):
     session["user_email"] = user["email"]
     session["user_nickname"] = user["nickname"]
@@ -27,23 +28,24 @@ def login_user_session(user, provider_name):
     session["login_provider"] = provider_name
 
 
+# 소셜 계정이 이미 연결되어 있으면 바로 로그인하고,
+# 연결된 계정이 없으면 회원가입/계정연결에 사용할 정보를 세션에 임시 저장하는 함수
 def handle_social_login_or_link(provider, social_id, email, nickname, profile_image_url):
+    # 기존에 연결된 회원이 있는지 조회
     user = find_user_by_social(provider, social_id)
 
+    # 이미 연결된 소셜 계정이면 바로 로그인 처리
     if user:
         login_user_session(user, provider.lower())
         flash("로그인되었습니다.")
         return redirect(url_for("index"))
 
-# ==================================================
-# 카카오 소셜 로그인 시 값을 이상하게 받아옴, 이메일 강제로 비우기
-# ==================================================
+    # 카카오는 이메일 값이 비정상적으로 들어오는 경우가 있어 회원가입용 이메일을 비워둠
     signup_email = email
     if provider.upper() == "KAKAO":
         signup_email = ""
 
-
-
+    # 연결되지 않은 소셜 계정은 회원가입 또는 기존 계정 연결에 사용할 정보를 세션에 저장
     session["pending_social_link"] = {
         "provider": provider.upper(),
         "social_id": social_id,
@@ -54,34 +56,44 @@ def handle_social_login_or_link(provider, social_id, email, nickname, profile_im
     session["show_social_link_modal"] = True
     session.pop("social_signup_data", None)
 
+    # 로그인 페이지로 이동시켜 계정 연결 또는 회원가입을 진행하도록 안내
     flash("연결된 계정이 없습니다. 기존 회원이면 계정 연결, 처음이라면 회원가입을 진행해주세요.")
     return redirect(url_for("login.login"))
 
 
-# =========================
-# 일반 로그인
-# =========================
+# ==================================================
+# 로그인 페이지
+# ==================================================
+# POST 요청이면 이메일/비밀번호로 로그인 검증을 하고,
+# 소셜 연동 대기 정보가 있으면 기존 계정과 소셜 계정을 연결한 뒤 로그인한다.
+# GET 요청이면 일반 로그인 화면을 렌더링한다.
 @login_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         email = request.form["email"]
         password = request.form["password"]
 
+        # 입력한 이메일과 비밀번호가 맞는지 확인한다.
         user = verify_user_login(email, password)
 
         if user:
+            # 소셜 로그인 후 기존 계정 연결이 필요한 경우, 세션에 저장된 연동 정보를 가져온다.
             pending_social_link = session.get("pending_social_link")
 
             if pending_social_link:
                 provider = pending_social_link.get("provider")
                 social_id = pending_social_link.get("social_id")
 
+
+                # 연동에 필요한 값이 없으면 연결을 진행하지 않고 다시 로그인 화면으로 보낸다.
                 if not provider or not social_id:
                     session.pop("pending_social_link", None)
                     session.pop("show_social_link_modal", None)
                     flash("소셜 연동 정보가 올바르지 않습니다. 다시 시도해주세요.")
                     return redirect(url_for("login.login"))
 
+
+                # 기존 계정에 소셜 계정을 연결한다.
                 try:
                     link_social_account(user["user_id"], provider, social_id)
                 except ValueError as e:
@@ -95,16 +107,21 @@ def login():
                     flash("소셜 계정 연결 중 오류가 발생했습니다.")
                     return redirect(url_for("login.login"))
 
+                # 연결이 끝났으면 관련 세션을 지우고 완료 메시지를 보여준다.
                 session.pop("pending_social_link", None)
                 session.pop("show_social_link_modal", None)
                 flash("기존 계정과 소셜 계정이 연결되었습니다.")
 
+            # 로그인 정보를 세션에 저장한 뒤 메인 화면으로 이동한다.
             login_user_session(user, "local")
             return redirect(url_for("index"))
 
+        # 계정 정보가 맞지 않으면 로그인에 실패한 것으로 처리한다.
         flash("이메일 또는 비밀번호가 올바르지 않거나 탈퇴한 계정입니다.")
         return redirect(url_for("login.login"))
 
+    # GET 요청이면 로그인 화면을 보여주고,
+    # 필요하면 소셜 계정 연결 안내 모달도 함께 띄운다.
     show_social_link_modal = session.pop("show_social_link_modal", False)
     pending_social_link = session.get("pending_social_link")
 
@@ -115,11 +132,15 @@ def login():
     )
 
 
-# =========================
+# ==================================================
 # 일반 회원가입 / 소셜 회원가입
-# =========================
+# ==================================================
+# GET 요청이면 회원가입 화면을 보여주고,
+# POST 요청이면 입력값 검증 후 일반 회원가입 또는 소셜 회원가입을 진행한다.
 @login_bp.route("/signup", methods=["GET", "POST"])
 def signup():
+
+    # 일반 회원가입 모드로 들어온 경우
     if request.method == "GET":
         mode = request.args.get("mode", "").strip()
         if mode == "local":
@@ -127,9 +148,12 @@ def signup():
             session.pop("pending_social_link", None)
             session.pop("show_social_link_modal", None)
 
+    # 소셜 회원가입 중이라면 세션에 저장된 소셜 정보를 가져온다.
     social_data = session.get("social_signup_data", {})
 
+
     if request.method == "POST":
+        # 회원가입 폼에서 입력한 값을 가져온다.
         nickname = request.form.get("nickname", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
@@ -152,6 +176,7 @@ def signup():
         nickname_checked = request.form.get("nickname_checked", "false")
         checked_nickname_value = request.form.get("checked_nickname_value", "").strip()
 
+        # 오류메시지 이후에도 입력값이 유지되도록 회원가입 폼 데이터를 묶어둔다.
         form_data = {
             "email": email,
             "nickname": nickname,
@@ -167,10 +192,12 @@ def signup():
             "ad_agree": ad_agree,
         }
 
+        # 회원가입 중 오류가 생기면 메시지를 띄우고, 입력값을 유지한 채 다시 화면을 보여준다.
         def render_signup_with_error(message):
             flash(message)
             return render_template("login/signup.html", social_data=social_data, form_data=form_data)
 
+        # 회원가입에 필요한 기본 항목이 모두 입력되었는지 확인한다.
         if not nickname or not email:
             return render_signup_with_error("이메일과 닉네임을 입력해주세요.")
         if not gender:
@@ -180,6 +207,8 @@ def signup():
         if not postcode or not road_address:
             return render_signup_with_error("주소 검색을 통해 주소를 입력해주세요.")
 
+        # 이미 가입된 이메일이나 닉네임인지 확인한다.
+        # 단, 소셜 회원가입 중 기존에 받아온 자신의 정보와 같은 값은 예외로 허용한다.
         existing_user = find_user_by_email(email)
         if existing_user:
             if not social_data or existing_user["email"] != social_data.get("email"):
@@ -190,32 +219,40 @@ def signup():
             if not social_data or existing_nickname["nickname"] != social_data.get("nickname"):
                 return render_signup_with_error("이미 사용 중인 닉네임입니다.")
 
-        # 소셜 신규 회원가입
+        # 소셜 회원가입이면 세션에 저장된 소셜 정보와 함께 가입을 진행한다.
         if social_data:
             provider = social_data.get("provider")
             social_id = social_data.get("social_id")
             profile_image_url = social_data.get("profile_image_url")
 
+            # 소셜 가입에 필요한 핵심 정보가 없으면 가입을 중단하고 로그인 화면으로 돌려보낸다.
             if not provider or not social_id:
                 flash("소셜 회원가입 정보가 올바르지 않습니다. 다시 시도해주세요.")
                 session.pop("social_signup_data", None)
                 session.pop("pending_social_link", None)
                 return redirect(url_for("login.login"))
-
+            
+            # 소셜 회원가입도 비밀번호를 직접 입력받아 확인한다.
             if not password or not password_confirm:
                 return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
             if password != password_confirm:
                 return render_signup_with_error("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
 
+            # 카카오는 이메일이 이상하게 받아와지므로 직접 입력하게한다,
+            # 즉, 이메일 중복 확인까지 완료시키고 가입을 진행한다.
             if provider.upper() == "KAKAO":
                 if not email:
+                    # 이거 굳이 안 보여줘도 돼서 invisible 처리
                     return render_signup_with_error("카카오 회원가입은 이메일을 직접 입력해주세요.")
                 if email_checked != "true" or checked_email_value != email:
                     return render_signup_with_error("이메일 중복 확인을 해주세요.")
 
+            # 소셜 회원가입도 닉네임 중복 확인을 마친 경우에만 가입을 진행한다.
             if nickname_checked != "true" or checked_nickname_value != nickname:
                 return render_signup_with_error("닉네임 중복 확인을 해주세요.")
 
+
+            # users와 user_social_accounts에 회원 정보를 저장한다.
             create_social_user_with_form(
                 nickname=nickname,
                 email=email,
@@ -225,6 +262,7 @@ def signup():
                 profile_image_url=profile_image_url,
             )
 
+            # 가입이 끝나면 다시 사용자 정보를 조회해 로그인 세션을 만든다.
             user = find_user_by_social(provider, social_id)
             if not user:
                 return render_signup_with_error("소셜 회원가입 후 사용자 조회에 실패했습니다.")
@@ -237,7 +275,7 @@ def signup():
             flash("간편 회원가입이 완료되었습니다.")
             return redirect(url_for("index"))
 
-        # 일반 회원가입
+        # 일반 회원가입이면 비밀번호 확인과 중복 확인을 마친 뒤 가입을 진행한다.
         if not password or not password_confirm:
             return render_signup_with_error("비밀번호와 비밀번호 확인을 입력해주세요.")
         if password != password_confirm:
@@ -251,9 +289,13 @@ def signup():
         flash("회원가입이 완료되었습니다. 로그인해주세요.")
         return redirect(url_for("login.login"))
 
+    # GET 요청이면 회원가입 화면을 보여준다.
     return render_template("login/signup.html", social_data=social_data, form_data={})
 
 
+# ==================================================
+# 회원가입 중 저장된 소셜 관련 세션을 초기화하고 일반 회원가입 화면으로 이동한다.
+# ==================================================
 @login_bp.route("/signup/reset")
 def signup_reset():
     session.pop("social_signup_data", None)
@@ -262,9 +304,10 @@ def signup_reset():
     return redirect(url_for("login.signup", mode="local"))
 
 
-# =========================
-# 소셜 연결 선택 페이지
-# =========================
+# ==================================================
+# 소셜 계정을 기존 계정에 연결할지, 새로 회원가입할지 선택하는 화면을 보여준다.
+# 먼저 세션에 소셜 연동 정보가 있는지 확인하고, 없으면 로그인 페이지로 돌려보낸다.
+# ==================================================
 @login_bp.route("/social/connect-choice")
 def social_connect_choice():
     pending_social_link = session.get("pending_social_link")
@@ -278,9 +321,9 @@ def social_connect_choice():
     )
 
 
-# =========================
+# ==================================================
 # 기존 회원 계정과 연결하러 로그인 페이지로 이동
-# =========================
+# ==================================================
 
 #@login_bp.route("/social/connect-existing")
 #def social_connect_existing():
@@ -294,6 +337,11 @@ def social_connect_choice():
 #    return redirect(url_for("login.login"))
 
 
+
+# ==================================================
+# 소셜 로그인 이후 새 계정으로 회원가입을 진행할 때,
+# 세션에 저장된 소셜 정보를 회원가입용 데이터를 회원가입 화면으로 보낸다.
+# ==================================================
 @login_bp.route("/social/signup")
 def social_signup():
     pending_social_link = session.get("pending_social_link")
@@ -307,6 +355,10 @@ def social_signup():
     return redirect(url_for("login.signup"))
 
 
+# ==================================================
+# 소셜 로그인 연결 과정을 중단할 때,
+# 진행 중이던 소셜 관련 세션 정보를 지우고 로그인 화면으로 돌아간다.
+# ==================================================
 @login_bp.route("/social/cancel")
 def social_cancel():
     session.pop("pending_social_link", None)
@@ -316,20 +368,28 @@ def social_cancel():
     return redirect(url_for("login.login"))
 
 
+# ==================================================
+# 회원가입 화면에서 이메일이나 닉네임이 이미 사용 중인지 비동기로 확인한다.
+# 요청된 type 값에 따라 이메일 또는 닉네임 중복 여부를 조회해 JSON으로 반환한다.
+# ==================================================
 @login_bp.route("/api/check-duplicate")
 def check_duplicate():
     check_type = request.args.get("type", "").strip()
     value = request.args.get("value", "").strip()
 
+    # 확인할 값이 비어 있으면
     if not value:
         return jsonify({"available": False, "message": "값을 입력해주세요."})
 
+    # 이메일 중복 여부 확인
     if check_type == "email":
         user = find_user_by_email(value)
         return jsonify({
             "available": not bool(user),
             "message": "사용 가능한 이메일입니다." if not user else "이미 사용 중인 이메일입니다."
         })
+    
+    # 닉네임 중복 여부 확인
     elif check_type == "nickname":
         user = find_user_by_nickname(value)
         return jsonify({
@@ -337,18 +397,27 @@ def check_duplicate():
             "message": "사용 가능한 닉네임입니다." if not user else "이미 사용 중인 닉네임입니다."
         })
 
+    # 이메일이나 닉네임이 아닌 값이 들어오면 잘못된 요청으로 처리한다.
     return jsonify({"available": False, "message": "잘못된 요청입니다."})
 
 
+# ==================================================
+# 닉네임으로 가입한 이메일을 찾는다.
+# POST 요청이면 닉네임을 확인해 이메일을 조회하고,
+# GET 요청이면 아이디 찾기 화면을 보여준다.
+# ==================================================
 @login_bp.route("/find-id", methods=["GET", "POST"])
 def find_id():
     found_email = None
     if request.method == "POST":
         nickname = request.form.get("nickname", "").strip()
+
+        # 닉네임이 비어 있으면 다시 입력하도록 안내한다.
         if not nickname:
             flash("닉네임을 입력해주세요.")
             return redirect(url_for("login.find_id"))
 
+        # 입력한 닉네임으로 가입 정보를 찾고, 없으면 오류 메시지를 보여준다.
         user = find_email_by_nickname(nickname)
         if not user:
             flash("일치하는 회원 정보를 찾을 수 없습니다.")
@@ -358,6 +427,11 @@ def find_id():
     return render_template("login/find_id.html", found_email=found_email)
 
 
+# ==================================================
+# 이메일과 닉네임이 일치하는 회원의 비밀번호를 새 비밀번호로 변경한다.
+# POST 요청이면 입력값을 확인한 뒤 비밀번호를 재설정하고,
+# GET 요청이면 비밀번호 찾기 화면을 보여준다.
+# ==================================================
 @login_bp.route("/find-password", methods=["GET", "POST"])
 def find_password():
     if request.method == "POST":
@@ -366,16 +440,22 @@ def find_password():
         new_password = request.form.get("new_password", "").strip()
         new_password_confirm = request.form.get("new_password_confirm", "").strip()
 
+        # 비밀번호 재설정에 필요한 값이 모두 입력되었는지 확인한다.
         if not email or not nickname or not new_password or not new_password_confirm:
             flash("모든 항목을 입력해주세요.")
             return redirect(url_for("login.find_password"))
+        
+        # 새 비밀번호와 확인값이 같은지 확인한다.
         if new_password != new_password_confirm:
             flash("새 비밀번호가 일치하지 않습니다.")
             return redirect(url_for("login.find_password"))
+        
+        # 너무 짧은 비밀번호는 사용할 수 없도록 제한한다.
         if len(new_password) < 4:
             flash("비밀번호는 4자 이상 입력해주세요.")
             return redirect(url_for("login.find_password"))
 
+        # 이메일과 닉네임이 일치하는 회원의 비밀번호를 재설정한다.
         success = reset_user_password(email, nickname, new_password)
         if not success:
             flash("입력한 정보와 일치하는 회원을 찾을 수 없습니다.")
@@ -387,6 +467,11 @@ def find_password():
     return render_template("login/find_password.html")
 
 
+# ==================================================
+# 로그인한 방식에 따라 로그아웃을 처리한다.
+# 카카오 로그인은 카카오 로그아웃 주소로 보내고,
+# 그 외 로그인은 세션만 지운 뒤 메인 화면으로 이동한다.
+# ==================================================
 @login_bp.route("/logout")
 def logout():
     provider = session.get("login_provider")
