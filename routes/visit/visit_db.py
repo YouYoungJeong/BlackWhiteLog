@@ -106,12 +106,12 @@ def create_visit_with_menus(user_id, restaurant_id, purchase_date, items):
         conn.close()
 
 def exists_visit_same_day(user_id, restaurant_id, purchase_date):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    conn = get_connection()
+    cursor = conn.cursor()
 
     sql = """
         SELECT visit_id
-        FROM visit
+        FROM visits
         WHERE user_id = %s
           AND restaurant_id = %s
           AND DATE(visited_at) = %s
