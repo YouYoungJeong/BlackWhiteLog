@@ -32,9 +32,10 @@ def verify_user_login(email, password):
 # =========================
 def find_user_by_email(email):
     sql = """
-        SELECT user_id, email, nickname, status
+        SELECT user_id, email, nickname, password_hash, status
         FROM users
         WHERE email = %s
+          AND (status IS NULL OR status <> 'DELETED')
         LIMIT 1
     """
 
@@ -55,6 +56,7 @@ def find_user_by_nickname(nickname):
         SELECT user_id, email, nickname, status
         FROM users
         WHERE nickname = %s
+          AND (status IS NULL OR status <> 'DELETED')
         LIMIT 1
     """
 
@@ -254,8 +256,34 @@ def find_email_by_nickname(nickname):
 
 
 # =========================
+# 이메일로 비밀번호 변경
+# 이메일 인증 완료 후 사용
+# =========================
+def update_user_password_by_email(email, new_password):
+    new_password_hash = generate_password_hash(new_password)
+
+    sql = """
+        UPDATE users
+        SET password_hash = %s
+        WHERE email = %s
+          AND (status IS NULL OR status <> 'DELETED')
+    """
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (new_password_hash, email))
+            changed = cursor.rowcount > 0
+        conn.commit()
+        return changed
+    finally:
+        conn.close()
+
+
+# =========================
 # 비밀번호 재설정
 # 이메일 + 닉네임 일치하는 회원의 비밀번호 변경
+# 기존 방식 유지용
 # =========================
 def reset_user_password(email, nickname, new_password):
     new_password_hash = generate_password_hash(new_password)
