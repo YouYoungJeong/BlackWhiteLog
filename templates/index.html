@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/user_ranking.css') }}" />
     <!--#### 랭크 css 스타일시트-->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mainrank.css') }}" />
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/visit.css') }}" />
     
 </head>
 <body>
@@ -67,6 +67,8 @@
 
 <div class="topbar-actions">
     {% if user_email %}
+        <button class="ghost-btn visit-stamp-btn" id="visitStampBtn" type="button">도장 찍기</button>
+
         <div class="profile-menu-wrap">
             <button class="user-profile-chip" id="profileToggle" type="button">
                 <span class="user-profile-chip__name">{{ user_nickname }}</span>
@@ -104,7 +106,6 @@
                             <button class="sort-chip active" data-sort="visits">추천</button>
                             <button class="sort-chip" data-sort="rating">랭킹</button>
                             <button class="sort-chip" data-sort="latest">즐겨찾기</button>
-                            <button class="sort-chip" data-sort="reviews">카테고리</button>
                         </div>
 
                         <button
@@ -309,7 +310,7 @@
 </aside>
 
     
-
+    {% include 'visit/receipt_modal.html' %}
     <script>
         window.__INITIAL_STATE__ = {
             apiUrl: "{{ url_for('api_restaurants') }}",
@@ -317,10 +318,12 @@
             favoriteToggleBaseUrl: "/api/favorites",
             loginUrl: "{{ url_for('login.login') }}",
             isLoggedIn: {{ 'true' if user_id else 'false' }},
-            userId: {{ user_id if user_id else 'null' }}
+            userId: {{ user_id if user_id else 'null' }},
+            visitReceiptApiUrl: "{{ url_for('visit.register_visit_by_receipt') }}"
         };
     </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/pages/visit.js') }}"></script>
     <!--####레스토랑 판넬 js-->
     <script src="{{ url_for('static', filename='js/pages/restaurant_panel.js') }}"></script>
     <!--####레스토랑 판넬 js-->

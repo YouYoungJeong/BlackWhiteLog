@@ -714,6 +714,7 @@ async function fetchFavoriteRestaurants() {
     }
 }
 
+window.fetchRestaurants = fetchRestaurants;
 window.fetchFavoriteRestaurants = fetchFavoriteRestaurants;
 
 /************************************************************
@@ -906,6 +907,49 @@ function createMarkerIconContent(index) {
                 line-height: 1;
                 z-index: 2;
                 pointer-events: none;
+            ">${index + 1}</span>
+        </div>
+    `;
+}
+
+function createVisitedMarkerIconContent(index, isActive = false) {
+    return `
+        <div style="
+            position: relative;
+            width: 44px;
+            height: 52px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        ">
+            <div style="
+                width: 40px;
+                height: 40px;
+                background-image: url('/static/img/stamp.png');
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                filter: ${isActive
+                    ? "drop-shadow(0 8px 18px rgba(0,0,0,0.28))"
+                    : "drop-shadow(0 6px 12px rgba(0,0,0,0.18))"};
+            "></div>
+
+            <span style="
+                position: absolute;
+                left: 0;
+                top: -2px;
+                min-width: 18px;
+                height: 18px;
+                padding: 0px 0px 0px 0px;
+                border-radius: 999px;
+                background: #ffffff;
+                color: #b22222;
+                font-size: 12px;
+                font-weight: 800;
+                line-height: 18px;
+                text-align: center;
+                z-index: 3;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.18);
             ">${index + 1}</span>
         </div>
     `;
@@ -1241,19 +1285,28 @@ async function renderMapMarkers(items) {
 
         hasMarker = true;
 
+        const isVisited = Boolean(item.has_visited);
+
         const marker = new naver.maps.Marker({
             position: position,
             map: naverMap,
             title: item.name || "이름 없음",
             icon: {
-                content: createMarkerIconContent(index),
-                size: new naver.maps.Size(34, 46),
-                anchor: new naver.maps.Point(17, 46)
+                content: isVisited
+                    ? createVisitedMarkerIconContent(index, false)
+                    : createMarkerIconContent(index),
+                size: isVisited
+                    ? new naver.maps.Size(44, 52)
+                    : new naver.maps.Size(34, 46),
+                anchor: isVisited
+                    ? new naver.maps.Point(22, 52)
+                    : new naver.maps.Point(17, 46)
             }
         });
 
         marker.restaurantId = Number(item.restaurant_id);
         marker.markerIndex = index;
+        marker.isVisited = isVisited;
 
         naver.maps.Event.addListener(marker, "click", () => {
 
@@ -1313,54 +1366,66 @@ function highlightMarker(restaurantId) {
 
     naverMarkers.forEach((marker) => {
         const isActive = Number(marker.restaurantId) === Number(restaurantId);
+        const isVisited = Boolean(marker.isVisited);
 
         marker.setIcon({
-            content: `
-                <div style="
-                    position: relative;
-                    width: 34px;
-                    height: 46px;
-                    display: flex;
-                    align-items: flex-start;
-                    justify-content: center;
-                ">
+            content: isVisited
+                ? createVisitedMarkerIconContent(marker.markerIndex, isActive)
+                : `
                     <div style="
                         position: relative;
                         width: 34px;
-                        height: 34px;
-                        border-radius: 50% 50% 50% 0;
-                        transform: rotate(-45deg);
-                        background: linear-gradient(
-                            135deg,
-                            ${isActive ? "#6f8d59" : "#8faa7a"} 0%,
-                            ${isActive ? "#4f6d3e" : "#6f8d59"} 100%
-                        );
-                        border: 2px solid #d7dfb9;
-                        box-shadow: ${isActive
-                            ? "0 10px 24px rgba(111, 141, 89, 0.38)"
-                            : "0 8px 18px rgba(0, 0, 0, 0.18)"};
-                    "></div>
+                        height: 46px;
+                        display: flex;
+                        align-items: flex-start;
+                        justify-content: center;
+                    ">
+                        <div style="
+                            position: relative;
+                            width: 34px;
+                            height: 34px;
+                            border-radius: 50% 50% 50% 0;
+                            transform: rotate(-45deg);
+                            background: linear-gradient(
+                                135deg,
+                                ${isActive ? "#6f8d59" : "#8faa7a"} 0%,
+                                ${isActive ? "#4f6d3e" : "#6f8d59"} 100%
+                            );
+                            border: 2px solid #d7dfb9;
+                            box-shadow: ${isActive
+                                ? "0 10px 24px rgba(111, 141, 89, 0.38)"
+                                : "0 8px 18px rgba(0, 0, 0, 0.18)"};
+                        "></div>
 
-                    <span style="
-                        position: absolute;
-                        top: 9px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        font-size: ${isActive ? 14 : 13}px;
-                        font-weight: 800;
-                        color: #ffffff;
-                        line-height: 1;
-                        z-index: 2;
-                        pointer-events: none;
-                    ">${marker.markerIndex + 1}</span>
-                </div>
-            `,
-            size: new naver.maps.Size(34, 46),
-            anchor: new naver.maps.Point(17, 46)
+                        <span style="
+                            position: absolute;
+                            top: 9px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            font-size: ${isActive ? 14 : 13}px;
+                            font-weight: 800;
+                            color: #ffffff;
+                            line-height: 1;
+                            z-index: 2;
+                            pointer-events: none;
+                        ">${marker.markerIndex + 1}</span>
+                    </div>
+                `,
+            size: isVisited
+                ? new naver.maps.Size(44, 52)
+                : new naver.maps.Size(34, 46),
+            anchor: isVisited
+                ? new naver.maps.Point(22, 52)
+                : new naver.maps.Point(17, 46)
         });
+
+        marker.setZIndex(isActive ? 200 : 100);
     });
 
-    naverMap.panTo(targetMarker.getPosition());
+    const position = targetMarker.getPosition();
+    if (position) {
+        naverMap.panTo(position);
+    }
 }
 
 /************************************************************

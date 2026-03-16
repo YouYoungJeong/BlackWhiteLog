@@ -74,14 +74,12 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, user_id=None,
     sort_by:
       - visits   : 방문수순
       - rating   : 평점순
-      - reviews  : 리뷰많은순
       - latest   : 최신등록순
     """
 
     order_by_map = {
         "visits": "visit_count DESC, avg_rating DESC, review_count DESC, r.created_at DESC",
         "rating": "avg_rating DESC, review_count DESC, visit_count DESC, r.created_at DESC",
-        "reviews": "review_count DESC, avg_rating DESC, visit_count DESC, r.created_at DESC",
         "latest": "r.created_at DESC, visit_count DESC, avg_rating DESC",
     }
 
@@ -114,6 +112,11 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, user_id=None,
                 ELSE 1
             END AS is_favorite,
 
+            CASE
+                WHEN uv.restaurant_id IS NULL THEN 0
+                ELSE 1
+            END AS has_visited,
+
             (
                 SELECT COALESCE(ri.thumb_url, ri.image_url)
                 FROM restaurant_images ri
@@ -126,6 +129,13 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, user_id=None,
             LEFT JOIN user_favorites uf
                 ON uf.restaurant_id = r.restaurant_id
             AND uf.user_id = %s
+
+            LEFT JOIN (
+                SELECT DISTINCT restaurant_id
+                FROM visits
+                WHERE user_id = %s
+            ) uv
+                ON uv.restaurant_id = r.restaurant_id
 
             LEFT JOIN restaurant_categories rc
                 ON r.restaurant_category_id = rc.restaurant_category_id
@@ -153,7 +163,7 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, user_id=None,
     """
 
     effective_user_id = user_id if user_id else 0
-    params = [effective_user_id]
+    params = [effective_user_id, effective_user_id]
 
     # 운영 가능한 음식점만 보이게 하는 조건
     sql += " AND (r.status IS NULL OR r.status IN ('OPEN', 'ACTIVE')) "
@@ -197,6 +207,7 @@ def fetch_restaurants(region=None, keyword=None, category_id=None, user_id=None,
                 row["visit_count"] = int(row["visit_count"] or 0)
                 row["review_count"] = int(row["review_count"] or 0)
                 row["is_favorite"] = bool(row.get("is_favorite", 0))
+                row["has_visited"] = bool(row.get("has_visited", 0))
 
             return rows
     finally:
@@ -227,6 +238,11 @@ def fetch_favorite_restaurants(user_id, region=None, category_id=None):
             COALESCE(rv.review_count, 0) AS review_count,
             COALESCE(rv.avg_rating, 0) AS avg_rating,
 
+            CASE
+                WHEN uv.restaurant_id IS NULL THEN 0
+                ELSE 1
+            END AS has_visited,
+
             (
                 SELECT COALESCE(ri.thumb_url, ri.image_url)
                 FROM restaurant_images ri
@@ -240,6 +256,13 @@ def fetch_favorite_restaurants(user_id, region=None, category_id=None):
             ON uf.restaurant_id = r.restaurant_id
         LEFT JOIN restaurant_categories rc
             ON r.restaurant_category_id = rc.restaurant_category_id
+
+        LEFT JOIN (
+            SELECT DISTINCT restaurant_id
+            FROM visits
+            WHERE user_id = %s
+        ) uv
+            ON uv.restaurant_id = r.restaurant_id
 
         LEFT JOIN (
             SELECT restaurant_id, COUNT(*) AS visit_count
@@ -264,7 +287,7 @@ def fetch_favorite_restaurants(user_id, region=None, category_id=None):
           AND (r.status IS NULL OR r.status IN ('OPEN', 'ACTIVE'))
     """
 
-    params = [user_id]
+    params = [user_id, user_id]
 
     if region and region != "전체":
         sql += " AND r.region_sigungu = %s "
@@ -293,6 +316,7 @@ def fetch_favorite_restaurants(user_id, region=None, category_id=None):
                 row["avg_rating"] = float(row["avg_rating"] or 0)
                 row["visit_count"] = int(row["visit_count"] or 0)
                 row["review_count"] = int(row["review_count"] or 0)
+                row["has_visited"] = bool(row.get("has_visited", 0))
 
             return rows
     finally:

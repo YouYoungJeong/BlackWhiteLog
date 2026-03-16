@@ -11,6 +11,7 @@ from routes.login.login_routes import login_bp
 from routes.mypage.mypage_routes import mypage_bp
 from routes.restaurant.restaurant_panel import restaurant_panel_bp
 from routes.ranking.user_ranking import user_ranking_bp
+from routes.visit.visit_routes import visit_bp
 
 from db import (
     fetch_categories,
@@ -30,6 +31,7 @@ app.register_blueprint(login_bp)
 app.register_blueprint(mypage_bp)
 app.register_blueprint(restaurant_panel_bp)
 app.register_blueprint(user_ranking_bp)
+app.register_blueprint(visit_bp)
 register_owner_routes(app)
 
 

@@ -39,19 +39,49 @@ def get_restaurant_detail(restaurant_id, user_id=None):
     finally:
         conn.close()
 
-def get_restaurant_menus(restaurant_id):
-    """특정 음식점의 메뉴 목록을 가져오는 함수"""
+def get_restaurant_menus(restaurant_id, user_id=None):
+    """특정 음식점의 메뉴 목록 + 현재 유저가 먹은 메뉴 여부를 가져오는 함수"""
+    effective_user_id = user_id if user_id else 0
+
     sql = """
-        SELECT menu_name, price 
-        FROM restaurant_menus 
-        WHERE restaurant_id = %s 
-        ORDER BY menu_id ASC
+        SELECT
+            rm.menu_id,
+            rm.menu_name,
+            rm.price,
+            COALESCE(uvm.eaten_count, 0) AS eaten_count,
+            CASE
+                WHEN uvm.menu_id IS NULL THEN 0
+                ELSE 1
+            END AS has_eaten
+        FROM restaurant_menus rm
+        LEFT JOIN (
+            SELECT
+                vm.menu_id,
+                SUM(vm.quantity) AS eaten_count
+            FROM visit_menus vm
+            INNER JOIN visits v
+                ON vm.visit_id = v.visit_id
+            WHERE v.user_id = %s
+              AND v.restaurant_id = %s
+            GROUP BY vm.menu_id
+        ) uvm
+            ON rm.menu_id = uvm.menu_id
+        WHERE rm.restaurant_id = %s
+        ORDER BY rm.menu_id ASC
     """
+
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (restaurant_id,))
-            return cursor.fetchall()
+            cursor.execute(sql, (effective_user_id, restaurant_id, restaurant_id))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                row["price"] = int(row["price"] or 0)
+                row["eaten_count"] = int(row.get("eaten_count") or 0)
+                row["has_eaten"] = bool(row.get("has_eaten", 0))
+
+            return rows
     finally:
         conn.close()
 
