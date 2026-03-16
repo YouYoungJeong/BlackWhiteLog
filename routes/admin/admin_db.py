@@ -250,11 +250,9 @@ def release_admin_sanction(sanction_id):
             return True
     return False
 
+
 # =========================
 # 관리자 리뷰 관리 - 전체 리뷰 목록 조회
-# 설명:
-# - 필요 시 app.py나 다른 화면에서 써도 되도록 유지
-# - keyword, status 필터 지원
 # =========================
 def fetch_admin_reviews(keyword="", status=""):
     sql = """
@@ -269,7 +267,9 @@ def fetch_admin_reviews(keyword="", status=""):
             rv.content,
             rv.created_at,
             rv.updated_at,
-            rv.status
+            rv.status,
+            rv.status_changed_at,
+            rv.deleted_at
         FROM reviews rv
         INNER JOIN visits v
             ON rv.visit_id = v.visit_id
@@ -304,7 +304,12 @@ def fetch_admin_reviews(keyword="", status=""):
     try:
         with conn.cursor() as cursor:
             cursor.execute(sql, params)
-            return cursor.fetchall()
+            reviews = cursor.fetchall()
+
+        for review in reviews:
+            review["comments"] = []
+
+        return reviews
     finally:
         conn.close()
 
@@ -338,6 +343,15 @@ def fetch_admin_review_restaurants(keyword=""):
 
 
 # =========================
+# 관리자 리뷰 댓글 목록 조회
+# 현재 review_comments 테이블을 사용하지 않으므로 빈 값 반환
+# 템플릿 호환용
+# =========================
+def fetch_admin_review_comments_by_review_ids(review_ids):
+    return {}
+
+
+# =========================
 # 관리자 리뷰 관리 - 특정 가게의 리뷰 목록 조회
 # =========================
 def fetch_admin_reviews_by_restaurant(restaurant_id, status=""):
@@ -353,7 +367,9 @@ def fetch_admin_reviews_by_restaurant(restaurant_id, status=""):
             rv.content,
             rv.created_at,
             rv.updated_at,
-            rv.status
+            rv.status,
+            rv.status_changed_at,
+            rv.deleted_at
         FROM reviews rv
         INNER JOIN visits v
             ON rv.visit_id = v.visit_id
@@ -376,7 +392,12 @@ def fetch_admin_reviews_by_restaurant(restaurant_id, status=""):
     try:
         with conn.cursor() as cursor:
             cursor.execute(sql, params)
-            return cursor.fetchall()
+            reviews = cursor.fetchall()
+
+        for review in reviews:
+            review["comments"] = []
+
+        return reviews
     finally:
         conn.close()
 
@@ -397,7 +418,9 @@ def get_admin_review_by_id(review_id):
             rv.content,
             rv.created_at,
             rv.updated_at,
-            rv.status
+            rv.status,
+            rv.status_changed_at,
+            rv.deleted_at
         FROM reviews rv
         INNER JOIN visits v
             ON rv.visit_id = v.visit_id
@@ -413,9 +436,22 @@ def get_admin_review_by_id(review_id):
     try:
         with conn.cursor() as cursor:
             cursor.execute(sql, (review_id,))
-            return cursor.fetchone()
+            review = cursor.fetchone()
+
+        if review:
+            review["comments"] = []
+
+        return review
     finally:
         conn.close()
+
+
+# =========================
+# 관리자 리뷰 댓글 단건 조회
+# 현재 review_comments 테이블을 사용하지 않으므로 None 반환
+# =========================
+def get_admin_review_comment_by_id(comment_id):
+    return None
 
 
 # =========================
@@ -435,18 +471,26 @@ def update_admin_review(review_id, rating, content):
     try:
         with conn.cursor() as cursor:
             cursor.execute(sql, (rating, content, review_id))
-            return cursor.rowcount > 0
+            success = cursor.rowcount > 0
+        conn.commit()
+        return success
     finally:
         conn.close()
 
 
 # =========================
 # 관리자 리뷰 관리 - 리뷰 상태 변경 공통 함수
+# ACTIVE / HIDDEN / DELETED
 # =========================
 def update_admin_review_status(review_id, new_status):
     sql = """
         UPDATE reviews
         SET status = %s,
+            status_changed_at = NOW(),
+            deleted_at = CASE
+                WHEN %s = 'DELETED' THEN NOW()
+                ELSE NULL
+            END,
             updated_at = NOW()
         WHERE review_id = %s
     """
@@ -454,10 +498,20 @@ def update_admin_review_status(review_id, new_status):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (new_status, review_id))
-            return cursor.rowcount > 0
+            cursor.execute(sql, (new_status, new_status, review_id))
+            success = cursor.rowcount > 0
+        conn.commit()
+        return success
     finally:
         conn.close()
+
+
+# =========================
+# 관리자 리뷰 댓글 상태 변경 공통 함수
+# 현재 review_comments 테이블을 사용하지 않으므로 False 반환
+# =========================
+def update_admin_review_comment_status(comment_id, new_status):
+    return False
 
 
 # =========================
@@ -479,3 +533,11 @@ def soft_delete_admin_review(review_id):
 # =========================
 def restore_admin_review(review_id):
     return update_admin_review_status(review_id, "ACTIVE")
+
+
+# =========================
+# 관리자 리뷰 댓글 삭제(소프트 삭제)
+# 현재 review_comments 테이블을 사용하지 않으므로 False 반환
+# =========================
+def soft_delete_admin_review_comment(comment_id):
+    return False

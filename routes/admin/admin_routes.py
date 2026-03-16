@@ -33,7 +33,6 @@ from .admin_db import (
 )
 
 # 관리자 블루프린트 생성
-# url_for 쓸 때 admin.붙음
 admin_bp = Blueprint("admin", __name__)
 
 
@@ -63,20 +62,16 @@ def admin_required(view_func):
 @admin_bp.route("/admin/restaurants")
 @admin_required
 def admin_restaurants():
-    # 검색어 받기
     keyword = request.args.get("keyword", "").strip()
 
-    # 기본은 전체 목록
     filtered_restaurants = DUMMY_RESTAURANTS
 
-    # 검색어가 있으면 이름 기준 검색
     if keyword:
         filtered_restaurants = [
             r for r in DUMMY_RESTAURANTS
             if keyword.lower() in r["restaurant_name"].lower()
         ]
 
-    # 카테고리명 붙여서 템플릿에 전달
     restaurants_with_category = []
     for r in filtered_restaurants:
         item = r.copy()
@@ -96,7 +91,6 @@ def admin_restaurants():
 @admin_bp.route("/admin/restaurants/create", methods=["GET", "POST"])
 @admin_required
 def admin_restaurant_create():
-    # GET 요청이면 등록 폼 보여주기
     if request.method == "GET":
         return render_template(
             "admin/admin_restaurant_form.html",
@@ -105,14 +99,12 @@ def admin_restaurant_create():
             restaurant=None,
         )
 
-    # POST 요청이면 폼 데이터 받기
     restaurant_name = request.form.get("restaurant_name", "").strip()
     restaurant_category_id = request.form.get("restaurant_category_id", "").strip()
     region_sigungu = request.form.get("region_sigungu", "").strip()
     address = request.form.get("address", "").strip()
     phone = request.form.get("phone", "").strip()
 
-    # 이름은 필수 입력
     if not restaurant_name:
         flash("음식점 이름을 입력해주세요.")
         return render_template(
@@ -122,7 +114,6 @@ def admin_restaurant_create():
             restaurant=None,
         )
 
-    # 새 음식점 더미 데이터 생성
     new_restaurant = {
         "restaurant_id": get_next_restaurant_id(),
         "restaurant_name": restaurant_name,
@@ -132,7 +123,6 @@ def admin_restaurant_create():
         "phone": phone,
     }
 
-    # 더미 목록에 추가
     DUMMY_RESTAURANTS.append(new_restaurant)
 
     flash("음식점이 등록되었습니다.")
@@ -145,15 +135,12 @@ def admin_restaurant_create():
 @admin_bp.route("/admin/restaurants/<int:restaurant_id>/edit", methods=["GET", "POST"])
 @admin_required
 def admin_restaurant_edit(restaurant_id):
-    # 수정할 음식점 찾기
     restaurant = get_restaurant_by_id(restaurant_id)
 
-    # 없는 음식점이면 목록으로 이동
     if not restaurant:
         flash("해당 음식점을 찾을 수 없습니다.")
         return redirect(url_for("admin.admin_restaurants"))
 
-    # GET 요청이면 수정 폼 보여주기
     if request.method == "GET":
         return render_template(
             "admin/admin_restaurant_form.html",
@@ -162,14 +149,12 @@ def admin_restaurant_edit(restaurant_id):
             restaurant=restaurant,
         )
 
-    # POST 요청이면 수정값 받기
     restaurant_name = request.form.get("restaurant_name", "").strip()
     restaurant_category_id = request.form.get("restaurant_category_id", "").strip()
     region_sigungu = request.form.get("region_sigungu", "").strip()
     address = request.form.get("address", "").strip()
     phone = request.form.get("phone", "").strip()
 
-    # 이름은 필수 입력
     if not restaurant_name:
         flash("음식점 이름을 입력해주세요.")
         return render_template(
@@ -179,7 +164,6 @@ def admin_restaurant_edit(restaurant_id):
             restaurant=restaurant,
         )
 
-    # 더미 데이터 수정
     restaurant["restaurant_name"] = restaurant_name
     restaurant["restaurant_category_id"] = int(restaurant_category_id) if restaurant_category_id else 1
     restaurant["region_sigungu"] = region_sigungu
@@ -196,15 +180,12 @@ def admin_restaurant_edit(restaurant_id):
 @admin_bp.route("/admin/restaurants/<int:restaurant_id>/delete", methods=["POST"])
 @admin_required
 def admin_restaurant_delete(restaurant_id):
-    # 삭제할 음식점 찾기
     target = get_restaurant_by_id(restaurant_id)
 
-    # 없으면 에러 메시지
     if not target:
         flash("삭제할 음식점을 찾지 못했습니다.")
         return redirect(url_for("admin.admin_restaurants"))
 
-    # 더미 목록에서 제거
     DUMMY_RESTAURANTS.remove(target)
 
     flash("음식점이 삭제되었습니다.")
@@ -213,8 +194,6 @@ def admin_restaurant_delete(restaurant_id):
 
 # =========================
 # 관리자 리뷰 관리 - 리뷰가 등록된 가게 목록
-# 템플릿:
-# - templates/admin/admin_reviews.html
 # =========================
 @admin_bp.route("/admin/reviews")
 @admin_required
@@ -232,8 +211,6 @@ def admin_review_restaurants():
 
 # =========================
 # 관리자 리뷰 관리 - 특정 가게의 리뷰 목록
-# 템플릿:
-# - templates/admin/admin_reviews_detail.html
 # =========================
 @admin_bp.route("/admin/reviews/<int:restaurant_id>")
 @admin_required
@@ -242,10 +219,8 @@ def admin_review_manage(restaurant_id):
 
     reviews = fetch_admin_reviews_by_restaurant(restaurant_id, status)
 
-    # 기본 제목
     restaurant_name = "리뷰 관리"
 
-    # 리뷰가 있으면 첫 번째 리뷰에서 가게명 꺼내기
     if reviews:
         restaurant_name = reviews[0]["restaurant_name"]
 
@@ -260,37 +235,30 @@ def admin_review_manage(restaurant_id):
 
 # =========================
 # 관리자 리뷰 관리 - 리뷰 수정
-# 템플릿:
-# - templates/admin/admin_review_edit.html
 # =========================
 @admin_bp.route("/admin/reviews/edit/<int:review_id>", methods=["GET", "POST"])
 @admin_required
 def admin_edit_review(review_id):
     review = get_admin_review_by_id(review_id)
 
-    # 없는 리뷰면 목록으로 이동
     if not review:
         flash("리뷰를 찾을 수 없습니다.")
         return redirect(url_for("admin.admin_review_restaurants"))
 
-    # 수정 저장
     if request.method == "POST":
         rating = request.form.get("rating", "").strip()
         content = request.form.get("content", "").strip()
 
-        # 입력값 검증
         if not rating or not content:
             flash("평점과 내용을 모두 입력해주세요.")
             return render_template("admin/admin_review_edit.html", review=review)
 
-        # 평점 숫자 변환
         try:
             rating = int(rating)
         except ValueError:
             flash("평점은 숫자로 입력해주세요.")
             return render_template("admin/admin_review_edit.html", review=review)
 
-        # 평점 범위 체크
         if rating < 1 or rating > 5:
             flash("평점은 1점부터 5점까지 입력할 수 있습니다.")
             return render_template("admin/admin_review_edit.html", review=review)
@@ -304,14 +272,11 @@ def admin_edit_review(review_id):
 
         return redirect(url_for("admin.admin_review_manage", restaurant_id=review["restaurant_id"]))
 
-    # GET 요청이면 수정 화면
     return render_template("admin/admin_review_edit.html", review=review)
 
 
 # =========================
 # 관리자 리뷰 관리 - 리뷰 숨김
-# 설명:
-# - status를 HIDDEN으로 변경
 # =========================
 @admin_bp.route("/admin/reviews/hide/<int:review_id>", methods=["POST"])
 @admin_required
@@ -334,8 +299,6 @@ def admin_hide_review(review_id):
 
 # =========================
 # 관리자 리뷰 관리 - 리뷰 삭제(소프트 삭제)
-# 설명:
-# - 실제 DELETE가 아니라 status를 DELETED로 변경
 # =========================
 @admin_bp.route("/admin/reviews/delete/<int:review_id>", methods=["POST"])
 @admin_required
@@ -358,8 +321,6 @@ def admin_delete_review(review_id):
 
 # =========================
 # 관리자 리뷰 관리 - 리뷰 복구
-# 설명:
-# - HIDDEN / DELETED -> ACTIVE
 # =========================
 @admin_bp.route("/admin/reviews/restore/<int:review_id>", methods=["POST"])
 @admin_required
@@ -378,6 +339,7 @@ def admin_restore_review(review_id):
         flash("리뷰 복구에 실패했습니다.")
 
     return redirect(url_for("admin.admin_review_manage", restaurant_id=review["restaurant_id"]))
+
 
 # =========================
 # 관리자 페이지
