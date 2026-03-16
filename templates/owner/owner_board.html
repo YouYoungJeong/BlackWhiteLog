@@ -5,58 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>흑백로그 | 오너보드</title>
 
-    <!-- 현재 페이지 전용 CSS 연결 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/owner/owner_board.css') }}">
 </head>
 <body>
-    <!-- =========================================================
-        전체 오너보드 페이지를 감싸는 최상위 래퍼
-        헤더 / 본문 / 푸터 / 드로어를 한 화면 단위로 묶음
-        ========================================================= -->
     <div class="owner-board-page">
 
-        <!-- =========================================================
-            [시멘틱 태그] header
-            상단 헤더 영역
-            - 로고
-            - 날짜
-            - 가게 프로필
-            - 햄버거 메뉴 버튼
-            ========================================================= -->
         <header class="top-header">
-            <!-- 헤더 왼쪽 영역 : 브랜드 로고 -->
             <div class="header-left">
-                <div class="brand-wrap">
+                <a href="{{ url_for('index') }}" class="brand-wrap" aria-label="메인 페이지로 이동">
                     <img
                         src="{{ url_for('static', filename='img/main_logo.png') }}"
                         alt="흑백로그 로고"
                         class="main-logo"
                     >
-                </div>
+                </a>
             </div>
 
-            <!-- 헤더 오른쪽 영역 : 날짜 / 가게명 / 프로필 / 메뉴 버튼 -->
             <div class="header-right">
-                <!-- 오늘 날짜 표시용 -->
-                <span class="today-date">2026.03.15</span>
-
-                <!-- 가게 프로필 묶음 -->
                 <div class="store-profile">
-                    <!-- 가게명 -->
-                    <span class="store-name">
-                        {% if sidebar_selected_restaurant_name %}
-                            {{ sidebar_selected_restaurant_name }}
-                        {% else %}
-                            가게를 선택해주세요
-                        {% endif %}
-                    </span>
-
-                    <!-- 프로필 아이콘 -->
                     <div class="profile-circle">👨‍🍳</div>
                 </div>
 
-                <!-- 햄버거 버튼
-                    JS에서 클릭 시 side-drawer를 열기 위한 트리거 역할 -->
                 <button
                     id="menuBtn"
                     class="menu-toggle"
@@ -68,492 +37,303 @@
             </div>
         </header>
 
-        <!-- =========================================================
-            [시멘틱 태그] main
-            페이지 핵심 본문 영역
-            좌측 사이드바 + 우측 메인 콘텐츠의 2단 레이아웃
-            ========================================================= -->
         <main class="board-layout">
-
-            <!-- =====================================================
-                [시멘틱 태그] aside
-                좌측 사이드바
-                - 오너 페이지 메뉴
-                - 공지사항 카드
-                - 로그아웃 버튼
-                ===================================================== -->
             <aside class="sidebar">
-
-                <!-- 상단 메뉴 묶음 -->
                 <div class="sidebar-top">
-                    <!-- 사이드바 제목 -->
                     <div class="sidebar-title">오너 페이지</div>
 
-                    <!-- 메뉴 리스트 -->
                     <ul class="sidebar-menu">
-                        <!-- 현재 활성 메뉴 -->
                         <li class="sidebar-item active">
-                            <a href="#">대시보드</a>
+                            <a href="{{ url_for('owner_board') }}">대시보드</a>
                         </li>
 
-                        <!-- 메뉴 관리 페이지 이동 -->
                         <li class="sidebar-item">
                             <a href="{{ url_for('owner_menu_management') }}">메뉴 관리</a>
                         </li>
 
-                        <!-- 리뷰 관리 페이지 이동 -->
                         <li class="sidebar-item">
                             <a href="{{ url_for('owner_review_management') }}">리뷰 관리</a>
+                        </li>
+
+                        <li class="sidebar-item">
+                            <a href="{{ url_for('owner_notice_management') }}">공지사항 관리</a>
                         </li>
                     </ul>
                 </div>
 
-                <!-- =================================================
-                    사이드바 전용 공지사항 카드
-                    - 식당 선택 토글
-                    - 현재 고정 공지
-                    - 이전 공지 3개
-                    ================================================= -->
-                <div class="sidebar-notice card" id="sidebarNoticeCard">
-                    <div class="sidebar-notice-header">
-                        <h3>공지사항</h3>
+                <div class="info-edit-card card">
+                    <div class="info-row top-row">
+                        <h2>가게 현황</h2>
                     </div>
 
-                    <!-- =================================================
-                        식당 선택 토글
-                        - 여러 가게를 가진 오너를 위해 restaurant_id 기준으로 공지를 다시 조회
-                        - JS에서 change 이벤트로 SPA 갱신
-                        ================================================= -->
-                    <div class="sidebar-notice-toggle-wrap">
-                        <label for="sidebarNoticeRestaurantSelect" class="sidebar-notice-toggle-label">가게 선택</label>
-                        <div class="sidebar-notice-toggle-box">
-                            <select id="sidebarNoticeRestaurantSelect" class="sidebar-notice-toggle-select" aria-label="공지사항 가게 선택">
-                                {% for restaurant in sidebar_restaurant_list %}
-                                    <option
-                                        value="{{ restaurant.restaurant_id }}"
-                                        {% if restaurant.restaurant_id == sidebar_selected_restaurant_id %}selected{% endif %}
-                                    >
-                                        {{ restaurant.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            <span class="sidebar-notice-toggle-icon">▼</span>
-                        </div>
-                    </div>
-
-                    <!-- =================================================
-                        현재 공지 카드
-                        - is_pinned = 1 중 updated_at 가장 최근 1건 표시
-                        - 최초 렌더링은 Jinja
-                        - 이후 식당 변경 시 JS로 교체
-                        ================================================= -->
-                    <div
-                        class="sidebar-notice-current{% if sidebar_notice_current %} is-clickable{% endif %}"
-                        id="sidebarNoticeCurrent"
-                        {% if sidebar_notice_current %}
-                            data-notice-id="{{ sidebar_notice_current.notice_id }}"
-                            data-restaurant-id="{{ sidebar_notice_current.restaurant_id }}"
-                            tabindex="0"
-                            role="button"
-                            aria-label="현재 공지사항 상세 보기"
-                        {% endif %}
-                    >
-                        {% if sidebar_notice_current %}
-                            <span class="notice-badge">현재</span>
-                            <strong class="notice-title">{{ sidebar_notice_current.notice_title }}</strong>
-                            <p class="notice-content">{{ sidebar_notice_current.notice_content }}</p>
-                            <span class="notice-date">{{ sidebar_notice_current.updated_at }}</span>
-                        {% else %}
-                            <span class="notice-badge empty">현재</span>
-                            <strong class="notice-title">고정된 공지사항이 없습니다.</strong>
-                            <p class="notice-content">상단 고정된 공지사항을 등록하면 이 영역에 가장 최근 공지가 표시됩니다.</p>
-                            <span class="notice-date">-</span>
-                        {% endif %}
-                    </div>
-
-                    <!-- =================================================
-                        이전 공지 기록 리스트
-                        - is_pinned = 0
-                        - updated_at 최신순
-                        - 3개만 출력
-                        - 최초 렌더링은 Jinja for문
-                        - 이후 식당 변경 시 JS로 교체
-                        ================================================= -->
-                    <div class="sidebar-notice-history">
-                        <div class="sidebar-notice-history-title">이전 공지</div>
-
-                        <ul class="notice-history-list" id="sidebarNoticeHistoryList">
-                            {% if sidebar_notice_history_list %}
-                                {% for notice in sidebar_notice_history_list %}
+                    <div class="sidebar-notice-history info-card-history">
+                        <ul class="notice-history-list">
+                            {% if restaurant_menu_list %}
+                                {% for restaurant in restaurant_menu_list %}
                                     <li class="notice-history-item">
-                                        <div
-                                            class="notice-history-card is-clickable"
-                                            data-notice-id="{{ notice.notice_id }}"
-                                            data-restaurant-id="{{ notice.restaurant_id }}"
-                                            tabindex="0"
-                                            role="button"
-                                            aria-label="공지사항 상세 보기"
-                                        >
-                                            <strong class="notice-title">{{ notice.notice_title }}</strong>
-                                            <p class="notice-content">{{ notice.notice_content }}</p>
-                                            <span class="notice-date">{{ notice.updated_at }}</span>
+                                        <div class="notice-history-card info-summary-card">
+                                            <strong class="notice-title">{{ restaurant.name }}</strong>
+                                            <p class="notice-content">우리가게 판매 메뉴 개수<br>{{ restaurant.cnt }} 개</p>
                                         </div>
                                     </li>
                                 {% endfor %}
                             {% else %}
                                 <li class="notice-history-item">
                                     <div class="notice-history-card empty-card">
-                                        <strong class="notice-title">이전 공지가 없습니다.</strong>
-                                        <p class="notice-content">최근 일반 공지가 등록되면 이 영역에 최대 3개까지 표시됩니다.</p>
-                                        <span class="notice-date">-</span>
+                                        <strong class="notice-title">등록된 식당이 없습니다.</strong>
+                                        <p class="notice-content">가게 정보가 등록되면 이 영역에 표시됩니다.</p>
                                     </div>
                                 </li>
                             {% endif %}
                         </ul>
                     </div>
-
-                    <!-- =================================================
-                        공지사항 관리 버튼
-                        - 기존 헤더 옆 버튼을 카드 맨 아래로 이동
-                        - 클릭 시 MPA 이동
-                        ================================================= -->
-                    <div class="sidebar-notice-footer">
-                        <a href="{{ url_for('owner_notice_management') }}" class="fill-btn sidebar-notice-manage-link">
-                            공지사항 관리
-                        </a>
-                    </div>
                 </div>
 
-                <!-- 로그아웃 버튼 -->
                 <button class="logout-btn" type="button">로그아웃</button>
             </aside>
 
-            <!-- =====================================================
-                메인 콘텐츠 영역
-                - 환영 문구
-                - 가게 요약
-                - 좌/우 카드형 콘텐츠
-                ===================================================== -->
             <section class="main-content">
-
-                <!-- =================================================
-                    환영 및 가게 요약 영역
-                    ================================================= -->
                 <section class="welcome-section">
-                    <!-- 오너 환영 문구 -->
-                    <h2 class="welcome-title">안녕하세요, !</h2>
-
-                    <!-- 가게 핵심 요약 정보 -->
-                    <div class="store-summary">
-                        <!-- 평점 원형 배지 -->
-                        <div class="rating-badge">
-                            <strong>5.0</strong>
-                            <span>평점</span>
+                    <section class="content-grid">
+                    <div class="sidebar-notice card" id="sidebarNoticeCard">
+                        <div class="sidebar-notice-header">
+                            <h3>공지사항</h3>
                         </div>
 
-                        <!-- 카테고리 / 위치 / 주소 -->
-                        <div class="store-meta">
-                            <p class="store-category-location">한식 / 수원시 수원동</p>
-                            <p class="store-address">비빔밥 원조집, 경기도 수원팔달시 나눔의왕로 1</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- =================================================
-                    메인 카드 그리드
-                    좌측 컬럼 + 우측 컬럼
-                    ================================================= -->
-                <section class="content-grid">
-
-                    <!-- =========================
-                        왼쪽 컬럼
-                        - 랭크 카드
-                        - 가게/메뉴 정보 카드
-                        - 방문자 수 통계 카드
-                        ========================= -->
-                    <div class="left-column">
-
-                        <!-- 랭크 카드 -->
-                        <div class="rank-card card">
-                            <div class="rank-badge-area">
-                                <div class="diamond-badge">💎</div>
-                            </div>
-
-                            <div class="rank-text-area">
-                                <h3>우리가게의 랭크는 <span>다이아몬드</span> 입니다!</h3>
-                                <p>와우 대단해요 맛집중에 맛집!</p>
+                        <div class="sidebar-notice-toggle-wrap">
+                            <label for="sidebarNoticeRestaurantSelect" class="sidebar-notice-toggle-label">가게 선택</label>
+                            <div class="sidebar-notice-toggle-box">
+                                <select id="sidebarNoticeRestaurantSelect" class="sidebar-notice-toggle-select" aria-label="공지사항 가게 선택">
+                                    {% for restaurant in sidebar_restaurant_list %}
+                                        <option
+                                            value="{{ restaurant.restaurant_id }}"
+                                            {% if restaurant.restaurant_id == sidebar_selected_restaurant_id %}selected{% endif %}
+                                        >
+                                            {{ restaurant.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <span class="sidebar-notice-toggle-icon">▼</span>
                             </div>
                         </div>
 
-                        <!-- 메뉴 / 가게 정보 요약 카드 -->
-                        <div class="info-edit-card card">
-                            <!-- 상단 행 : 가게 대표 아이콘 + 상호명 -->
-                            <div class="info-row top-row">
-                                <h2>무엇을 넣을까요</h2>
-                            </div>
-
-                            <!-- 하단 행 : 카테고리 / 메뉴 수 -->
-                            {% if restaurant_menu_list %}
-                                {% for restaurant in restaurant_menu_list %}
-                                    <div class="info-row bottom-row">
-                                        <div class="menu-type-box">
-                                            <span class="emoji">🥟</span>
-                                            <span><p>{{ restaurant.name }}</p></span>
-                                        </div>
-
-                                        <div class="menu-count-box">
-                                            <p>등록된 메뉴 수: {{ restaurant.cnt }}</p>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="info-row bottom-row">
-                                    <div class="menu-type-box">
-                                        <span class="emoji">🥟</span>
-                                        <span><p>등록된 식당이 없습니다.</p></span>
-                                    </div>
-                                </div>
+                        <div
+                            class="sidebar-notice-current{% if sidebar_notice_current %} is-clickable{% endif %}"
+                            id="sidebarNoticeCurrent"
+                            {% if sidebar_notice_current %}
+                                data-notice-id="{{ sidebar_notice_current.notice_id }}"
+                                data-restaurant-id="{{ sidebar_notice_current.restaurant_id }}"
+                                tabindex="0"
+                                role="button"
+                                aria-label="현재 공지사항 상세 보기"
                             {% endif %}
-
-                            <!-- CTA 버튼 : 메뉴 관리 페이지 이동 -->
-                            <div class="action-buttons">
-                                <button type="button" class="fill-btn">
-                                    <a href="{{ url_for('owner_menu_management') }}">추가 하러가기</a>
-                                </button>
-                            </div>
+                        >
+                            {% if sidebar_notice_current %}
+                                <span class="notice-badge">현재</span>
+                                <strong class="notice-title">{{ sidebar_notice_current.notice_title }}</strong>
+                                <p class="notice-content">{{ sidebar_notice_current.notice_content }}</p>
+                                <span class="notice-date">{{ sidebar_notice_current.updated_at }}</span>
+                            {% else %}
+                                <span class="notice-badge empty">현재</span>
+                                <strong class="notice-title">고정된 공지사항이 없습니다.</strong>
+                                <p class="notice-content">상단 고정된 공지사항을 등록하면 이 영역에 가장 최근 공지가 표시됩니다.</p>
+                                <span class="notice-date">-</span>
+                            {% endif %}
                         </div>
 
-<!-- 방문자 수 통계 카드 -->
-<div class="chart-card card">
-    <div class="card-header">
-        <h3>방문자 수 통계</h3>
-    </div>
+                        <div class="sidebar-notice-history">
+                            <div class="sidebar-notice-history-title">이전 공지</div>
 
-    <!-- 차트 영역 -->
-    <div class="chart-area">
-        {% set raw_max = 0 %}
-        {% if visit_chart_data %}
-            {% set raw_max = visit_chart_data | map(attribute='visit_count') | max %}
-        {% endif %}
-
-        <!-- 최대값을 5단위로 올림 -->
-        {% if raw_max <= 0 %}
-            {% set y_max = 5 %}
-        {% elif raw_max <= 5 %}
-            {% set y_max = 5 %}
-        {% elif raw_max <= 10 %}
-            {% set y_max = 10 %}
-        {% elif raw_max <= 15 %}
-            {% set y_max = 15 %}
-        {% elif raw_max <= 20 %}
-            {% set y_max = 20 %}
-        {% elif raw_max <= 25 %}
-            {% set y_max = 25 %}
-        {% elif raw_max <= 30 %}
-            {% set y_max = 30 %}
-        {% else %}
-            {% set y_max = raw_max %}
-        {% endif %}
-
-<div class="chart-area">
-    <div class="chart-top-row">
-        <!-- Y축 숫자 -->
-        <div class="chart-y-axis">
-            <span>{{ y_max }}</span>
-            <span>{{ ((y_max / 4) * 3) | round | int }}</span>
-            <span>{{ ((y_max / 4) * 2) | round | int }}</span>
-            <span>{{ ((y_max / 4) * 1) | round | int }}</span>
-            <span>0</span>
-        </div>
-        <!-- 차트 본체 -->
-        <div class="chart-main">
-            <div class="chart-grid"></div>
-
-            <svg class="chart-svg" viewBox="0 0 900 220" preserveAspectRatio="none">
-                {% if visit_chart_data %}
-                    {% set ns = namespace(points='') %}
-                    {% for item in visit_chart_data %}
-                        {% set x = 20 + (loop.index0 * 95) %}
-                        {% set y = 180 - ((item.visit_count / y_max) * 120) %}
-                        {% set ns.points = ns.points + x|string + ',' + y|string + ' ' %}
-                    {% endfor %}
-
-                    <polyline
-                        fill="none"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="4"
-                        points="{{ ns.points.strip() }}"
-                    />
-
-                    <g class="chart-dots">
-                        {% for item in visit_chart_data %}
-                            {% set x = 20 + (loop.index0 * 95) %}
-                            {% set y = 180 - ((item.visit_count / y_max) * 120) %}
-                            <circle cx="{{ x }}" cy="{{ y }}" r="6"></circle>
-                        {% endfor %}
-                    </g>
-                {% endif %}
-            </svg>
-        </div>
-    </div>
-
-                <!-- X축 라벨 : 그리드선 밖 -->
-                                    <div class="chart-labels">
-                                        {% if visit_chart_data %}
-                                            {% for item in visit_chart_data %}
-                                                <span>{{ item.weekday }}</span>
-                                            {% endfor %}
-                                        {% else %}
-                                            <span>-</span>
-                                            <span>-</span>
-                                            <span>-</span>
-                                            <span>-</span>
-                                            <span>-</span>
-                                            <span>-</span>
-                                            <span>-</span>
-                                            <span>-</span>
-                                            <span>-</span>
-                                            <span>-</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-    <!-- =================================================
-    우측 컬럼 리뷰 요약 카드
-    - 상단 mini-stat-card : 3월 리뷰 수 표시
-    - 하단 review-card : restaurant_id 기준 최신 리뷰 5개 미리보기
-    - 카드 클릭 시 review_management 페이지로 이동
-    ================================================= -->
-<div class="right-column">
-
-    <!-- =================================================
-        3월 리뷰 수 카드
-        - owner_review_db.py 의 get_board_review_summary_by_restaurant()
-        - march_review_count 값을 출력
-        ================================================= -->
-    <div class="mini-stat-card card">
-        <div class="mini-stat-top">
-            <h3>3월 리뷰</h3>
-        </div>
-        <!-- =================================================
-            3월 리뷰 개수 출력
-            - board_review_data.march_review_count 사용
-            ================================================= -->
-        <div class="stat-number">
-            {{ board_review_data.march_review_count if board_review_data else 0 }}
-        </div>
-    </div>
-
-    <!-- =================================================
-        리뷰 미리보기 카드
-        - restaurant_id 기준 최신 리뷰 5개 출력
-        - users.profile_image_url, users.nickname
-        - reviews.rating_text, reviews.content, reviews.updated_at 사용
-        - 각 카드 클릭 시 해당 리뷰 위치로 이동
-        ================================================= -->
-    <div class="review-card card" id="boardReviewCard">
-        <div class="notice-header">
-            <h3>최근 리뷰</h3>
-        </div>
-
-        <!-- =================================================
-            리뷰 리스트
-            - review_list 가 있으면 5개까지 출력
-            - 없으면 empty 카드 표시
-            ================================================= -->
-        <div class="review-list" id="boardReviewList">
-            {% if board_review_data and board_review_data.review_list %}
-                {% for review in board_review_data.review_list %}
-                    <div
-                        class="review-item"
-                        data-review-id="{{ review.review_id }}"
-                        data-restaurant-id="{{ review.restaurant_id }}"
-                        tabindex="0"
-                        role="button"
-                        aria-label="리뷰 상세 보기"
-                        onclick="location.href='{{ url_for('owner_review_management', restaurant_id=review.restaurant_id) }}?review_id={{ review.review_id }}&page={{ review.review_page }}'"
-                        onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); location.href='{{ url_for('owner_review_management', restaurant_id=review.restaurant_id) }}?review_id={{ review.review_id }}&page={{ review.review_page }}'; }"
-                    >
-                                    <!-- =================================================
-                                        리뷰 작성자 프로필
-                                        - profile_image_url 이 있으면 이미지 출력
-                                        - 없으면 기본 아이콘 출력
-                                        ================================================= -->
-                                    <div class="review-profile">
-                                        {% if review.profile_image_url %}
-                                            <img
-                                                src="{{ review.profile_image_url }}"
-                                                alt="{{ review.nickname }} 프로필 이미지"
-                                                style="width:100%; height:100%; object-fit:cover; border-radius:50%;"
+                            <ul class="notice-history-list" id="sidebarNoticeHistoryList">
+                                {% if sidebar_notice_history_list %}
+                                    {% for notice in sidebar_notice_history_list %}
+                                        <li class="notice-history-item">
+                                            <div
+                                                class="notice-history-card is-clickable"
+                                                data-notice-id="{{ notice.notice_id }}"
+                                                data-restaurant-id="{{ notice.restaurant_id }}"
+                                                tabindex="0"
+                                                role="button"
+                                                aria-label="공지사항 상세 보기"
                                             >
-                                        {% else %}
-                                            👤
-                                        {% endif %}
+                                                <strong class="notice-title">{{ notice.notice_title }}</strong>
+                                                <p class="notice-content">{{ notice.notice_content }}</p>
+                                                <span class="notice-date">{{ notice.updated_at }}</span>
+                                            </div>
+                                        </li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li class="notice-history-item">
+                                        <div class="notice-history-card empty-card">
+                                            <strong class="notice-title">이전 공지가 없습니다.</strong>
+                                            <p class="notice-content">최근 일반 공지가 등록되면 이 영역에 최대 3개까지 표시됩니다.</p>
+                                            <span class="notice-date">-</span>
+                                        </div>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    <aside class="right-sidebar">
+                        <div class="mini-stat-card card">
+                            <div class="mini-stat-top">
+                                <h3>3월 리뷰</h3>
+                            </div>
+
+                            <div class="stat-number">
+                                {{ board_review_data.march_review_count if board_review_data else 0 }}
+                            </div>
+                        </div>
+
+                        <div class="review-card card" id="boardReviewCard">
+                            <div class="notice-header">
+                                <h3>최근 리뷰</h3>
+                            </div>
+
+                            <div class="review-list" id="boardReviewList">
+                                {% if board_review_data and board_review_data.review_list %}
+                                    {% for review in board_review_data.review_list %}
+                                        <div
+                                            class="review-item"
+                                            data-review-id="{{ review.review_id }}"
+                                            data-restaurant-id="{{ review.restaurant_id }}"
+                                            tabindex="0"
+                                            role="button"
+                                            aria-label="리뷰 상세 보기"
+                                            onclick="location.href='{{ url_for('owner_review_management', restaurant_id=review.restaurant_id) }}?review_id={{ review.review_id }}&page={{ review.review_page }}'"
+                                            onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); location.href='{{ url_for('owner_review_management', restaurant_id=review.restaurant_id) }}?review_id={{ review.review_id }}&page={{ review.review_page }}'; }"
+                                        >
+                                            <div class="review-profile">
+                                                {% if review.profile_image_url %}
+                                                    <img
+                                                        src="{{ review.profile_image_url }}"
+                                                        alt="{{ review.nickname }} 프로필 이미지"
+                                                        style="width:100%; height:100%; object-fit:cover; border-radius:50%;"
+                                                    >
+                                                {% else %}
+                                                    👤
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="review-content">
+                                                <div class="review-top">
+                                                    <strong>{{ review.nickname }}</strong>
+                                                    <span class="stars">{{ review.rating_text }}</span>
+                                                    <span class="review-date">{{ review.updated_at }}</span>
+                                                </div>
+
+                                                <p>{{ review.content }}</p>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="review-item">
+                                        <div class="review-profile">📝</div>
+                                        <div class="review-content">
+                                            <div class="review-top">
+                                                <strong>등록된 리뷰 없음</strong>
+                                                <span class="review-date">-</span>
+                                            </div>
+                                            <p>아직 등록된 리뷰가 없습니다. 고객 리뷰가 작성되면 이 영역에 최신순으로 최대 5개까지 표시됩니다.</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <a
+                                href="{{ url_for('owner_review_management', restaurant_id=sidebar_selected_restaurant_id) }}"
+                                class="fill-btn review-more-btn"
+                            >
+                                리뷰 전체보기
+                            </a>
+                        </div>
+                    </aside>
+                    <div class="left-main-column">
+                        <div class="chart-card card">
+                            <div class="card-header">
+                                <h3>방문자 수 통계</h3>
+                            </div>
+
+                            <div class="chart-area">
+                                {% set y_max = 5 %}
+
+                                <div class="chart-top-row">
+                                    <div class="chart-y-axis">
+                                        <span>5</span>
+                                        <span>4</span>
+                                        <span>3</span>
+                                        <span>2</span>
+                                        <span>1</span>
+                                        <span>0</span>
                                     </div>
 
-                                    <!-- =================================================
-                                        리뷰 본문 영역
-                                        - 닉네임 / 별점 / 날짜
-                                        - 내용은 2줄 정도 보여주고 길면 CSS에서 정리
-                                        ================================================= -->
-                                    <div class="review-content">
-                                        <div class="review-top">
-                                            <strong>{{ review.nickname }}</strong>
-                                            <span class="stars">{{ review.rating_text }}</span>
-                                            <span class="review-date">{{ review.updated_at }}</span>
-                                        </div>
+                                    <div class="chart-main">
+                                        <div class="chart-grid"></div>
 
-                                        <p>{{ review.content }}</p>
+                                        <svg class="chart-svg" viewBox="0 0 900 220" preserveAspectRatio="none">
+                                            {% if visit_chart_data %}
+                                                {% set ns = namespace(points='') %}
+                                                {% for item in visit_chart_data %}
+                                                    {% set draw_count = item.visit_count if item.visit_count <= 5 else 5 %}
+                                                    {% set x = 20 + (loop.index0 * 95) %}
+                                                    {% set y = 170 - ((draw_count / y_max) * 130) %}
+                                                    {% set ns.points = ns.points + x|string + ',' + y|string + ' ' %}
+                                                {% endfor %}
+
+                                                <polyline
+                                                    fill="none"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="4"
+                                                    points="{{ ns.points.strip() }}"
+                                                />
+
+                                                <g class="chart-dots">
+                                                    {% for item in visit_chart_data %}
+                                                        {% set draw_count = item.visit_count if item.visit_count <= 5 else 5 %}
+                                                        {% set x = 20 + (loop.index0 * 95) %}
+                                                        {% set y = 170 - ((draw_count / y_max) * 130) %}
+                                                        <circle cx="{{ x }}" cy="{{ y }}" r="6"></circle>
+                                                    {% endfor %}
+                                                </g>
+                                            {% endif %}
+                                        </svg>
                                     </div>
                                 </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="review-item">
-                                <div class="review-profile">📝</div>
-                                <div class="review-content">
-                                    <div class="review-top">
-                                        <strong>등록된 리뷰 없음</strong>
-                                        <span class="review-date">-</span>
-                                    </div>
-                                    <p>아직 등록된 리뷰가 없습니다. 고객 리뷰가 작성되면 이 영역에 최신순으로 최대 5개까지 표시됩니다.</p>
+
+                                <div class="chart-labels">
+                                    {% if visit_chart_data %}
+                                        {% for item in visit_chart_data %}
+                                            <span>{{ item.weekday }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span>-</span>
+                                        <span>-</span>
+                                        <span>-</span>
+                                        <span>-</span>
+                                        <span>-</span>
+                                        <span>-</span>
+                                        <span>-</span>
+                                        <span>-</span>
+                                        <span>-</span>
+                                        <span>-</span>
+                                    {% endif %}
                                 </div>
                             </div>
-                        {% endif %}
+                        </div>
                     </div>
-
-                    <!-- =================================================
-                        하단 전체보기 버튼
-                        - review_management 페이지로 이동
-                        ================================================= -->
-                    <a
-                        href="{{ url_for('owner_review_management', restaurant_id=sidebar_selected_restaurant_id) }}"
-                        class="fill-btn review-more-btn"
-                    >
-                        리뷰 전체보기
-                    </a>
-                </div>
-            </div>
-        </section>
-            
+                    </section>
+                </section>
+            </section>
         </main>
 
-        <!-- =========================================================
-            [시멘틱 태그] footer
-            사이트 하단 공통 정보
-            ========================================================= -->
         <footer class="site-footer">
             <div class="footer-inner">
-                <!-- 브랜드 정보 -->
                 <div class="footer-brand">
                     <strong>흑백로그</strong>
                     <span>Black & White Log</span>
                 </div>
 
-                <!-- 저작권 및 안내 문구 -->
                 <div class="footer-info">
                     <p>© 2026 흑백로그. All rights reserved.</p>
                     <p>
@@ -568,9 +348,6 @@
         </footer>
     </div>
 
-    <!-- =========================================================
-        햄버거 클릭 시 열리는 사이드 드로어 영역
-        ========================================================= -->
     <div class="side-drawer-backdrop" id="sideDrawerBackdrop" hidden></div>
 
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
@@ -627,10 +404,6 @@
         </div>
     </aside>
 
-    <!-- =========================================================
-        오너보드 공지사항 초기 데이터
-        - Jinja 초기 렌더링 + JS SPA 갱신에서 함께 사용
-        ========================================================= -->
     <script>
         window.ownerBoardNoticeInitialData = {
             selected_restaurant_id: {{ sidebar_selected_restaurant_id | tojson }},
@@ -640,10 +413,7 @@
         };
     </script>
 
-    <!-- 드로어 동작용 JS 연결 -->
     <script src="{{ url_for('static', filename='js/pages/owner_drawer.js') }}"></script>
-
-    <!-- 오너보드 공지사항 SPA JS -->
     <script src="{{ url_for('static', filename='js/pages/owner/owner_board.js') }}"></script>
 </body>
 </html>
