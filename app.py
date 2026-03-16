@@ -1,6 +1,7 @@
 # Flask 기본 기능들 import
 from flask import Flask, jsonify, render_template, request, session, url_for
 # .env 파일에 저장한 환경변수 불러오기
+from extensions import mail
 from dotenv import load_dotenv
 # 운영체제 환경변수 접근용
 import os
@@ -26,6 +27,19 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
+
+# =========================
+# 메일 설정
+# =========================
+app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER")
+app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
+app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "True") == "True"
+app.config["MAIL_USE_SSL"] = os.getenv("MAIL_USE_SSL", "False") == "True"
+app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER")
+
+mail.init_app(app)
 
 app.register_blueprint(admin_bp)
 app.register_blueprint(login_bp)
