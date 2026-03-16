@@ -291,11 +291,19 @@
                     <span>로그인</span>
                 </a>
             {% endif %}
-
-            <button type="button" class="side-drawer__item" id="sellerRegisterBtn">
-                <span class="side-drawer__icon">🏪</span>
-                <span>판매자 등록하기</span>
-            </button>
+        <!-- 수정! owner_id 존재시 판매자 페이지 이동 -->
+            {% if is_owner %}
+                <a href="{{ url_for('owner_board') }}" class="side-drawer__item side-drawer__item--link" id="sellerRegisterBtn">
+                    <span class="side-drawer__icon">🏪</span>
+                    <span>판매자 페이지 이동</span>
+                </a>
+            {% else %}
+                <button type="button" class="side-drawer__item" id="sellerRegisterBtn">
+                    <span class="side-drawer__icon">🏪</span>
+                    <span>판매자 등록하기</span>
+                </button>
+            {% endif %}
+            <!-- 수정! owner_id 존재하지 않을시 판매자 페이지 이동 -->
         </nav>
 
         <div class="side-drawer__divider"></div>

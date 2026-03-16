@@ -19,6 +19,7 @@ from db import (
     fetch_restaurants,
     fetch_favorite_restaurants,
     toggle_favorite_restaurant,
+    get_owner_by_user_id
 )
 
 load_dotenv()
@@ -45,14 +46,24 @@ def index():
     user_email = session.get("user_email")
     user_nickname = session.get("user_nickname")
     user_id = session.get("user_id")
+    
+    # owner_id 유무 판단후 판매자 페이지 이동
+    owner_id = None
+    is_owner = False
 
+    if user_id:
+        owner_id = get_owner_by_user_id(user_id)
+        is_owner = owner_id is not None
+        
     return render_template(
         "index.html",
         regions=regions,
         categories=categories,
         user_email=user_email,
         user_nickname=user_nickname,
-        user_id=user_id
+        user_id=user_id,
+        is_owner=is_owner, # owner_id True 일때
+        owner_id=owner_id # owner_id 반환
     )
 
 

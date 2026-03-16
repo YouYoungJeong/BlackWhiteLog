@@ -24,9 +24,6 @@ def register_owner_routes(app):
         session_user_id = session.get("user_id")
         session_owner_id = session.get("owner_id")
 
-        if not session_owner_id:
-            session_owner_id = 1
-
         restaurant_menu_list = owner_db.get_menu_count_by_owner(session_owner_id)
 
         try:
@@ -114,10 +111,6 @@ def register_owner_routes(app):
     @app.route("/owner/board/api/notice_summary", methods=["GET"], endpoint="owner_board_api_notice_summary")
     def owner_board_api_notice_summary():
         session_owner_id = session.get("owner_id")
-
-        if not session_owner_id:
-            session_owner_id = 1
-
         client_restaurant_id = request.args.get("restaurant_id", type=int)
 
         try:
@@ -253,9 +246,6 @@ def register_owner_routes(app):
     def owner_menu_management():
         session_user_id = session.get("user_id")
         session_owner_id = session.get("owner_id")
-
-        if not session_owner_id:
-            session_owner_id = 1
 
         db_owner = owner_db.get_owner_info(session_owner_id)
         db_categories = owner_db.get_menu_categories()
