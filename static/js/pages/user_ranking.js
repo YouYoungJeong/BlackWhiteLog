@@ -1,3 +1,39 @@
+// 티어 승급 기준 점수표 (프론트엔드용)
+const TIER_THRESHOLDS = [
+    { name: 'BRONZE', kor: '브론즈', min: 0 },
+    { name: 'SILVER', kor: '실버', min: 500 },
+    { name: 'GOLD', kor: '골드', min: 1500 },
+    { name: 'PLATINUM', kor: '플래티넘', min: 3000 },
+    { name: 'DIAMOND', kor: '다이아몬드', min: 6000 }
+];
+
+function calculateTierInfo(totalPoint) {
+    let point = totalPoint || 0;
+    let currentTierObj = TIER_THRESHOLDS.slice().reverse().find(t => point >= t.min) || TIER_THRESHOLDS[0];
+    let currentTierIdx = TIER_THRESHOLDS.findIndex(t => t.name === currentTierObj.name);
+    
+    let isMax = currentTierIdx === TIER_THRESHOLDS.length - 1;
+    let nextTierObj = isMax ? currentTierObj : TIER_THRESHOLDS[currentTierIdx + 1];
+    
+    let displayPoint = point - currentTierObj.min;
+    let pointNeeded = isMax ? 0 : nextTierObj.min - point; 
+    let range = isMax ? 1 : nextTierObj.min - currentTierObj.min; 
+    let percent = isMax ? 100 : Math.min((displayPoint / range) * 100, 100);
+
+    return {
+        korName: currentTierObj.kor,
+        engName: currentTierObj.name,
+        nextKorName: isMax ? 'MAX' : nextTierObj.kor,
+        displayPoint: displayPoint,
+        range: range,
+        percent: percent,
+        pointNeeded: pointNeeded,
+        isMax: isMax,
+        totalPoint: point
+    };
+}
+
+
 document.addEventListener("DOMContentLoaded", () => {
     // =========================================================
     // DOM 분리 및 이동 (구조 보존)
@@ -65,8 +101,60 @@ document.addEventListener("DOMContentLoaded", () => {
             rankingDashboardOverlay.classList.remove('hidden-view');
         }
     });
+    // 서머리 카드 누르면 랭킹텝 이동
+    const activitySummaryBtn = document.getElementById('activitySummaryBtn');
+    if (activitySummaryBtn) {
+        activitySummaryBtn.addEventListener('click', () => {
+            // 네비게이션 바에 있는 '랭킹' 정렬 칩을 찾아서 대신 클릭해줍니다.
+            const rankingChip = document.querySelector('.sort-chip[data-sort="rating"]');
+            if (rankingChip) {
+                rankingChip.click();
+            }
+        });
+    }
+    // 요약 데이터 불러오기
+    loadRankingSummary();
 });
 
+// 랭킹 요약 데이터 로드
+async function loadRankingSummary() {
+    const summaryCard = document.getElementById('activitySummaryBtn');
+    if (!summaryCard) return; 
+
+    try {
+        const res = await fetch('/api/ranking/summary');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // 공통 계산기로 환산
+        const tInfo = calculateTierInfo(data.point);
+
+        const gaugeFill = document.getElementById('summaryGaugeFill');
+        if (gaugeFill) gaugeFill.style.width = tInfo.percent + "%";
+
+        const progressText = document.querySelector('.activity-summary-progress-text');
+        if (progressText) progressText.innerText = Math.floor(tInfo.percent) + "%";
+
+        const visitCount = document.getElementById('summaryVisitCount');
+        if (visitCount) visitCount.innerText = `${data.visit_count || 0}회`;
+
+        const myRank = document.getElementById('summaryMyRank');
+        if (myRank) myRank.innerText = `#${data.my_rank || '-'}`;
+
+        const latestBadge = document.getElementById('summaryLatestBadge');
+        if (latestBadge) {
+            if (data.latest_badge_img) {
+                latestBadge.innerHTML = `<img src="${data.latest_badge_img}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/static/img/main_logo.png'">`;
+            } else {
+                latestBadge.innerHTML = `<span style="font-size: 10px; color: #999;">없음</span>`;
+            }
+        }
+    } catch(e) {
+        console.error("랭킹 요약 데이터 로드 실패:", e);
+    }
+}
+
+//////////////////////////////////////-----------------------------/////////////////////////////////////////////////////
 // =========================================================
 // 데이터 Fetch 및 화면 렌더링 로직
 // =========================================================
@@ -78,9 +166,21 @@ async function loadRankingData() {
         ]);
 
         const users = await listRes.json();
-        const me = await meRes.json();
+        // 수정/추가된 부분 : 로그인 여부 확인 및 블러 오버레이 제어
+        let me = null;
+        const blurOverlay = document.getElementById('loginBlurOverlay');
+        const dashboardOverlay = document.getElementById('rankingDashboardOverlay'); // 대시보드 추가
+        
+        if (meRes.status === 401) {
+            if (blurOverlay) blurOverlay.classList.remove('hidden-view');
+            if (dashboardOverlay) dashboardOverlay.style.overflow = 'hidden'; // 비로그인 시 스크롤 잠금!
+        } else {
+            if (blurOverlay) blurOverlay.classList.add('hidden-view');
+            if (dashboardOverlay) dashboardOverlay.style.overflow = 'auto'; // 로그인 시 스크롤 해제!
+            me = await meRes.json();
+        }
 
-        // 좌측 패널: 실시간 랭킹 리스트
+        // 좌측 패널: 실시간 랭킹 리스트 (로그인/비로그인 모두 렌더링)
         const listContainer = document.querySelector(".ranking-list-body");
         if (listContainer && users.length > 0) {
             listContainer.innerHTML = users.map((u, i) => {
@@ -89,9 +189,12 @@ async function loadRankingData() {
                 else if (i === 1) rankClass = "silver";
                 else if (i > 2) rankClass = "";
 
-                const isMe = u.user_id === me.user_id;
+                // 수정된 부분 : me 객체가 있을 때(로그인)만 내 랭킹인지 비교
+                const isMe = me ? (u.user_id === me.user_id) : false; 
                 const highlightClass = isMe ? "my-rank-highlight" : (i < 3 ? "top-rank" : "");
                 const meBadge = isMe ? `<span class="me-badge">ME</span>` : "";
+                // 수정 : DB의 u.tier 대신 계산된 티어 정보(tInfo.korName)를 사용합니다.
+                const tInfo = calculateTierInfo(u.point);
 
                 return `
                     <div class="rank-item ${highlightClass}">
@@ -105,6 +208,11 @@ async function loadRankingData() {
                 `;
             }).join('');
         }
+        // 추가된 부분 3: 비로그인 상태면 전체 랭킹까지만 그리고 함수 강제 종료 (아래 에러 방지)
+        if (!me) return;
+        // 데이터 로드 후 서머리 최신화
+        loadRankingSummary();
+
         const allBadges = me.achievements_data.all_achievements;
         const myBadges = me.achievements_data.user_achievements;
         const myBadgeIds = myBadges.map(b => b.achievement_id);
@@ -116,50 +224,33 @@ async function loadRankingData() {
         const profileName = document.querySelector('.profile-card h3');
         const tierBadge = document.querySelector('.tier-badge');
         const tierDesc = document.querySelector('.tier-desc'); // 칭호 요소
-        const gaugePts = document.querySelector('.gauge-pts strong');
+        const gaugePts = document.querySelector('.gauge-pts');
         const gaugeFill = document.querySelector('.gauge-bar-fill');
         const gaugeLabels = document.querySelectorAll('.gauge-labels span'); // 게이지 양끝 티어
         const gaugeDesc = document.querySelector('.gauge-desc'); // 승급까지 남은 점수 설명
 
         // 이름
         if (profileName) profileName.innerText = me.nickname;
-        // 업적 이름으로 하기
+        // 칭호
         if (tierDesc) {
             tierDesc.innerText = myBadges.length > 0 ? myBadges[0].name : "초보 미식가";
         }
-        // 다음 티어 계산
-        const tierList = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND'];
-        const tierNames = {'BRONZE':'브론즈', 'SILVER':'실버', 'GOLD':'골드', 'PLATINUM':'플래티넘', 'DIAMOND':'다이아몬드'};
-        // DB에서 가져온 영문 티어를 인덱스로 변환
-        let currentTierStr = me.tier || 'BRONZE';
-        let currentTierIdx = tierList.indexOf(currentTierStr.toUpperCase());
-        if(currentTierIdx === -1) currentTierIdx = 0;
-        const currentTierName = tierNames[tierList[currentTierIdx]];
-        const nextTierIdx = Math.min(currentTierIdx + 1, tierList.length - 1);
-        const nextTierName = tierNames[tierList[nextTierIdx]];
-
-        // 프로필 밑 티어
-        if (tierBadge) tierBadge.innerText = `${currentTierName} 티어`;
-
-        // 게이지 바 양끝 티어 이름 동적 변경 (좌: 내 티어, 우: 다음 티어)
+        // 내정보 계산기에 넣기
+        const myTInfo = calculateTierInfo(me.point);
+        if (tierBadge) tierBadge.innerText = `💍 ${myTInfo.korName} 티어`;
         if (gaugeLabels.length >= 2) {
-            gaugeLabels[0].innerText = currentTierName;
-            gaugeLabels[1].innerText = currentTierIdx === nextTierIdx ? 'MAX' : nextTierName;
+            gaugeLabels[0].innerText = myTInfo.korName;
+            gaugeLabels[1].innerText = myTInfo.nextKorName;
         }
-        
-        // 게이지 바 아래 설명 (다음 티어 이름은 반영, 점수는 1580점 하드코딩 유지)
-        if (gaugeDesc) {
-            if (currentTierIdx === nextTierIdx) {
-                gaugeDesc.innerHTML = `최고 등급에 도달했습니다!`;
-            } else {
-                gaugeDesc.innerHTML = `${nextTierName} 승급까지 <strong>1,580점</strong> 남았습니다!`;
-            }
+        if (myTInfo.isMax) {
+            if (gaugeDesc) gaugeDesc.innerHTML = `최고 등급에 도달했습니다!`;
+            if (gaugeFill) gaugeFill.style.width = "100%";
+            if (gaugePts) gaugePts.innerHTML = `<strong>${myTInfo.displayPoint.toLocaleString()}</strong>`;
+        } else {
+            if (gaugeDesc) gaugeDesc.innerHTML = `${myTInfo.nextKorName} 승급까지 <strong>${myTInfo.pointNeeded.toLocaleString()}점</strong> 남았습니다!`;
+            if (gaugeFill) gaugeFill.style.width = myTInfo.percent + "%";
+            if (gaugePts) gaugePts.innerHTML = `<strong>${myTInfo.displayPoint.toLocaleString()}</strong> / ${myTInfo.range.toLocaleString()}`;
         }
-
-        // 포인트 점수 및 게이지 % 바 채우기
-        if (gaugePts) gaugePts.innerText = (me.point || 0).toLocaleString();
-        const percent = Math.min(((me.point || 0) / 10000) * 100, 100);
-        if (gaugeFill) gaugeFill.style.width = percent + "%";
 
         // 대시보드 메인 화면: 내가 보유한 대표 뱃지 렌더링 (최대 3개)
         const dashboardBadgeList = document.querySelector('.badge-list');
@@ -226,6 +317,59 @@ async function loadRankingData() {
                 }
             }
             equippedSlotsContainer.innerHTML = slotsHtml;
+        }
+
+
+        // 일일/주간 도전 과제 동적 렌더링
+        if (me.missions_data) {
+            const d = me.missions_data.daily;
+            const w = me.missions_data.weekly;
+            
+            // 일일 과제 그리기
+            const dailyHtml = [
+                { id: "attendance", name: "일일 출석 완료", ...d.attendance },
+                { id: "visit", name: "영수증 도장 찍기", ...d.visit },     // favorite 대신 visit 사용
+                { id: "review", name: "새로운 리뷰 작성", ...d.review }
+            ].map(m => {
+                const isCompleted = m.count >= m.target;
+
+                let actionBtn = '';
+                // 출석 과제이면서 아직 완료 안 됐을 때만 출석 버튼 생성
+                if (m.id === "attendance" && !isCompleted) {
+                    actionBtn = `<button onclick="checkDailyAttendance()" style="margin-left: 8px; padding: 2px 8px; font-size: 11px; font-weight: bold; background: #333; color: #fff; border: none; border-radius: 4px; cursor: pointer;">출석하기</button>`;
+                }
+
+                return `
+                    <li class="${isCompleted ? 'completed' : ''}" style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <span class="check-icon" style="margin-right: 8px;">${isCompleted ? '✔️' : '⬜'}</span>
+                        <span class="mission-text" style="flex: 1;">${m.name} ${m.count}/${m.target}</span>
+                        <span class="mission-reward">+${m.reward} pts</span>
+                        ${actionBtn}
+                    </li>
+                `;
+            }).join('');
+            
+            // 주간 과제 그리기 (즐겨찾기 -> 도장 찍기로 변경)
+            const weeklyHtml = [
+                { name: "주간 출석 완료", ...w.attendance },
+                { name: "주간 도장 찍기", ...w.visit },       // favorite 대신 visit 사용
+                { name: "주간 리뷰 작성", ...w.review }
+            ].map(m => {
+                const isCompleted = m.count >= m.target;
+                return `
+                    <li class="${isCompleted ? 'completed' : ''}" style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <span class="check-icon" style="margin-right: 8px;">${isCompleted ? '✔️' : '⬜'}</span>
+                        <span class="mission-text" style="flex: 1;">${m.name} ${m.count}/${m.target}</span>
+                        <span class="mission-reward">+${m.reward} pts</span>
+                    </li>
+                `;
+            }).join('');
+            
+            const dailyList = document.querySelector('.mission-card-day .mission-list');
+            if (dailyList) dailyList.innerHTML = dailyHtml;
+            
+            const weeklyList = document.querySelector('.mission-card-week .mission-list');
+            if (weeklyList) weeklyList.innerHTML = weeklyHtml;
         }
 
         // 렌더링이 완료된 후, 동적으로 생성된 요소들에 대해 교체(Swap) 이벤트를 연결합니다.
@@ -319,3 +463,24 @@ function bindBadgeSwapEvents() {
         });
     });
 }
+
+window.checkDailyAttendance = async function() {
+    try {
+        const response = await fetch('/api/ranking/attendance', { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.success) {
+            loadRankingData(); 
+            if (typeof loadRankingSummary === 'function') loadRankingSummary();
+        } else {
+            alert(result.message);
+        }
+    } catch (e) {
+        console.error("출석체크 오류:", e);
+        alert("출석체크 중 오류가 발생했습니다.");
+    }
+};
+
+// 다른 파일에서 이 함수 부르도록
+window.loadRankingData = loadRankingData;
+window.loadRankingSummary = loadRankingSummary;

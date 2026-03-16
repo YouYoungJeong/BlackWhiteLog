@@ -383,3 +383,169 @@ body.login-page {
     display: inline-block;
     flex-shrink: 0;
 }
+
+/* =========================
+소셜 계정 연결 모달
+========================= */
+.social-link-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(37, 48, 34, 0.36);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 9999;
+}
+
+.social-link-modal-backdrop.hidden {
+    display: none;
+}
+
+.social-link-modal {
+    position: relative;
+    width: 100%;
+    max-width: 430px;
+    background: #fbfcf8;
+    border: 1px solid #d8dfcb;
+    border-radius: 24px;
+    padding: 28px 24px 22px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16);
+    animation: socialModalUp 0.24s ease;
+}
+
+@keyframes socialModalUp {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.social-link-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #eef3e6;
+    color: #5d6d58;
+    font-size: 22px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.social-link-close:hover {
+    background: #e3ebd9;
+    transform: scale(1.05);
+}
+
+.social-link-badge {
+    display: inline-block;
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #edf4e6;
+    color: #5f7a61;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.social-link-title {
+    margin: 0 0 10px;
+    font-size: 24px;
+    font-weight: 800;
+    color: #304330;
+}
+
+.social-link-desc {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.75;
+    color: #677463;
+}
+
+.social-link-info {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 16px;
+    background: #f4f7ef;
+    border: 1px solid #e0e7d5;
+}
+
+.social-link-info > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    font-size: 13px;
+    padding: 6px 0;
+}
+
+.social-link-info span {
+    color: #7f8b7a;
+}
+
+.social-link-info strong {
+    color: #314030;
+    text-align: right;
+    word-break: break-all;
+}
+
+.social-link-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.social-link-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.social-link-btn.primary {
+    background: #8faa7a;
+    color: #fff;
+}
+
+.social-link-btn.primary:hover {
+    background: #6f8d59;
+}
+
+.social-link-btn.secondary {
+    background: #f3f6ee;
+    border: 1px solid #d5deca;
+    color: #50634f;
+}
+
+.social-link-btn.secondary:hover {
+    background: #eaf0e0;
+}
+
+.social-link-cancel {
+    display: block;
+    margin-top: 14px;
+    text-align: center;
+    font-size: 13px;
+    color: #7b8778;
+    text-decoration: none;
+}
+
+.social-link-cancel:hover {
+    text-decoration: underline;
+}

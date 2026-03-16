@@ -149,6 +149,72 @@ body {
     box-shadow: 0 8px 18px rgba(106, 126, 83, 0.06);
 }
 
+
+
+/* =========================
+   즐겨찾기 페이지 전용
+========================= */
+.favorite-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.favorite-card {
+    padding: 22px 20px;
+}
+
+.favorite-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.favorite-category-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    height: 34px;
+    padding: 0 12px;
+    background: #eef3e3;
+    border: 1px solid #d7dfc0;
+    border-radius: 999px;
+    color: #667655;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.favorite-delete-form {
+    margin: 0;
+}
+
+.favorite-delete-btn {
+    min-width: 58px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid #e3c7c3;
+    border-radius: 999px;
+    background: #fff8f7;
+    color: #c15b52;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.favorite-delete-btn:hover {
+    background: #fdf0ee;
+    border-color: #d9a9a2;
+    color: #ae463e;
+    transform: translateY(-1px);
+}
+
+
 /* =========================
    하단 버튼 영역
 ========================= */

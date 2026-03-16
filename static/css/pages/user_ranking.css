@@ -506,3 +506,59 @@
     width: calc(100% - 60px);
     margin: 0 30px;
 }
+
+
+/* =========================================
+   비로그인 블러 오버레이
+========================================= */
+.login-blur-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;  /* width: 100% 대신 right: 0 */
+    bottom: 0; /* height: 100% 대신 bottom: 0 */
+    
+    background: rgba(255, 255, 255, 0.4); 
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-blur-overlay.hidden-view {
+    display: none !important;
+}
+
+.blur-content {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 30px 40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.blur-message {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c341f;
+    margin: 0 0 20px;
+}
+
+.blur-login-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #6f8765 0%, #89a07d 100%);
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    transition: transform 0.2s;
+}
+
+.blur-login-btn:hover {
+    transform: translateY(-2px);
+}
